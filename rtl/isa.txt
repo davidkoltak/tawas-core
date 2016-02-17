@@ -1,0 +1,73 @@
+
+
+00    [AU OP]    [AU_OP]    - Series AU Ops
+01    [LS_OP]    [LS_OP]    - Series LS Ops
+10    [LS_OP]    [AU_OP]    - Parallel LS/AU Ops
+1100  [BR_OP]    [AU_OP]    - Parallel BR/AU Ops
+1101  [BR_OP]    [LS_OP]    - Parallel BR/AU Ops
+1110       [IMM_OP]         - Set Immediate MSB 28'bits
+1111       [CALL_OP]        - Call/Jmp
+
+
+AU Opcodes: 15-bits
+------------------------------------------
+
+0 iiiiii aaaa bbbb  : i.op b, a         (b = b *i* a)
+1 iiiiii aaaa bbbb  : i.op b, imm      (b = b *i* imm(a))
+
+00 : Move     (a) -> b    (NOTE: 00 = "mv r0, r0", aka "nop")
+01 : Inv      (~a) -> b
+02 : Inc      (b + #a) -> b
+03 : Dec      (b - #a) -> b
+04 : lsl      (b << #a) -> b
+05 : lsr      (b >> #a) -> b
+06 : asr      (b >> #a) -> b
+07 : sx       sign-extend(b, type(a)) -> b
+
+08 : Add      (b + a) -> b
+09 : Sub      (b - a) -> b
+0A : And      (b & a) -> b
+0B : Or       (b | a) -> b
+0C : Xor      (b ^ a) -> b
+0D :
+0E :
+0F :
+  ...
+3F :
+
+  
+  
+LS Opcodes: 15-bits
+------------------------------------------
+
+0 tt iiii pppp dddd  : Load  (type) p[i] -> d  (ld.t rx, p[i])
+
+1 tt iiii pppp dddd  : Store (type) d -> p[i]
+
+ TYPE
+ -----------
+ 00 : 8-bit
+ 01 : 16-bit
+ 1i : 32-bit (extended offset field)
+
+
+
+BR Opcodes: 13-bits
+------------------------------------------
+
+0 cccc aaaa bbbb  : ind.cc a, b   (pc->a, b->pc), (NOTE: aka "rtn.cc a")
+
+10 cccc iiii iii  : br.cc -64,63 words
+
+11 iiii iiii iii  : br -1024,1023 words
+
+
+
+Call Opcodes: 28-bits
+------------------------------------------
+
+0000 eeeeeeee eeeeeeee eeeeeeee : jmp e (e->pc)
+aaaa eeeeeeee eeeeeeee eeeeeeee : call e, a (pc->a, e->pc) NOTE: a != 0
+
+
+

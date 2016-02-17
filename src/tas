@@ -1,0 +1,476 @@
+#!/usr/bin/perl
+
+#
+# Tawas Assembler: A very basic assembler for the 'tawas' processor core
+#
+# by David M. Koltak  02/11/2016
+#
+
+if ($#ARGV < 0)
+{ die "Usage: sas input {input ...}\n  - Files assembled in left to right order\n  - Output is placed in ./irom.hex and ./dram.hex\n"; }
+
+$PC = 0;
+$DC = 0;
+@Iwords = ();
+@Dwords = ();
+
+%Labels = ();
+@FixUps = ();
+
+@FileList = @ARGV;
+$FilesParsed = '';
+
+while ($#FileList >= 0)
+{
+  $input_filename = shift(@FileList);
+  
+  open(_INPUT_FILE_, "<".$input_filename) || die "ERROR: Unable to open '$input_filename' for reading.\n";
+  
+  $FilesParsed .= "$input_filename|";
+  
+  $linenum = 0;
+  while (my $line = <_INPUT_FILE_>)
+  {
+    $linenum++;
+    chomp ($line);
+    $line =~ s/\/\/.*//;
+    $line =~ s/^\s+//;
+    
+    if ($line =~ /\.include\s*\(\s*(.*)\s*\)/)
+    {
+      $include_file = $1;
+      if (!($FilesParsed =~ /$include_file/))
+      { push(@FileList, $include_file); }
+      next;
+    }
+    
+    if ($line =~ /\.org\(\s*(.*)\s*\)/)
+    {
+      $new_pc = $1;
+      if ($new_pc =~ /\s*0/)
+      { $new_pc = oct($new_pc); }
+      if ($PC > $new_pc)
+      { die "ERROR: Cannot ORG backwards ($PC -> $new_pc) @ $input_filename:$linenum\n"; }
+      $PC = $new_pc;
+      next;
+    }
+    
+    if ($line =~ /^(\w+):/)
+    {
+      my $label = $1;
+      $line =~ s/^.*://;
+      $Labels{$label} = "$PC,$DC";
+    }
+    
+    if ($line eq '')
+    { next; }
+    
+    if ($line =~ /\s*(ld|st)\s*\((.+)\)\s*;\s*(ld|st)\s*\((.+)\)\s*;/)
+    {
+      # ld/st, ld/st
+      $i_lower = &ldst($1, $2);
+      $i_upper = &ldst($3, $4);
+      $i_total = (1 << 30) | ($i_upper << 15) | ($i_lower);
+    }
+    elsif ($line =~ /\s*(br|ind|rtn)\s*\((.+)\)\s*;\s*(ld|st)\s*\((.+)\)\s*;/)
+    {
+      # br/ind, ld/st
+      $i_lower = &ldst($3, $4);
+      $i_upper = &brind($1, $2);
+      $i_total = (13 << 28) | ($i_upper << 15) | ($i_lower);
+    }
+    elsif ($line =~ /\s*(ld|st)\s*\((.+)\)\s*;\s*(br|ind|rtn)\s*\((.+)\)\s*;/)
+    {
+      # br/ind, ld/st
+      $i_lower = &ldst($1, $2);
+      $i_upper = &brind($3, $4);
+      $i_total = (13 << 28) | ($i_upper << 15) | ($i_lower);
+    }
+    elsif ($line =~ /\s*(ld|st)\s*\((.+)\)\s*;\s*([a-z]+)\s*\((.*)\)\s*;/)
+    {
+      # br/ind, au
+      $i_lower = &au($3, $4);
+      $i_upper = &ldst($1, $2);
+      $i_total = (2 << 30) | ($i_upper << 15) | ($i_lower);
+    }
+    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;\s*(ld|st)\s*\((.+)\)\s*;/)
+    {
+      # br/ind, au
+      $i_lower = &au($1, $2);
+      $i_upper = &ldst($3, $4);
+      $i_total = (2 << 30) | ($i_upper << 15) | ($i_lower);
+    }
+    elsif ($line =~ /\s*(br|ind|rtn)\s*\((.+)\)\s*;\s*([a-z]+)\s*\((.*)\)\s*;/)
+    {
+      # br/ind, au
+      $i_lower = &au($3, $4);
+      $i_upper = &brind($1, $2);
+      $i_total = (12 << 28) | ($i_upper << 15) | ($i_lower);
+      printf "... %08X, %08X, %08X\n", $i_total, $i_upper, $i_lower;
+    }
+    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;\s*(br|ind|rtn)\s*\((.+)\)\s*;/)
+    {
+      # br/ind, au
+      $i_lower = &au($1, $2);
+      $i_upper = &brind($3, $4);
+      $i_total = (12 << 28) | ($i_upper << 15) | ($i_lower);
+    }
+    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;\s*([a-z]+)\s*\((.*)\)\s*;/)
+    {
+      # au, au
+      $i_lower = &au($1, $2);
+      $i_upper = &au($3, $4);
+      $i_total = ($i_upper << 15) | ($i_lower);
+    }
+    elsif ($line =~ /\s*(call|jmp)\s*\((.+)\)\s*;/)
+    {
+      # call/jmp
+      $i_total = &calljmp($1, $2);
+    }
+    else
+    { die "ERROR: Invalid instruction format @ $input_filename:$linenum\n"; }
+    
+    #printf("---> 0x%06X : %08X\n", $PC, $i_total);
+    $Iwords[$PC] = $i_total;
+    $PC++;
+  }
+}
+
+$Labels{".text.start"} = "0,0";
+$Labels{".text.end"} = ($#Iwords + 1).",0";
+
+$Labels{".data.start"} = "0,0";
+$Labels{".data.end"} = "0,".($#Dwords + 1);
+      
+foreach $FixUp (@FixUps)
+{
+  my @spec = split(/\|/, $FixUp);
+  
+  if (exists $Labels{$spec[2]})
+  { $label_addr = $Labels{$spec[2]}; }
+  else
+  { die "ERROR: Unresolved label '".$spec[2]."' @ ".$spec[3]."\n"; }
+  
+  if ($spec[0] eq 'br.short')
+  {
+    $label_addr =~ s/,.*//;
+    $val = $label_addr - $spec[1];
+    
+    if (($val < -64) || ($val > 63))
+    { die "ERROR: Relative address for *conditional* branch exceeds limit (-64,63) for label '".$spec[2]."' @ ".$spec[3]."\n"; }
+    
+    $Iwords[$spec[1] + 0] |= (($val & 0x7F) << 15);
+  }
+  elsif ($spec[0] eq 'br.long')
+  {
+    $label_addr =~ s/,.*//;
+    $val = $label_addr - $spec[1];
+    
+    if (($val < -1024) || ($val > 1023))
+    { die "ERROR: Relative address for branch exceeds limit (-1024,1023) for label '".$spec[2]."' @ ".$spec[3]."\n"; }
+    
+    $Iwords[$spec[1] + 0] |= (($val & 0x7FF) << 15);
+  }
+  elsif (($spec[0] eq 'jmp') || ($spec[0] eq 'call'))
+  {
+    $label_addr =~ s/,.*//;
+    $val = $label_addr;
+    
+    $Iwords[$spec[1] + 0] |= ($val & 0xFFFFFF);
+  }
+  else
+  { die "ERROR: Bad FixUp specification '$FixUp'... how did that happen???\n"; }
+}
+
+open(_IROM_FILE_, ">irom.hex") || die "ERROR: Unable to open 'irom.hex' for writing.\n";
+open(_DRAM_FILE_, ">dram.hex") || die "ERROR: Unable to open 'dram.hex' for writing.\n";
+
+foreach $line (@Iwords)
+{
+  printf _IROM_FILE_ "%08X\n", $line;
+}
+
+foreach $line (@Dwords)
+{
+  printf _DRAM_FILE_ "%08X\n", $line;
+}
+
+close(_IROM_FILE_);
+close(_DRAM_FILE_);
+exit;
+
+#
+# Command functions
+#
+
+sub cond_code
+{
+  my $code = shift(@_);
+  my $rtn = 0;
+  
+  if ($code eq 'always')
+  { $rtn = 0; }
+  elsif ($code eq 'never')
+  { $rtn = 1; }
+  else
+  { die "ERROR: Invalid condition code '$code' @ $input_filename:$linenum\n"; }
+  
+  return $rtn;
+}
+  
+sub ldst
+{
+  my $cmd = shift(@_);
+  my $args = shift(@_);
+  my $rtn = 0;
+  my $type;
+  my $reg;
+  my $ptr;
+  my $offset;
+  
+  #print "ldst: $cmd ($args)\n";
+  
+  if ($args =~ /(b|h|w)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)\[(\d+)\]/)
+  {
+    $type = $1;
+    $reg = $2;
+    $ptr = $3;
+    $offset = $4;
+    
+    if (($reg < 0) || ($reg > 15))
+    { die "ERROR: Register ($reg) must be 0-15 @ $input_filename:$linenum\n"; }
+    
+    if (($ptr < 0) || ($ptr > 15))
+    { die "ERROR: Pointer ($ptr) must be 0-15 @ $input_filename:$linenum\n"; }
+    
+    if ($type eq 'w')
+    {
+      if (($offset < 0) || ($offset > 31))
+      { die "ERROR: Word Offset ($offset) must be 0-31 @ $input_filename:$linenum\n"; }
+    }
+    else
+    {
+      if (($offset < 0) || ($offset > 15))
+      { die "ERROR: Offset ($offset) must be 0-15 @ $input_filename:$linenum\n"; }
+    }
+  }
+  else
+  { die "ERROR: Ld/St syntax error @ $input_filename:$linenum\n"; }
+  
+  if ($cmd eq 'st')
+  { $rtn = (1 << 14); }
+  
+  if ($type eq 'h')
+  { $rtn |= (1 << 12); }
+  elsif ($type eq 'w')
+  { $rtn |= (2 << 12); }
+  
+  $rtn |= ($offset << 8);
+  $rtn |= ($ptr << 4);
+  $rtn |= ($reg << 0);
+  
+  return $rtn;
+}
+
+sub brind
+{
+  my $cmd = shift(@_);
+  my $args = shift(@_);
+  my $rtn = 0;
+  
+  #print "brind: $cmd ($args)\n";
+  
+  if ($cmd eq 'br')
+  {
+    if ($args =~ /([a-z]+)\s*,\s*(\w+)/)
+    {
+      push(@FixUps, "br.short|$PC|".$2."|$input_filename:$linenum");
+      my $cond = &cond_code($1);
+      
+      $rtn = (2 << 11) | ($cond << 7);
+    }
+    elsif ($args =~ /(\w+)/)
+    {
+      push(@FixUps, "br.long|$PC|".$1."|$input_filename:$linenum");
+      
+      $rtn = (3 << 11);
+    }
+    else
+    { die "ERROR: BR syntax error @ $input_filename:$linenum\n"; }    
+  }
+  elsif ($cmd eq 'ind')
+  {
+    if ($args =~ /([a-z]+)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)/)
+    {
+      my $rega = $2;
+      my $regb = $3;
+      my $cond = &cond_code($1);
+    
+      if (($rega < 0) || ($rega > 15))
+      { die "ERROR: Register A ($rega) must be 0-15 @ $input_filename:$linenum\n"; } 
+      
+      if (($regb < 0) || ($regb > 15))
+      { die "ERROR: Register B ($regb) must be 0-15 @ $input_filename:$linenum\n"; } 
+      
+      $rtn = ($cond << 8) | ($rega << 4) | ($regb);
+    }
+    else
+    { die "ERROR: IND syntax error @ $input_filename:$linenum\n"; }    
+  }
+  elsif ($cmd eq 'rtn')
+  {
+    if ($args =~ /([a-z]+)\s*,\s*[rR](\d+)/)
+    {
+      my $reg = $2;
+      my $cond = &cond_code($1);
+      
+      if (($reg < 0) || ($reg > 15))
+      { die "ERROR: Register ($reg) must be 0-15 @ $input_filename:$linenum\n"; }  
+      
+      $rtn = ($cond << 8) | ($reg << 4) | ($reg);
+    }
+    elsif ($args =~ /[rR](\d+)/)
+    {
+      my $reg = $1;
+      my $cond = &cond_code('always');
+      
+      if (($reg < 0) || ($reg > 15))
+      { die "ERROR: Register ($reg) must be 0-15 @ $input_filename:$linenum\n"; }  
+      
+      $rtn = ($cond << 8) | ($reg << 4) | ($reg);
+    }
+    else
+    { die "ERROR: RTN syntax error @ $input_filename:$linenum\n"; }   
+  }
+  else
+  { die "ERROR: BR/IND/RTN syntax error @ $input_filename:$linenum\n"; }
+  
+  return $rtn;
+}
+
+sub au
+{
+  my $cmd = shift(@_);
+  my $args = shift(@_);
+  my $rtn = 0;
+  
+  #print "au: $cmd ($args)\n";
+  
+  if (($cmd eq 'nop') && ($args eq ''))
+  { return $rtn; }
+  
+  if (($cmd eq 'inc') || ($cmd eq 'dec') || ($cmd eq 'lsl') || ($cmd eq 'lsr') || ($cmd eq 'asr') || ($cmd eq 'sx'))
+  {
+    if ($args =~ /[rR](\d+)\s*,\s*(\d\w*)/)
+    {
+      my $reg = $1;
+      my $imm = oct($2);
+      
+      if (($reg < 0) || ($reg > 15))
+      { die "ERROR: Register ($reg) must be 0-15 @ $input_filename:$linenum\n"; }
+      
+      if (($imm < 0) || ($imm > 15))
+      { die "ERROR: Imm ($imm) must be 0-15 @ $input_filename:$linenum\n"; }
+      
+      $rtn |= ($imm << 4) | ($reg);  
+    }
+    else    
+    { die "ERROR: '$cmd($args)' syntax error @ $input_filename:$linenum\n"; }   
+  }
+  elsif ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)/)
+  {
+    my $rega = $2;
+    my $regb = $1;
+    
+    if (($rega < 0) || ($rega > 15))
+    { die "ERROR: Register A ($rega) must be 0-15 @ $input_filename:$linenum\n"; } 
+    
+    if (($regb < 0) || ($regb > 15))
+    { die "ERROR: Register B ($regb) must be 0-15 @ $input_filename:$linenum\n"; } 
+    
+    $rtn |= ($rega << 4) | ($regb);  
+  }
+  elsif ($args =~ /[rR](\d+)\s*,\s*(\d\w*)/)
+  {
+    my $reg = $1;
+    my $imm = oct($2);
+    
+    if (($reg < 0) || ($reg > 15))
+    { die "ERROR: Register ($reg) must be 0-15 @ $input_filename:$linenum\n"; }
+    
+    $Iwords[$PC] = (0xE0000000) | (($imm >> 4) & 0x0FFFFFFF);
+    $PC++;
+    $rtn |= (1 << 14) | (($imm & 0xf) << 4) | ($reg);
+  }
+  elsif ($args =~ /[rR](\d+)\s*,\s*(\w+)/)
+  { 
+    my $reg = $1;
+    push(@FixUps, "imm|$PC|".$2."|$input_filename:$linenum");
+    
+    if (($reg < 0) || ($reg > 15))
+    { die "ERROR: Register ($reg) must be 0-15 @ $input_filename:$linenum\n"; } 
+    
+    $rtn |= (1 << 14) | ($reg);
+  }
+  else
+  { die "ERROR: AU '$cmd($args)' syntax error @ $input_filename:$linenum\n"; }
+  
+  if ($cmd eq 'mv')     { $rtn |= (0x00 << 8); }
+  elsif ($cmd eq 'inv') { $rtn |= (0x01 << 8); }
+  elsif ($cmd eq 'inc') { $rtn |= (0x02 << 8); }
+  elsif ($cmd eq 'dec') { $rtn |= (0x03 << 8); }
+  elsif ($cmd eq 'lsl') { $rtn |= (0x04 << 8); }
+  elsif ($cmd eq 'lsr') { $rtn |= (0x05 << 8); }
+  elsif ($cmd eq 'asr') { $rtn |= (0x06 << 8); }
+  elsif ($cmd eq 'sx')  { $rtn |= (0x07 << 8); }
+  elsif ($cmd eq 'add') { $rtn |= (0x08 << 8); }
+  elsif ($cmd eq 'sub') { $rtn |= (0x09 << 8); }
+  elsif ($cmd eq 'and') { $rtn |= (0x0A << 8); }
+  elsif ($cmd eq 'or')  { $rtn |= (0x0B << 8); }
+  elsif ($cmd eq 'xor') { $rtn |= (0x0C << 8); }
+  else
+  { die "ERROR: Invalid AU command '$cmd' @ $input_filename:$linenum\n"; }
+  
+  return $rtn;
+}
+
+sub calljmp
+{
+  my $cmd = shift(@_);
+  my $args = shift(@_);
+  my $rtn = 0;
+  
+  #print "calljmp: $cmd ($args)\n";
+  
+  if ($cmd eq 'call')
+  {
+    if ($args =~ /[rR](\d+)\s*,\s*(\w+)/)
+    {
+      my $reg = $1;
+      push(@FixUps, "jmp|$PC|".$2."|$input_filename:$linenum");
+      
+      if (($reg < 1) || ($reg > 15))
+      { die "ERROR: Link Register ($reg) must be 1-15 @ $input_filename:$linenum\n"; } 
+           
+      $rtn = 0xF0000000 | ($reg << 24);
+    }
+    else
+    { die "ERROR: CALL syntax error @ $input_filename:$linenum\n"; }
+  }
+  elsif ($cmd eq 'jmp')
+  {
+    if ($args =~ /(\w+)/)
+    {
+      push(@FixUps, "jmp|$PC|".$1."|$input_filename:$linenum");
+      $rtn = 0xF0000000;
+    }
+    else
+    { die "ERROR: JMP syntax error @ $input_filename:$linenum\n"; }
+  }
+  else
+  { die "ERROR: CALL/JMP syntax error @ $input_filename:$linenum\n"; }
+  
+  return $rtn;
+}
+
+      
