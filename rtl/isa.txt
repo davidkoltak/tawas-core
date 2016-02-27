@@ -12,9 +12,8 @@
 AU Opcodes: 15-bits
 ------------------------------------------
 
-00 iiiiiii aaa bbb  : i.op b, a         (b = b *i* a)
-01 iiiaaaa aaa bbb
-1x iiiiiii aaa bbb  : i.op b, imm      (b = b *i* imm(a))
+0 iiiii aaa bbb ccc  : i.op b, a       (b = b *i* a)
+1 aiiii aaa bbb ccc : i.op b, imm      (b = b *i* imm(a))
 
 00 : Move     (a) -> b    (NOTE: 00 = "mv r0, r0", aka "nop")
 01 : Inv      (~a) -> b
@@ -34,7 +33,7 @@ AU Opcodes: 15-bits
 0E :
 0F :
   ...
-3F :
+1F :
 
   
   
@@ -68,16 +67,20 @@ Call Opcodes: 28-bits
 
 0000 eeeeeeee eeeeeeee eeeeeeee : jmp e (e->pc)
 0001 eeeeeeee eeeeeeee eeeeeeee : jmpr e (pc+e->pc)
-0010 xxxxxxxx xxxxxxxx xxxxxxxx ; jmp r15
+0010 xxxxxxxx xxxxxxxx xxxxxxxx ; jmp r7
 
-0100 eeeeeeee eeeeeeee eeeeeeee : call e (pc->r15, e->pc)
-0101 eeeeeeee eeeeeeee eeeeeeee : callr e (pc->r15, pc+e->pc)
-1110 eeeeeeee eeeeeeee eeeeeeee : call r15, e (pc->r15, r15->pc, e->r0)
+0100 eeeeeeee eeeeeeee eeeeeeee : call e (pc->r7, e->pc)
+0101 eeeeeeee eeeeeeee eeeeeeee : callr e (pc->r7, pc+e->pc)
+1110 eeeeeeee eeeeeeee eeeeeeee : call r7, e (pc->r7, r7->pc, e->r0)
 
-1010 eeeeeeee eeeeeeee eeeeeeee : rtn (r15->pc, e->r0)
+1010 eeeeeeee eeeeeeee eeeeeeee : rtn (r7->pc, e->r0)
 
 ---1 relative
---1- pc rtn (e or r15)
--1-- pc store (pc->r15)
+--1- pc rtn (e or r7)
+-1-- pc store (pc->r7)
 1--- e store (e->r0)
 
+
+
+strcmp:
+  

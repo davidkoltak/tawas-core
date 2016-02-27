@@ -32,18 +32,20 @@ module tawas
   
   wire [15:0] au_flags;
   wire au_op_vld;
-  wire [5:0] au_op;
-  wire [3:0] au_op_ra;
-  wire [3:0] au_op_rb;
+  wire [4:0] au_op;
+  wire [2:0] au_op_ra;
+  wire [2:0] au_op_rb;
+  wire [2:0] au_op_rc;
   wire au_op_imm_vld;
   wire [31:0] au_op_imm;
   
   wire ls_op_vld;
   wire ls_op_store;
+  wire ls_op_ptr_upd;
   wire [1:0] ls_op_type;
-  wire [3:0] ls_op_ptr;
-  wire [3:0] ls_op_offset;
-  wire [3:0] ls_op_reg;
+  wire [2:0] ls_op_ptr;
+  wire [5:0] ls_op_offset;
+  wire [2:0] ls_op_reg;
   
   tawas_fetch tawas_fetch
   (
@@ -68,6 +70,7 @@ module tawas
     .AU_OP(au_op),
     .AU_OP_RA(au_op_ra),
     .AU_OP_RB(au_op_rb),
+    .AU_OP_RC(au_op_rc),
     
     .AU_OP_IMM_VLD(ap_op_imm_vld),
     .AU_OP_IMM(au_op_imm),
