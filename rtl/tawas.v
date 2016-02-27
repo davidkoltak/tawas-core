@@ -25,10 +25,10 @@ module tawas
   wire slice;
   
   wire pc_store;
-  wire [3:0] pc_store_reg;
   wire [23:0] pc;
-  wire [3:0] pc_load_reg;
   wire [23:0] pc_rtn;
+  wire e_store;
+  wire [31:0] e_value;
   
   wire [15:0] au_flags;
   wire au_op_vld;
@@ -56,11 +56,11 @@ module tawas
     .SLICE(slice),
     
     .PC_STORE(pc_store),
-    .PC_STORE_REG(pc_store_reg),
     .PC(pc),
-    
-    .PC_LOAD_REG(pc_load_reg),
     .PC_RTN(pc_rtn),
+  
+    .E_STORE(e_store),
+    .E(e_value),
     
     .AU_FLAGS(au_flags),
     
@@ -70,10 +70,11 @@ module tawas
     .AU_OP_RB(au_op_rb),
     
     .AU_OP_IMM_VLD(ap_op_imm_vld),
-    .AU_OP_IMM(ap_op_imm),
+    .AU_OP_IMM(au_op_imm),
     
     .LS_OP_VLD(ls_op_vld),
     .LS_OP_STORE(ls_op_store),
+    .LS_OP_PTR_UPD(ls_op_ptr_upd),
     .LS_OP_TYPE(ls_op_type),
     .LS_OP_PTR(ls_op_ptr),
     .LS_OP_OFFSET(ls_op_offset),
@@ -116,6 +117,10 @@ module tawas
   wire [31:0] ls_ptr;
   wire [31:0] ls_store_data;
   
+  wire ls_ptr_upd_vld;
+  wire [2:0] ls_ptr_upd_sel;
+  wire [31:0] ls_ptr_upd;
+  
   wire ls_load_vld;
   wire [3:0] ls_load_sel;
   wire [31:0] ls_load_data;
@@ -151,12 +156,14 @@ module tawas
     .CLK(CLK),
     .RST(RST),
     
-    .PC_STORE(pc_store),
-    .PC_STORE_REG(pc_store_reg),
-    .PC(pc),
+    .SLICE(slice),
     
-    .PC_LOAD_REG(pc_load_reg),
+    .PC_STORE(pc_store),
+    .PC(pc),
     .PC_RTN(pc_rtn),
+    
+    .E_STORE(e_store),
+    .E(e_value),
     
     .AU_RA_SEL(au_ra_sel),
     .AU_RA(au_ra),
@@ -172,6 +179,10 @@ module tawas
     
     .LS_STORE_SEL(ls_op_reg),
     .LS_STORE_DATA(ls_store_data),
+    
+    .LS_PTR_UPD_VLD(ls_ptr_upd_vld),
+    .LS_PTR_UPD_SEL(ls_ptr_upd_sel),
+    .LS_PTR_UPD(ls_ptr_upd),
     
     .LS_LOAD_VLD(ls_load_vld),
     .LS_LOAD_SEL(ls_load_sel),

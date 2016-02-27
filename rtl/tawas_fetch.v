@@ -24,28 +24,29 @@ module tawas_fetch
   output SLICE,
   
   output PC_STORE,
-  output [3:0] PC_STORE_REG,
   output [23:0] PC,
-
-  output [3:0] PC_LOAD_REG,
   input [23:0] PC_RTN,
+  
+  output E_STORE,
+  output [31:0] E,
 
   input [15:0] AU_FLAGS,
 
   output AU_OP_VLD,
-  output [5:0] AU_OP,
-  output [3:0] AU_OP_RA,
-  output [3:0] AU_OP_RB,
+  output [6:0] AU_OP,
+  output [2:0] AU_OP_RA,
+  output [2:0] AU_OP_RB,
 
   output AU_OP_IMM_VLD,
   output [31:0] AU_OP_IMM,
 
   output LS_OP_VLD,
   output LS_OP_STORE,
+  output LS_OP_PTR_UPD,
   output [1:0] LS_OP_TYPE,
-  output [3:0] LS_OP_PTR,
-  output [3:0] LS_OP_OFFSET,
-  output [3:0] LS_OP_REG
+  output [2:0] LS_OP_PTR,
+  output [5:0] LS_OP_OFFSET,
+  output [2:0] LS_OP_REG
 );
 
   //
@@ -57,8 +58,9 @@ module tawas_fetch
   
   reg [23:0] pc_next;
   reg [23:0] pc_inc;
+  reg [23:0] pc_adj;
+  reg e_store_en;
   reg pc_store_en;
-  reg [3:0] pc_store_sel;
   
   reg instr_vld;
   reg pc_sel;
@@ -72,23 +74,20 @@ module tawas_fetch
   assign SLICE = ~pc_sel;
   
   assign PC_STORE = pc_store_en;
-  assign PC_STORE_REG = pc_store_sel;
   assign PC = pc_inc;
-  assign PC_LOAD_REG = (IDATA[31:30] == 2'b11) ? IDATA[18:15] : 4'd0;
+  
+  assign E_STORE = e_store_en;
+  assign E = {{8{IDATA[23]}}, IDATA[23:0]};
   
   assign IADDR = pc;
   
   always @ *
   begin
-    au_cond_sel = 4'd0;
-    
-    if (IDATA[31:29] == 3'b110)
-    begin
-      if (IDATA[27:26] == 2'b10)
-        au_cond_sel = IDATA[25:22];
-      else if (IDATA[27] == 1'b0)
-        au_cond_sel = IDATA[26:23];
-    end
+      
+    if ((IDATA[31:29] == 3'b110) && (IDATA[27] == 1'b0))
+      au_cond_sel = IDATA[26:23];
+    else
+      au_cond_sel = 4'd0;
     
     case (au_cond_sel)
     4'h0: au_cond_true = AU_FLAGS[0];
@@ -114,30 +113,26 @@ module tawas_fetch
   begin
     pc_next = (pc_sel) ? pc_0 : pc_1;
     pc_inc = pc_next + 24'd1;
-    
+    e_store_en = 1'b0;
     pc_store_en = 1'b0;
-    pc_store_sel = 4'd0;
     
     if (au_cond_true)
     begin   
       if (IDATA[31:28] == 4'b1111)
       begin
-        pc_next = IDATA[23:0];
-        pc_store_en = (IDATA[27:24] != 4'b0000);
-        pc_store_sel = IDATA[27:24];
+        e_store_en = IDATA[27];
+        pc_store_en = IDATA[26];
+        pc_adj = (IDATA[25]) ? PC_RTN : IDATA[23:0];
+        pc_next = (IDATA[24]) ? pc_next + pc_adj : pc_adj;
       end
       else if (IDATA[31:29] == 3'b110)
       begin
-        if (IDATA[27] == 1'b0)
-        begin
-          pc_next = PC_RTN;
-          pc_store_en = 1'b1;
-          pc_store_sel = IDATA[22:19];
-        end
-        else if (IDATA[27:26] == 2'b11)
-          pc_next = pc_next + {{13{IDATA[25]}}, IDATA[25:15]};
+        if (IDATA[27] == 1'b1)
+          pc_next = pc_next + {{12{IDATA[26]}}, IDATA[26:15]};
+        else if (au_cond_true)
+          pc_next = pc_next + {{16{IDATA[22]}}, IDATA[22:15]};
         else
-          pc_next = pc_next + {{17{IDATA[21]}}, IDATA[21:15]};
+          pc_next = pc_inc;
       end
       else
         pc_next = pc_inc;
@@ -230,24 +225,31 @@ module tawas_fetch
   assign au_upper = (pc_sel) ? series_cmd_0 : series_cmd_1;
   assign ls_upper = au_upper || (IDATA[31:0] == 2'b10);
   
-  wire au_rega;
+  wire [2:0] au_rega;
+  wire [1:0] ls_type;
   
   assign AU_OP_VLD = (IDATA[31:30] == 2'b00) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1100);
   assign AU_OP = (au_upper) ? IDATA[28:23] : IDATA[13:8];
-  assign au_rega = (au_upper) ? IDATA[22:19] : IDATA[7:4];
+  
+  assign au_rega = (au_upper) ? IDATA[20:18] : IDATA[5:3];
   assign AU_OP_RA = au_rega;
   
-  assign AU_OP_RB = (au_upper) ? IDATA[18:15] : IDATA[3:0];
+  assign AU_OP_RB = (au_upper) ? IDATA[18:15] : IDATA[2:0];
 
   assign AU_OP_IMM_VLD = (au_upper) ? IDATA[29] : IDATA[14];
   assign AU_OP_IMM[31:4] = (pc_sel) ? imm_hold_0 : imm_hold_1;
-  assign AU_OP_IMM[3:0] = au_rega;
+  assign AU_OP_IMM[3] = (au_upper) ? IDATA[28] : IDATA[13];
+  assign AU_OP_IMM[2:0] = au_rega;
 
   assign LS_OP_VLD = (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101);
   assign LS_OP_STORE = (ls_upper) ? IDATA[29] : IDATA[14];
-  assign LS_OP_TYPE = (ls_upper) ? IDATA[28:27] : IDATA[13:12];
-  assign LS_OP_PTR = (ls_upper) ? IDATA[26:23] : IDATA[11:8];
-  assign LS_OP_OFFSET = (ls_upper) ? IDATA[22:19] : IDATA[7:4];
-  assign LS_OP_REG = (ls_upper) ? IDATA[18:15] : IDATA[3:0];
+  assign LS_OP_PTR_UPD = (ls_upper) ? IDATA[28] : IDATA[13];
+  
+  assign ls_type = (ls_upper) ? IDATA[27:26] : IDATA[12:11];
+  assign LS_OP_TYPE = ls_type;
+  
+  assign LS_OP_OFFSET = ((ls_upper) ? IDATA[26:21] : IDATA[11:6]) & ((ls_type[1]) ? 6'h3F : 6'h1F);
+  assign LS_OP_PTR = (ls_upper) ? IDATA[20:18] : IDATA[5:3];
+  assign LS_OP_REG = (ls_upper) ? IDATA[17:15] : IDATA[2:0];
                
 endmodule

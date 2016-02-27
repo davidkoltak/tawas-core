@@ -12,8 +12,9 @@
 AU Opcodes: 15-bits
 ------------------------------------------
 
-0 iiiiii aaaa bbbb  : i.op b, a         (b = b *i* a)
-1 iiiiii aaaa bbbb  : i.op b, imm      (b = b *i* imm(a))
+00 iiiiiii aaa bbb  : i.op b, a         (b = b *i* a)
+01 iiiaaaa aaa bbb
+1x iiiiiii aaa bbb  : i.op b, imm      (b = b *i* imm(a))
 
 00 : Move     (a) -> b    (NOTE: 00 = "mv r0, r0", aka "nop")
 01 : Inv      (~a) -> b
@@ -40,9 +41,11 @@ AU Opcodes: 15-bits
 LS Opcodes: 15-bits
 ------------------------------------------
 
-0 tt iiii pppp dddd  : Load  (type) p[i] -> d  (ld.t rx, p[i])
+00 tt iiiii ppp ddd  : Load  (type) p[i] -> d  (ld.t rx, p[i])
+01 tt iiiii ppp ddd                            (ld.t rx, p++i)
 
-1 tt iiii pppp dddd  : Store (type) d -> p[i]
+10 tt iiiii ppp ddd  : Store (type) d -> p[i]  (st.t p[i], rx)
+11 tt iiiii ppp ddd                            (st.t p++i, rx)
 
  TYPE
  -----------
@@ -55,11 +58,8 @@ LS Opcodes: 15-bits
 BR Opcodes: 13-bits
 ------------------------------------------
 
-0 cccc aaaa bbbb  : ind.cc a, b   (pc->a, b->pc), (NOTE: aka "rtn.cc a")
-
-10 cccc iiii iii  : br.cc -64,63 words
-
-11 iiii iiii iii  : br -1024,1023 words
+0 cccc iiii iiii  : br.cc -128,127 words
+1 iiii iiii iiii  : br -2048,2047 words
 
 
 
@@ -67,7 +67,17 @@ Call Opcodes: 28-bits
 ------------------------------------------
 
 0000 eeeeeeee eeeeeeee eeeeeeee : jmp e (e->pc)
-aaaa eeeeeeee eeeeeeee eeeeeeee : call e, a (pc->a, e->pc) NOTE: a != 0
+0001 eeeeeeee eeeeeeee eeeeeeee : jmpr e (pc+e->pc)
+0010 xxxxxxxx xxxxxxxx xxxxxxxx ; jmp r15
 
+0100 eeeeeeee eeeeeeee eeeeeeee : call e (pc->r15, e->pc)
+0101 eeeeeeee eeeeeeee eeeeeeee : callr e (pc->r15, pc+e->pc)
+1110 eeeeeeee eeeeeeee eeeeeeee : call r15, e (pc->r15, r15->pc, e->r0)
 
+1010 eeeeeeee eeeeeeee eeeeeeee : rtn (r15->pc, e->r0)
+
+---1 relative
+--1- pc rtn (e or r15)
+-1-- pc store (pc->r15)
+1--- e store (e->r0)
 
