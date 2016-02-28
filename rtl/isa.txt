@@ -30,6 +30,18 @@
 // SOFTWARE.
 // 
 
+Symetrical Dual-threaded (50% clocks each)
+ - Hides IROM fetch latency
+ - Chose this over branch delay slot because of easier programming
+ - Also provides natural TX/RX, Read/Write, or Consumer/Producer thread seperation
+ - Both threads share same IROM, but start at different offsets
+
+Each thread has 8 x 32-bit registers: r6->stack, r7->link
+
+
+32-bit instruction words formated as follows...
+___________________________________________
+
 00    [AU OP]    [AU_OP]    - Series AU Ops
 01    [LS_OP]    [LS_OP]    - Series LS Ops
 10    [LS_OP]    [AU_OP]    - Parallel LS/AU Ops
@@ -39,7 +51,7 @@
 1111       [CALL_OP]        - Call/Jmp
 
 
-AU Opcodes: 15-bits
+AU Opcodes: 15-bits (triadic)
 ------------------------------------------
 
 0 iiiii aaa bbb ccc  : i.op b, a       (c = a *i* b)
@@ -52,7 +64,7 @@ AU Opcodes: 15-bits
 04 : lsl      (a << #b) -> c
 05 : lsr      (a >> #b) -> c
 06 : asr      (a >> #b) -> c
-07 : sx       sign-extend(b, type(b)) -> c
+07 : sx       sign-extend(a, byte(b)) -> c
 
 08 : Add      (a + b) -> c
 09 : Sub      (a - b) -> c
@@ -66,7 +78,6 @@ AU Opcodes: 15-bits
 1F :
 
   
-  
 LS Opcodes: 15-bits
 ------------------------------------------
 
@@ -76,14 +87,16 @@ LS Opcodes: 15-bits
 10 tt iiiii ppp ddd  : Store (type) d -> p[i]  (st.t p[i], rx)
 11 tt iiiii ppp ddd                            (st.t p++/--i, rx)
 
-NOTE: Post-increment, Pre-decrement
-
  TYPE
  -----------
  00 : 8-bit
  01 : 16-bit
  1i : 32-bit (extended offset field)
 
+NOTE: Post-increment, Pre-decrement
+
+st.w r6--1, rx  == push rx
+ld.w rx, r6++1  == pop rx
 
 
 BR Opcodes: 13-bits

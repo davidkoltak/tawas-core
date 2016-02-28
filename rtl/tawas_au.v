@@ -141,8 +141,9 @@ module tawas_au
     6'h04: au_result = (reg_a << reg_b_as_imm[2:0]);
     6'h05: au_result = (reg_a >> reg_b_as_imm[2:0]);
     6'h06: au_result = (reg_a >>> reg_b_as_imm[2:0]);
-    6'h07: au_result = (reg_b_as_imm[1:0] == 2'b00) ? {{24{reg_a[7]}}, reg_a[7:0]} :
-                       (reg_b_as_imm[1:0] == 2'b01) ? {{16{reg_a[15]}}, reg_a[15:0]} : reg_a;
+    6'h07: au_result = (reg_b_as_imm[1:0] == 2'b01) ? {{24{reg_a[7]}}, reg_a[7:0]} :
+                       (reg_b_as_imm[1:0] == 2'b10) ? {{16{reg_a[15]}}, reg_a[15:0]} :
+                       (reg_b_as_imm[1:0] == 2'b11) ? {{8{reg_a[23]}}, reg_a[23:0]} : reg_a;
     
     6'h08: au_result = reg_a + reg_b;
     6'h09: au_result = reg_a - reg_b;
