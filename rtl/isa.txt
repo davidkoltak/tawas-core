@@ -1,4 +1,34 @@
 
+//
+// Tawas Instruction Set Architecture (ISA)
+//
+// - Notes on instruction set and machine instruction binary format
+//
+// by
+//   David M. Koltak  02/27/2016
+//
+// The MIT License (MIT)
+// 
+// Copyright (c) 2016 David M. Koltak
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+// 
 
 00    [AU OP]    [AU_OP]    - Series AU Ops
 01    [LS_OP]    [LS_OP]    - Series LS Ops
@@ -41,10 +71,12 @@ LS Opcodes: 15-bits
 ------------------------------------------
 
 00 tt iiiii ppp ddd  : Load  (type) p[i] -> d  (ld.t rx, p[i])
-01 tt iiiii ppp ddd                            (ld.t rx, p++i)
+01 tt iiiii ppp ddd                            (ld.t rx, p++/--i)
 
 10 tt iiiii ppp ddd  : Store (type) d -> p[i]  (st.t p[i], rx)
-11 tt iiiii ppp ddd                            (st.t p++i, rx)
+11 tt iiiii ppp ddd                            (st.t p++/--i, rx)
+
+NOTE: Post-increment, Pre-decrement
 
  TYPE
  -----------
@@ -65,20 +97,20 @@ BR Opcodes: 13-bits
 Call Opcodes: 28-bits
 ------------------------------------------
 
-0000 eeeeeeee eeeeeeee eeeeeeee : jmp e (e->pc)
-0001 eeeeeeee eeeeeeee eeeeeeee : jmpr e (pc+e->pc)
+0000 eeeeeeee eeeeeeee eeeeeeee : jmp a (a->pc)
+0001 eeeeeeee eeeeeeee eeeeeeee : jmpr r (pc+r->pc)
 0010 xxxxxxxx xxxxxxxx xxxxxxxx ; jmp r7
 
-0100 eeeeeeee eeeeeeee eeeeeeee : call e (pc->r7, e->pc)
-0101 eeeeeeee eeeeeeee eeeeeeee : callr e (pc->r7, pc+e->pc)
-1110 eeeeeeee eeeeeeee eeeeeeee : call r7, e (pc->r7, r7->pc, e->r0)
+0100 eeeeeeee eeeeeeee eeeeeeee : call a (pc->r7, ea->pc)
+0101 eeeeeeee eeeeeeee eeeeeeee : callr r (pc->r7, pc+r->pc)
+1110 eeeeeeee eeeeeeee eeeeeeee : call r7, ec (pc->r7, r7->pc, ec->r0)
 
-1010 eeeeeeee eeeeeeee eeeeeeee : rtn (r7->pc, e->r0)
+1010 eeeeeeee eeeeeeee eeeeeeee : rtn (r7->pc, ec->r0)
 
 ---1 relative
 --1- pc rtn (e or r7)
 -1-- pc store (pc->r7)
-1--- e store (e->r0)
+1--- ec store (ec->r0)  "exit code"
 
 
 

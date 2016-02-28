@@ -12,7 +12,28 @@
 // by
 //   David M. Koltak  02/11/2016
 //
-
+// The MIT License (MIT)
+// 
+// Copyright (c) 2016 David M. Koltak
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+// 
 module tawas_fetch
 (
   input CLK,
@@ -22,32 +43,23 @@ module tawas_fetch
   input [31:0] IDATA,
 
   output SLICE,
+  input [15:0] AU_FLAGS,
   
   output PC_STORE,
   output [23:0] PC,
   input [23:0] PC_RTN,
   
-  output E_STORE,
-  output [31:0] E,
-
-  input [15:0] AU_FLAGS,
+  output EC_STORE,
+  output [31:0] EC,
 
   output AU_OP_VLD,
-  output [4:0] AU_OP,
-  output [2:0] AU_OP_RA,
-  output [2:0] AU_OP_RB,
-  output [2:0] AU_OP_RC,
+  output [14:0] AU_OP,
 
   output AU_OP_IMM_VLD,
-  output [31:0] AU_OP_IMM,
+  output [27:0] AU_OP_IMM,
 
   output LS_OP_VLD,
-  output LS_OP_STORE,
-  output LS_OP_PTR_UPD,
-  output [1:0] LS_OP_TYPE,
-  output [2:0] LS_OP_PTR,
-  output [5:0] LS_OP_OFFSET,
-  output [2:0] LS_OP_REG
+  output [14:0] LS_OP
 );
 
   //
@@ -60,7 +72,7 @@ module tawas_fetch
   reg [23:0] pc_next;
   reg [23:0] pc_inc;
   reg [23:0] pc_adj;
-  reg e_store_en;
+  reg ec_store_en;
   reg pc_store_en;
   
   reg instr_vld;
@@ -77,8 +89,8 @@ module tawas_fetch
   assign PC_STORE = pc_store_en;
   assign PC = pc_inc;
   
-  assign E_STORE = e_store_en;
-  assign E = {{8{IDATA[23]}}, IDATA[23:0]};
+  assign EC_STORE = ec_store_en;
+  assign EC = {{8{IDATA[23]}}, IDATA[23:0]};
   
   assign IADDR = pc;
   
@@ -114,14 +126,14 @@ module tawas_fetch
   begin
     pc_next = (pc_sel) ? pc_0 : pc_1;
     pc_inc = pc_next + 24'd1;
-    e_store_en = 1'b0;
+    ec_store_en = 1'b0;
     pc_store_en = 1'b0;
     
     if (au_cond_true)
     begin   
       if (IDATA[31:28] == 4'b1111)
       begin
-        e_store_en = IDATA[27];
+        ec_store_en = IDATA[27];
         pc_store_en = IDATA[26];
         pc_adj = (IDATA[25]) ? PC_RTN : IDATA[23:0];
         pc_next = (IDATA[24]) ? pc_next + pc_adj : pc_adj;
@@ -226,6 +238,17 @@ module tawas_fetch
   assign au_upper = (pc_sel) ? series_cmd_0 : series_cmd_1;
   assign ls_upper = au_upper || (IDATA[31:0] == 2'b10);
   
+  assign AU_OP_VLD = (IDATA[31:30] == 2'b00) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1100);
+  assign AU_OP = (au_upper) ? IDATA[30:15] : IDATA[14:0];
+  
+  assign AU_OP_IMM_VLD = (IDATA[31:28] == 4'hE);
+  assign AU_OP_IMM = IDATA[27:0];
+  
+  assign LS_OP_VLD = (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101);
+  assign LS_OP = (ls_upper) ? IDATA[30:15] : IDATA[14:0];
+  
+  /* OLD STUFF
+  
   wire au_imm_vld;
   wire [2:0] au_rega;
   wire [1:0] ls_type;
@@ -256,5 +279,7 @@ module tawas_fetch
   assign LS_OP_OFFSET = ((ls_upper) ? IDATA[26:21] : IDATA[11:6]) & ((ls_type[1]) ? 6'h3F : 6'h1F);
   assign LS_OP_PTR = (ls_upper) ? IDATA[20:18] : IDATA[5:3];
   assign LS_OP_REG = (ls_upper) ? IDATA[17:15] : IDATA[2:0];
-               
+  
+  */
+        
 endmodule

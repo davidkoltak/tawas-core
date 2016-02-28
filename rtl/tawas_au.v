@@ -7,30 +7,52 @@
 // by
 //   David M. Koltak  02/11/2016
 //
+// The MIT License (MIT)
+// 
+// Copyright (c) 2016 David M. Koltak
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+// 
 
 module tawas_au
 (
   input CLK,
   input RST,
 
+  input SLICE,
   output [15:0] AU_FLAGS,
 
   input AU_OP_VLD,
-  input [5:0] AU_OP,
-  input [3:0] AU_OP_RA,
-  input [3:0] AU_OP_RB,
+  input [14:0] AU_OP,
 
   input AU_OP_IMM_VLD,
-  input [31:0] AU_OP_IMM,
+  input [27:0] AU_OP_IMM,
   
-  output [3:0] AU_RA_SEL,
+  output [2:0] AU_RA_SEL,
   input [31:0] AU_RA,
-  output [3:0] AU_RB_SEL,
+  
+  output [2:0] AU_RB_SEL,
   input [31:0] AU_RB,
   
-  output AU_RD_VLD,
-  output [3:0] AU_RD_SEL,
-  output [31:0] AU_RD
+  output AU_RC_VLD,
+  output [2:0] AU_RC_SEL,
+  output [31:0] AU_RC
 );
   
   assign AU_FLAGS = 16'h0001;

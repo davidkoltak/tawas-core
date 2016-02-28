@@ -8,6 +8,28 @@
 // by
 //   David M. Koltak  02/11/2016
 //
+// The MIT License (MIT)
+// 
+// Copyright (c) 2016 David M. Koltak
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+// 
 
 module tawas_regfile
 (
@@ -20,23 +42,24 @@ module tawas_regfile
   input [23:0] PC,
   output [23:0] PC_RTN,
 
-  input E_STORE,
-  input [31:0] E,
+  input EC_STORE,
+  input [31:0] EC,
   
   input [2:0] AU_RA_SEL,
   output [31:0] AU_RA,
+  
   input [2:0] AU_RB_SEL,
   output [31:0] AU_RB,
 
-  input AU_RD_VLD,
-  input [2:0] AU_RD_SEL,
-  input [31:0] AU_RD,
+  input AU_RC_VLD,
+  input [2:0] AU_RC_SEL,
+  input [31:0] AU_RC,
 
-  input [2:0] LS_PTR_REG,
+  input [2:0] LS_PTR_SEL,
   output [31:0] LS_PTR,
 
   input [2:0] LS_STORE_SEL,
-  output [31:0] LS_STORE_DATA,
+  output [31:0] LS_STORE,
 
   input LS_PTR_UPD_VLD,
   input [2:0] LS_PTR_UPD_SEL,
@@ -44,7 +67,7 @@ module tawas_regfile
   
   input LS_LOAD_VLD,
   input [2:0] LS_LOAD_SEL,
-  input [31:0] LS_LOAD_DATA 
+  input [31:0] LS_LOAD
 );
 
   reg [31:0] regfile_0[7:0];
@@ -68,16 +91,16 @@ module tawas_regfile
       regfile_1_nxt[7] = PC;
     end
     
-    if (E_STORE)
+    if (EC_STORE)
     begin
-      regfile_0_nxt[0] = E;
-      regfile_1_nxt[0] = E;
+      regfile_0_nxt[0] = EC;
+      regfile_1_nxt[0] = EC;
     end
     
-    if (AU_RD_VLD)
+    if (AU_RC_VLD)
     begin
-      regfile_0_nxt[AU_RD_SEL] = AU_RD;
-      regfile_1_nxt[AU_RD_SEL] = AU_RD;
+      regfile_0_nxt[AU_RC_SEL] = AU_RC;
+      regfile_1_nxt[AU_RC_SEL] = AU_RC;
     end
     
     if (LS_PTR_UPD_VLD)
@@ -88,8 +111,8 @@ module tawas_regfile
     
     if (LS_LOAD_VLD)
     begin
-      regfile_0_nxt[LS_LOAD_SEL] = LS_LOAD_DATA;
-      regfile_1_nxt[LS_LOAD_SEL] = LS_LOAD_DATA;
+      regfile_0_nxt[LS_LOAD_SEL] = LS_LOAD;
+      regfile_1_nxt[LS_LOAD_SEL] = LS_LOAD;
     end
   end
   
@@ -111,11 +134,11 @@ module tawas_regfile
 
   assign PC_RTN = (SLICE) ? regfile_1[15] : regfile_0[15];
   
-  assign AU_RA = (SLICE) ? regfile_1[AU_RA_SEL] : regfile_1[AU_RA_SEL];  
-  assign AU_RB = (SLICE) ? regfile_1[AU_RB_SEL] : regfile_1[AU_RB_SEL];
+  assign AU_RA = (SLICE) ? regfile_1[AU_RA_SEL] : regfile_0[AU_RA_SEL];  
+  assign AU_RB = (SLICE) ? regfile_1[AU_RB_SEL] : regfile_0[AU_RB_SEL];
   
-  assign LS_PTR = (SLICE) ? regfile_1[LS_PTR_SEL] : regfile_1[LS_PTR_SEL]; 
-  assign LS_STORE_DATA = (SLICE) ? regfile_1[LS_STORE_SEL] : regfile_1[LS_STORE_SEL]; 
+  assign LS_PTR = (SLICE) ? regfile_1[LS_PTR_SEL] : regfile_0[LS_PTR_SEL]; 
+  assign LS_STORE = (SLICE) ? regfile_1[LS_STORE_SEL] : regfile_0[LS_STORE_SEL]; 
 
   //
   // wires for simulation only... provides visibility with waveform viewers that cannot read arrays
