@@ -198,14 +198,43 @@ foreach $FixUp (@FixUps)
     $label_addr =~ s/,.*//;
     $val = $label_addr;
     
-    $Iwords[$spec[1] + 0] |= ($val & 0xFFFFFF);
+    $Iwords[$spec[1] + 0] |= ($val & 0x00FFFFFF);
   }
   elsif (($spec[0] eq 'jmpr') || ($spec[0] eq 'callr'))
   {
     $label_addr =~ s/,.*//;
     $val = $label_addr - $spec[1];
     
-    $Iwords[$spec[1] + 0] |= ($val & 0xFFFFFF);
+    $Iwords[$spec[1] + 0] |= ($val & 0x00FFFFFF);
+  }
+  elsif ($spec[0] eq 'imm32')
+  {
+    $label_addr =~ s/,.*//;
+    $val = $label_addr;
+    
+    if (($Iwords[$spec[1] + 0] & 0xF0000000) == 0xE0000000)
+    { $Iwords[$spec[1] + 0] |= (($val >> 4) & 0x0FFFFFFF); }
+    else
+    { die "ERROR: Immediate fixup prefix error for label '".$spec[2]."' @ ".$spec[3]."\n"; }
+    
+    if (($Iwords[$spec[1] + 1] & 0xC0000000) == 0x00000000)
+    {
+      if (($Iwords[$spec[1] + 1] & (1 << 14)) && ($Iwords[$spec[1] + 1] & (1 << 29)))
+      { die "ERROR: Immediate fixup series instruction error for label '".$spec[2]."' @ ".$spec[3]."\n"; }
+    }
+    
+    if ($Iwords[$spec[1] + 1] & (1 << 14))
+    { 
+      $Iwords[$spec[1] + 0] |= (($val & 7) << 3);
+      $Iwords[$spec[1] + 0] |= ((($val >> 3) & 1) << 13);
+    }
+    elsif (($Iwords[$spec[1] + 1] & (1 << 29)) && (($Iwords[$spec[1] + 1] & 0xC0000000) == 0x00000000))
+    {
+      $Iwords[$spec[1] + 0] |= (($val & 7) << 18);
+      $Iwords[$spec[1] + 0] |= ((($val >> 3) & 1) << 28);
+    }
+    else
+    { die "ERROR: Immediate fixup format error for label '".$spec[2]."' @ ".$spec[3]."\n"; }
   }
   else
   { die "ERROR: Bad FixUp specification '$FixUp'... how did that happen???\n"; }
@@ -266,11 +295,11 @@ sub ldst
     $ptr = $3;
     $offset = $4;
     
-    if (($reg < 0) || ($reg > 15))
-    { die "ERROR: Register ($reg) must be 0-15 @ $input_filename:$linenum\n"; }
+    if (($reg < 0) || ($reg > 7))
+    { die "ERROR: Register ($reg) must be r0-r7 @ $input_filename:$linenum\n"; }
     
-    if (($ptr < 0) || ($ptr > 15))
-    { die "ERROR: Pointer ($ptr) must be 0-15 @ $input_filename:$linenum\n"; }
+    if (($ptr < 0) || ($ptr > 7))
+    { die "ERROR: Pointer ($ptr) must be r0-r7 @ $input_filename:$linenum\n"; }
     
     if ($type eq 'w')
     {
@@ -348,71 +377,139 @@ sub au
   {
     if ($args =~ /[rR](\d+)\s*,\s*(\d\w*)/)
     {
-      my $reg = $1;
+      my $rega = $1;
       my $imm = oct($2);
       
-      if (($reg < 0) || ($reg > 15))
-      { die "ERROR: Register ($reg) must be 0-15 @ $input_filename:$linenum\n"; }
+      if (($rega < 0) || ($rega > 7))
+      { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
       
-      if (($imm < 0) || ($imm > 15))
-      { die "ERROR: Imm ($imm) must be 0-15 @ $input_filename:$linenum\n"; }
+      if (($imm < 1) || ($imm > 8))
+      { die "ERROR: Imm ($imm) must be 1-8 @ $input_filename:$linenum\n"; }
       
-      $rtn |= ($imm << 4) | ($reg);  
+      $rtn |= ($rega << 6) | (($imm - 1) << 3) | ($rega);  
+    }
+    elsif ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)\s*,\s*(\d\w*)/)
+    {
+      my $rega = $2;
+      my $regc = $1;
+      my $imm = oct($3);
+      
+      if (($rega < 0) || ($rega > 7))
+      { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
+      
+      if (($regc < 0) || ($regc > 7))
+      { die "ERROR: Register C ($regc) must be r0-r7 @ $input_filename:$linenum\n"; }
+      
+      if (($imm < 1) || ($imm > 8))
+      { die "ERROR: Imm ($imm) must be 1-8 @ $input_filename:$linenum\n"; }
+      
+      $rtn |= ($rega << 6) | (($imm - 1) << 3) | ($regc);  
     }
     else    
     { die "ERROR: '$cmd($args)' syntax error @ $input_filename:$linenum\n"; }   
   }
-  elsif ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)/)
+  elsif ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)/)
   {
     my $rega = $2;
-    my $regb = $1;
+    my $regb = $3;
+    my $regc = $1;
     
-    if (($rega < 0) || ($rega > 15))
-    { die "ERROR: Register A ($rega) must be 0-15 @ $input_filename:$linenum\n"; } 
+    if (($rega < 0) || ($rega > 7))
+    { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; } 
     
-    if (($regb < 0) || ($regb > 15))
-    { die "ERROR: Register B ($regb) must be 0-15 @ $input_filename:$linenum\n"; } 
+    if (($regb < 0) || ($regb > 7))
+    { die "ERROR: Register B ($regb) must be r0-r7 @ $input_filename:$linenum\n"; } 
     
-    $rtn |= ($rega << 4) | ($regb);  
+    if (($regc < 0) || ($regc > 7))
+    { die "ERROR: Register C ($regc) must be r0-r7 @ $input_filename:$linenum\n"; } 
+    
+    $rtn |= ($rega << 6) | ($regb << 3) | ($regc);  
   }
-  elsif ($args =~ /[rR](\d+)\s*,\s*(\d\w*)/)
+  elsif ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)/)
   {
-    my $reg = $1;
-    my $imm = oct($2);
+    my $rega = $1;
+    my $regb = $2;
     
-    if (($reg < 0) || ($reg > 15))
-    { die "ERROR: Register ($reg) must be 0-15 @ $input_filename:$linenum\n"; }
+    if (($rega < 0) || ($rega > 7))
+    { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; } 
+    
+    if (($regb < 0) || ($regb > 7))
+    { die "ERROR: Register B ($regb) must be r0-r7 @ $input_filename:$linenum\n"; } 
+    
+    $rtn |= ($rega << 6) | ($regb << 3) | ($rega);  
+  }
+  elsif ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)\s*,\s*(\d\w*)/)
+  {
+    my $rega = $2;
+    my $regc = $1;
+    my $imm = oct($3);
+    
+    if (($rega < 0) || ($rega > 7))
+    { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
+    
+    if (($regc < 0) || ($regc > 7))
+    { die "ERROR: Register C ($regc) must be r0-r7 @ $input_filename:$linenum\n"; }
     
     $Iwords[$PC] = (0xE0000000) | (($imm >> 4) & 0x0FFFFFFF);
     $PC++;
-    $rtn |= (1 << 14) | (($imm & 0xf) << 4) | ($reg);
+    $rtn |= (1 << 14) | ((($imm >> 3) & 1) << 13) | ($rega << 6) | (($imm & 7) << 3) | ($regc);
   }
-  elsif ($args =~ /[rR](\d+)\s*,\s*(\w+)/)
-  { 
-    my $reg = $1;
-    push(@FixUps, "imm|$PC|".$2."|$input_filename:$linenum");
+  elsif ($args =~ /[rR](\d+)\s*,\s*(\d\w*)/)
+  {
+    my $rega = $1;
+    my $imm = oct($2);
     
-    if (($reg < 0) || ($reg > 15))
-    { die "ERROR: Register ($reg) must be 0-15 @ $input_filename:$linenum\n"; } 
+    if (($rega < 0) || ($rega > 7))
+    { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
     
-    $rtn |= (1 << 14) | ($reg);
+    $Iwords[$PC] = (0xE0000000) | (($imm >> 4) & 0x0FFFFFFF);
+    $PC++;
+    $rtn |= (1 << 14) | ((($imm >> 3) & 1) << 13) | ($rega << 6) | (($imm & 7) << 3) | ($rega);
+  }
+  elsif ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)\s*,\s*(\d\w*)/)
+  {
+    my $rega = $2;
+    my $regc = $1;
+    push(@FixUps, "imm32|$PC|".$3."|$input_filename:$linenum");
+    
+    if (($rega < 0) || ($rega > 7))
+    { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
+    
+    if (($regc < 0) || ($regc > 7))
+    { die "ERROR: Register C ($regc) must be r0-r7 @ $input_filename:$linenum\n"; }
+    
+    $Iwords[$PC] = (0xE0000000);
+    $PC++;
+    $rtn |= (1 << 14) | ($rega << 6) | ($regc);
+  }
+  elsif ($args =~ /[rR](\d+)\s*,\s*(\d\w*)/)
+  {
+    my $rega = $1;
+    push(@FixUps, "imm32|$PC|".$2."|$input_filename:$linenum");
+    
+    if (($rega < 0) || ($rega > 7))
+    { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
+    
+    $Iwords[$PC] = (0xE0000000);
+    $PC++;
+    $rtn |= (1 << 14) | ($rega << 6) | ($rega);
   }
   else
   { die "ERROR: AU '$cmd($args)' syntax error @ $input_filename:$linenum\n"; }
   
-  if ($cmd eq 'mv')     { $rtn |= (0x00 << 8); }
-  elsif ($cmd eq 'inv') { $rtn |= (0x01 << 8); }
-  elsif ($cmd eq 'inc') { $rtn |= (0x02 << 8); }
-  elsif ($cmd eq 'dec') { $rtn |= (0x03 << 8); }
-  elsif ($cmd eq 'lsl') { $rtn |= (0x04 << 8); }
-  elsif ($cmd eq 'lsr') { $rtn |= (0x05 << 8); }
-  elsif ($cmd eq 'asr') { $rtn |= (0x06 << 8); }
-  elsif ($cmd eq 'sx')  { $rtn |= (0x07 << 8); }
-  elsif ($cmd eq 'add') { $rtn |= (0x08 << 8); }
-  elsif ($cmd eq 'sub') { $rtn |= (0x09 << 8); }
-  elsif ($cmd eq 'and') { $rtn |= (0x0A << 8); }
-  elsif ($cmd eq 'or')  { $rtn |= (0x0B << 8); }
-  elsif ($cmd eq 'xor') { $rtn |= (0x0C << 8); }
+  if ($cmd eq 'mv')     { $rtn |= (0x00 << 9); }
+  elsif ($cmd eq 'inv') { $rtn |= (0x01 << 9); }
+  elsif ($cmd eq 'inc') { $rtn |= (0x02 << 9); }
+  elsif ($cmd eq 'dec') { $rtn |= (0x03 << 9); }
+  elsif ($cmd eq 'lsl') { $rtn |= (0x04 << 9); }
+  elsif ($cmd eq 'lsr') { $rtn |= (0x05 << 9); }
+  elsif ($cmd eq 'asr') { $rtn |= (0x06 << 9); }
+  elsif ($cmd eq 'sx')  { $rtn |= (0x07 << 9); }
+  elsif ($cmd eq 'add') { $rtn |= (0x08 << 9); }
+  elsif ($cmd eq 'sub') { $rtn |= (0x09 << 9); }
+  elsif ($cmd eq 'and') { $rtn |= (0x0A << 9); }
+  elsif ($cmd eq 'or')  { $rtn |= (0x0B << 9); }
+  elsif ($cmd eq 'xor') { $rtn |= (0x0C << 9); }
   else
   { die "ERROR: Invalid AU command '$cmd' @ $input_filename:$linenum\n"; }
   

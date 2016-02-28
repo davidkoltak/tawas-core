@@ -132,7 +132,7 @@ module tawas_regfile
       for (x = 0; x < 8; x = x + 1)
         regfile_1[x] <= regfile_1_nxt[x];
 
-  assign PC_RTN = (SLICE) ? regfile_1[15] : regfile_0[15];
+  assign PC_RTN = (SLICE) ? regfile_1[7] : regfile_0[7];
   
   assign AU_RA = (SLICE) ? regfile_1[AU_RA_SEL] : regfile_0[AU_RA_SEL];  
   assign AU_RB = (SLICE) ? regfile_1[AU_RB_SEL] : regfile_0[AU_RB_SEL];

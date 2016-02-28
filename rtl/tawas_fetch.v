@@ -210,25 +210,6 @@ module tawas_fetch
     end
 
   //
-  // Immediate Data holding register
-  //
-  
-  reg [27:0] imm_hold_0;
-  reg [27:0] imm_hold_1;
-  
-  always @ (posedge CLK or posedge RST)
-    if (RST)
-      imm_hold_0 <= 28'd0;
-    else if ((pc_sel) && (IDATA[31:28] == 4'hE))
-      imm_hold_0 <= IDATA[28:0];
-
-  always @ (posedge CLK or posedge RST)
-    if (RST)
-      imm_hold_1 <= 28'd0;
-    else if ((~pc_sel) && (IDATA[31:28] == 4'hE))
-      imm_hold_1 <= IDATA[28:0];
-
-  //
   // Pick opcodes from instruction words
   //  
 
@@ -246,40 +227,5 @@ module tawas_fetch
   
   assign LS_OP_VLD = (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101);
   assign LS_OP = (ls_upper) ? IDATA[30:15] : IDATA[14:0];
-  
-  /* OLD STUFF
-  
-  wire au_imm_vld;
-  wire [2:0] au_rega;
-  wire [1:0] ls_type;
-  
-  assign AU_OP_VLD = (IDATA[31:30] == 2'b00) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1100);
-  
-  assign au_imm_vld = (au_upper) ? IDATA[29] : IDATA[14];
-  assign AU_OP = ((au_upper) ? IDATA[28:24] : IDATA[13:9]) & ((au_imm_vld) ? 5'h0F : 5'h1F);
-  
-  assign au_rega = (au_upper) ? IDATA[23:21] : IDATA[8:6];
-  assign AU_OP_RA = au_rega;
-  
-  assign AU_OP_RB = (au_upper) ? IDATA[20:18] : IDATA[5:3];
-  assign AU_OP_RC = (au_upper) ? IDATA[17:15] : IDATA[2:0];
-
-  assign AU_OP_IMM_VLD = au_imm_vld;
-  assign AU_OP_IMM[31:4] = (pc_sel) ? imm_hold_0 : imm_hold_1;
-  assign AU_OP_IMM[3] = (au_upper) ? IDATA[28] : IDATA[13];
-  assign AU_OP_IMM[2:0] = au_rega;
-
-  assign LS_OP_VLD = (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101);
-  assign LS_OP_STORE = (ls_upper) ? IDATA[29] : IDATA[14];
-  assign LS_OP_PTR_UPD = (ls_upper) ? IDATA[28] : IDATA[13];
-  
-  assign ls_type = (ls_upper) ? IDATA[27:26] : IDATA[12:11];
-  assign LS_OP_TYPE = ls_type;
-  
-  assign LS_OP_OFFSET = ((ls_upper) ? IDATA[26:21] : IDATA[11:6]) & ((ls_type[1]) ? 6'h3F : 6'h1F);
-  assign LS_OP_PTR = (ls_upper) ? IDATA[20:18] : IDATA[5:3];
-  assign LS_OP_REG = (ls_upper) ? IDATA[17:15] : IDATA[2:0];
-  
-  */
         
 endmodule

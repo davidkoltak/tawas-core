@@ -42,23 +42,23 @@
 AU Opcodes: 15-bits
 ------------------------------------------
 
-0 iiiii aaa bbb ccc  : i.op b, a       (b = b *i* a)
-1 aiiii aaa bbb ccc : i.op b, imm      (b = b *i* imm(a))
+0 iiiii aaa bbb ccc  : i.op b, a       (c = a *i* b)
+1 biiii aaa bbb ccc : i.op b, imm      (b = a *i* imm(b))
 
-00 : Move     (a) -> b    (NOTE: 00 = "mv r0, r0", aka "nop")
-01 : Inv      (~a) -> b
-02 : Inc      (b + #a) -> b
-03 : Dec      (b - #a) -> b
-04 : lsl      (b << #a) -> b
-05 : lsr      (b >> #a) -> b
-06 : asr      (b >> #a) -> b
-07 : sx       sign-extend(b, type(a)) -> b
+00 : Move     (b) -> c    (NOTE: 00 = "mv r0, r0", aka "nop")
+01 : Inv      (~b) -> c
+02 : Inc      (a + #b) -> c
+03 : Dec      (a - #b) -> c
+04 : lsl      (a << #b) -> c
+05 : lsr      (a >> #b) -> c
+06 : asr      (a >> #b) -> c
+07 : sx       sign-extend(b, type(b)) -> c
 
-08 : Add      (b + a) -> b
-09 : Sub      (b - a) -> b
-0A : And      (b & a) -> b
-0B : Or       (b | a) -> b
-0C : Xor      (b ^ a) -> b
+08 : Add      (a + b) -> c
+09 : Sub      (a - b) -> c
+0A : And      (a & b) -> c
+0B : Or       (a | b) -> c
+0C : Xor      (a ^ b) -> c
 0D :
 0E :
 0F :

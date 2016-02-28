@@ -136,7 +136,7 @@ module tawas
   wire [31:0] ls_ptr_upd;
   
   wire ls_load_vld;
-  wire [3:0] ls_load_sel;
+  wire [2:0] ls_load_sel;
   wire [31:0] ls_load;
   
   tawas_ls tawas_ls
