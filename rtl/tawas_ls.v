@@ -35,11 +35,11 @@ module tawas_ls
   input CLK,
   input RST,
 
-  output [31:0] DADDR,
-  output DCS,
-  output DWR,
-  output [3:0] DMASK,
-  output [31:0] DOUT,
+  output reg [31:0] DADDR,
+  output reg DCS,
+  output reg DWR,
+  output reg [3:0] DMASK,
+  output reg [31:0] DOUT,
   input [31:0] DIN,
 
   input LS_OP_VLD,
@@ -51,25 +51,119 @@ module tawas_ls
   output [2:0] LS_STORE_SEL,
   input [31:0] LS_STORE,
 
-  output LS_PTR_UPD_VLD,
-  output [2:0] LS_PTR_UPD_SEL,
-  output [31:0] LS_PTR_UPD,
+  output reg LS_PTR_UPD_VLD,
+  output reg [2:0] LS_PTR_UPD_SEL,
+  output reg [31:0] LS_PTR_UPD,
   
   output LS_LOAD_VLD,
   output [2:0] LS_LOAD_SEL,
   output [31:0] LS_LOAD
 );
 
-  assign LS_PTR_SEL = 3'd0;
-  assign LS_STORE_SEL = 3'd0;
+  //
+  // Instruction decode
+  //
   
-  assign LS_PTR_UPD_VLD = 1'b0;
-  assign LS_PTR_UPD_SEL = 3'd0;
-  assign LS_PTR_UPD = 32'd0;
+  reg [7:0] ld_d1;
+  reg [7:0] ld_d2;
+  reg [7:0] ld_d3;
   
-  assign LS_LOAD_VLD = 1'b0;
-  assign LS_LOAD_SEL = 3'd0;
-  assign  LS_LOAD_DATA = 32'd0;
+  wire [31:0] addr_offset;
+  wire [31:0] addr_adj;
+  wire [31:0] addr_next;
+  wire [31:0] addr_out;
+  
+  wire [31:0] wr_data;
+  wire [3:0] wr_data_mask;
+  wire [3:0] wr_data_mask_shifted;
+  
+  assign LS_PTR_SEL = LS_OP[5:3];
+  assign LS_STORE_SEL = LS_OP[2:0];
+  
+  assign addr_offset = (LS_OP[12]) ? {{24{1'b0}}, LS_OP[11:6], 2'd0} :
+                       (LS_OP[11]] ? {{26{1'b0}}, LS_OP[10:6], 1'd0} 
+                                   : {{27{1'b0}}, LS_OP[10:6]};
+                    
+  assign addr_adj = (LS_OP[12]) ? {{24{LS_OP[11]}}, LS_OP[11:6], 2'd0} :
+                    (LS_OP[11]] ? {{26{LS_OP[10]}}, LS_OP[10:6], 1'd0} 
+                                : {{27{LS_OP[10]}}, LS_OP[10:6]};
+  
+  assign addr_next = LS_PTR + ((LS_OP[13]) ? addr_adj : addr_offset);
+  assign addr_out = (LS_OP[13] && !addr_adj[31]) ? LS_PTR : addr_next;
+  
+  assign wr_data = (LS_OP[12]) ? LS_STORE[31:0] :
+                   (LS_OP[11]) ? {LS_STORE{15:0], LS_STORE[15:0]}
+                               : {LS_STORE[7:0], LS_STORE[7:0], LS_STORE[7:0], LS_STORE[7:0]};
+  
+  assign data_mask = (LS_OP[12]) ? 4'b1111 :
+                     (LS_OP[11]) ? (addr_out[0]) ? 4'b1100 : 4'b0011
+                                 : (addr_out[1] && addr_out[0]) ? 4'b1000 :
+                                   (addr_out[1]               ) ? 4'b0100 :
+                                   (               addr_out[0]) ? 4'b0100
+                                                                   : 4'b0001;
+                  
+  always @ (posedge CLK or posedge RST)
+    if (RST)
+      ld_d1 <= {8{1'b0}};
+    else if (LS_OP_VLD)
+      ld_d1 <= {LS_OP[14:12], addr_out[1:0], LS_OP[2:0]};
+    else
+      ld_d1 <= {8{1'b0}};
+  
+  always @ (posedge CLK or posedge RST)
+    if (RST)
+      {ld_d3, ld_d2} <= {{4{1'b0}}, {4{1'b0}}};
+    else
+      {ld_d3, ld_d2} <= {ld_d2, ld_d1};
+    
+  always @ (posedge CLK)
+    if (LS_OP_VLD)
+    begin
+      DADDR <= {addr_out[31:2], 2'b00};
+      DCS <= 1'b1;
+      DWR <= LS_OP[14];
+      DMASK <= data_mask;
+      DOUT <= (LS_OP[14]) ? wr_data : 32'd0;
+      
+      LS_PTR_UPD_VLD <= LS_OP[13];
+      LS_PTR_UPD_SEL <= LS_OP[5:3];
+      LS_PTR_UPD <= addr_new;
+    end
+    else
+    begin
+      DADDR <= 32'd0;
+      DCS <= 1'b0;
+      DWR <= 1'b0;
+      DMASK <= 4'b0000;
+      DOUT <= 32'd0;
+      
+      LS_PTR_UPD_VLD <= 1'b0;
+      LS_PTR_UPD_SEL <= 3'b0;
+      LS_PTR_UPD <= 32'd0;
+    end
+    
+  //
+  // Register read data and send to regfile
+  //
+  
+  reg [31:0] rd_data;
+  wire [31:0] rd_data_final;
+  
+  always @ (posedge CLK)
+    if (ld_d2[7])
+      rd_data <= DIN;
+  
+  assign rd_data_final = (ld_d3[6]) ? rd_data :
+                         (ld_d3[5]) ? (ld_d3[4]) ? {16'd0, rdata[31:16]}
+                                                 : {16'd0, rdata[15:0]}
+                                    : (ld_d3[4] && ld_d3[3]) ? {24'd0, rdata[31:24]}
+                                      (ld_d3[4]            ) ? {24'd0, rdata[23:16]}
+                                      (            ld_d3[3]) ? {24'd0, rdata[15:8]}
+                                                             : {24'd0, rdata[7:0]}          
+  
+  assign LS_LOAD_VLD = ld_d3[7];
+  assign LS_LOAD_SEL = ld_d3[2:0];
+  assign  LS_LOAD_DATA = rd_data_final;
   
 endmodule
   
