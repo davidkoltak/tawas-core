@@ -217,7 +217,7 @@ module tawas_fetch
   wire ls_upper;
   
   assign au_upper = (pc_sel) ? series_cmd_0 : series_cmd_1;
-  assign ls_upper = au_upper || (IDATA[31:0] == 2'b10);
+  assign ls_upper = au_upper || (IDATA[31:30] == 2'b10);
   
   assign AU_OP_VLD = (IDATA[31:30] == 2'b00) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1100);
   assign AU_OP = (au_upper) ? IDATA[30:15] : IDATA[14:0];

@@ -74,25 +74,24 @@ module tawas_ls
   wire [31:0] addr_out;
   
   wire [31:0] wr_data;
-  wire [3:0] wr_data_mask;
-  wire [3:0] wr_data_mask_shifted;
+  wire [3:0] data_mask;
   
   assign LS_PTR_SEL = LS_OP[5:3];
   assign LS_STORE_SEL = LS_OP[2:0];
   
   assign addr_offset = (LS_OP[12]) ? {{24{1'b0}}, LS_OP[11:6], 2'd0} :
-                       (LS_OP[11]] ? {{26{1'b0}}, LS_OP[10:6], 1'd0} 
+                       (LS_OP[11]) ? {{26{1'b0}}, LS_OP[10:6], 1'd0} 
                                    : {{27{1'b0}}, LS_OP[10:6]};
                     
   assign addr_adj = (LS_OP[12]) ? {{24{LS_OP[11]}}, LS_OP[11:6], 2'd0} :
-                    (LS_OP[11]] ? {{26{LS_OP[10]}}, LS_OP[10:6], 1'd0} 
+                    (LS_OP[11]) ? {{26{LS_OP[10]}}, LS_OP[10:6], 1'd0} 
                                 : {{27{LS_OP[10]}}, LS_OP[10:6]};
   
   assign addr_next = LS_PTR + ((LS_OP[13]) ? addr_adj : addr_offset);
   assign addr_out = (LS_OP[13] && !addr_adj[31]) ? LS_PTR : addr_next;
   
   assign wr_data = (LS_OP[12]) ? LS_STORE[31:0] :
-                   (LS_OP[11]) ? {LS_STORE{15:0], LS_STORE[15:0]}
+                   (LS_OP[11]) ? {LS_STORE[15:0], LS_STORE[15:0]}
                                : {LS_STORE[7:0], LS_STORE[7:0], LS_STORE[7:0], LS_STORE[7:0]};
   
   assign data_mask = (LS_OP[12]) ? 4'b1111 :
@@ -106,7 +105,7 @@ module tawas_ls
     if (RST)
       ld_d1 <= {8{1'b0}};
     else if (LS_OP_VLD)
-      ld_d1 <= {LS_OP[14:12], addr_out[1:0], LS_OP[2:0]};
+      ld_d1 <= {!LS_OP[14], LS_OP[12:11], addr_out[1:0], LS_OP[2:0]};
     else
       ld_d1 <= {8{1'b0}};
   
@@ -127,7 +126,7 @@ module tawas_ls
       
       LS_PTR_UPD_VLD <= LS_OP[13];
       LS_PTR_UPD_SEL <= LS_OP[5:3];
-      LS_PTR_UPD <= addr_new;
+      LS_PTR_UPD <= addr_next;
     end
     else
     begin
@@ -154,16 +153,16 @@ module tawas_ls
       rd_data <= DIN;
   
   assign rd_data_final = (ld_d3[6]) ? rd_data :
-                         (ld_d3[5]) ? (ld_d3[4]) ? {16'd0, rdata[31:16]}
-                                                 : {16'd0, rdata[15:0]}
-                                    : (ld_d3[4] && ld_d3[3]) ? {24'd0, rdata[31:24]}
-                                      (ld_d3[4]            ) ? {24'd0, rdata[23:16]}
-                                      (            ld_d3[3]) ? {24'd0, rdata[15:8]}
-                                                             : {24'd0, rdata[7:0]}          
+                         (ld_d3[5]) ? (ld_d3[4]) ? {16'd0, rd_data[31:16]}
+                                                 : {16'd0, rd_data[15:0]}
+                                    : (ld_d3[4] && ld_d3[3]) ? {24'd0, rd_data[31:24]} :
+                                      (ld_d3[4]            ) ? {24'd0, rd_data[23:16]} :
+                                      (            ld_d3[3]) ? {24'd0, rd_data[15:8]}
+                                                             : {24'd0, rd_data[7:0]};        
   
   assign LS_LOAD_VLD = ld_d3[7];
   assign LS_LOAD_SEL = ld_d3[2:0];
-  assign  LS_LOAD_DATA = rd_data_final;
+  assign LS_LOAD = rd_data_final;
   
 endmodule
   

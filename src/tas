@@ -87,35 +87,35 @@ while ($#FileList >= 0)
     if ($line eq '')
     { next; }
     
-    if ($line =~ /\s*(ld|st)\s*\((.+)\)\s*;\s*(ld|st)\s*\((.+)\)\s*;/)
+    if ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
     {
       # ld/st, ld/st
       $i_lower = &ldst($1, $2);
       $i_upper = &ldst($3, $4);
       $i_total = (1 << 30) | ($i_upper << 15) | ($i_lower);
     }
-    elsif ($line =~ /\s*(br)\s*\((.+)\)\s*;\s*(ld|st)\s*\((.+)\)\s*;/)
+    elsif ($line =~ /\s*(br)\s*\((.+)\)\s*;\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
     {
       # br, ld/st
       $i_lower = &ldst($3, $4);
       $i_upper = &br($1, $2);
       $i_total = (13 << 28) | ($i_upper << 15) | ($i_lower);
     }
-    elsif ($line =~ /\s*(ld|st)\s*\((.+)\)\s*;\s*(br)\s*\((.+)\)\s*;/)
+    elsif ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;\s*(br)\s*\((.+)\)\s*;/)
     {
       # br, ld/st
       $i_lower = &ldst($1, $2);
       $i_upper = &br($3, $4);
       $i_total = (13 << 28) | ($i_upper << 15) | ($i_lower);
     }
-    elsif ($line =~ /\s*(ld|st)\s*\((.+)\)\s*;\s*([a-z]+)\s*\((.*)\)\s*;/)
+    elsif ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;\s*([a-z]+)\s*\((.*)\)\s*;/)
     {
       # br, au
       $i_lower = &au($3, $4);
       $i_upper = &ldst($1, $2);
       $i_total = (2 << 30) | ($i_upper << 15) | ($i_lower);
     }
-    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;\s*(ld|st)\s*\((.+)\)\s*;/)
+    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
     {
       # br, au
       $i_lower = &au($1, $2);
@@ -288,12 +288,30 @@ sub ldst
   
   #print "ldst: $cmd ($args)\n";
   
-  if ($args =~ /(b|h|w)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)\[(\d+)\]/)
+  if (($cmd eq 'push') || ($cmd eq 'pop'))
+  {
+    if ($args =~ /[rR](\d+)/)
+    {
+      $type = 'w';
+      $reg = $1;
+      $ptr = 6;
+      
+      if ($cmd eq 'push')
+      { $offset = 0x3F; }
+      else
+      { $offset = 1; }
+    }
+    else
+    { die "ERROR: Push/Pop syntax error @ $input_filename:$linenum\n"; }
+    
+    $rtn |= (1 << 13);
+  }
+  elsif ($args =~ /(b|h|w)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)\[(\d\w*)\]/)
   {
     $type = $1;
     $reg = $2;
     $ptr = $3;
-    $offset = $4;
+    $offset = oct($4);
     
     if (($reg < 0) || ($reg > 7))
     { die "ERROR: Register ($reg) must be r0-r7 @ $input_filename:$linenum\n"; }
@@ -303,28 +321,64 @@ sub ldst
     
     if ($type eq 'w')
     {
-      if (($offset < 0) || ($offset > 31))
-      { die "ERROR: Word Offset ($offset) must be 0-31 @ $input_filename:$linenum\n"; }
+      if (($offset < 0) || ($offset > 63))
+      { die "ERROR: Word Offset ($offset) must be 0-63 @ $input_filename:$linenum\n"; }
     }
     else
     {
-      if (($offset < 0) || ($offset > 15))
-      { die "ERROR: Offset ($offset) must be 0-15 @ $input_filename:$linenum\n"; }
+      if (($offset < 0) || ($offset > 31))
+      { die "ERROR: Offset ($offset) must be 0-31 @ $input_filename:$linenum\n"; }
     }
+  }
+  elsif ($args =~ /(b|h|w)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)(\+\+|\-\-)(\d\w*)/)
+  {
+    $type = $1;
+    $reg = $2;
+    $ptr = $3;
+    $inc_dec = $4;
+    $offset = $5;
+    
+    if ($inc_dec eq '--')
+    { $offset = -($offset); }
+    
+    if (($reg < 0) || ($reg > 7))
+    { die "ERROR: Register ($reg) must be r0-r7 @ $input_filename:$linenum\n"; }
+    
+    if (($ptr < 0) || ($ptr > 7))
+    { die "ERROR: Pointer ($ptr) must be r0-r7 @ $input_filename:$linenum\n"; }
+    
+    if ($type eq 'w')
+    {
+      if (($offset < -32) || ($offset > 31))
+      { die "ERROR: Word Offset ($offset) must be -32,31 @ $input_filename:$linenum\n"; }
+      
+      $offset &= 0x3F;
+    }
+    else
+    {
+      if (($offset < -16) || ($offset > 15))
+      { die "ERROR: Offset ($offset) must be -16,15 @ $input_filename:$linenum\n"; }
+    
+      $offset &= 0x1F;
+    }
+    
+    $rtn |= (1 << 13);
   }
   else
   { die "ERROR: Ld/St syntax error @ $input_filename:$linenum\n"; }
   
-  if ($cmd eq 'st')
-  { $rtn = (1 << 14); }
+  if (($cmd eq 'st') || ($cmd eq 'push'))
+  { $rtn |= (1 << 14); }
   
   if ($type eq 'h')
-  { $rtn |= (1 << 12); }
+  { $rtn |= (1 << 11); }
   elsif ($type eq 'w')
-  { $rtn |= (2 << 12); }
+  { $rtn |= (2 << 11); }
+  elsif ($type ne 'b')
+  { die "ERROR: Invaid Ld/St type '$type' @ $input_filename:$linenum\n"; }
   
-  $rtn |= ($offset << 8);
-  $rtn |= ($ptr << 4);
+  $rtn |= ($offset << 6);
+  $rtn |= ($ptr << 3);
   $rtn |= ($reg << 0);
   
   return $rtn;

@@ -84,8 +84,8 @@ LS Opcodes: 15-bits
 00 tt iiiii ppp ddd  : Load  (type) p[i] -> d  (ld.t rx, p[i])
 01 tt iiiii ppp ddd                            (ld.t rx, p++/--i)
 
-10 tt iiiii ppp ddd  : Store (type) d -> p[i]  (st.t p[i], rx)
-11 tt iiiii ppp ddd                            (st.t p++/--i, rx)
+10 tt iiiii ppp ddd  : Store (type) d -> p[i]  (st.t rx, p[i])
+11 tt iiiii ppp ddd                            (st.t rx p++/--i)
 
  TYPE
  -----------
