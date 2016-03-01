@@ -31,12 +31,14 @@
 // 
 
 Symetrical Dual-threaded (50% clocks each)
- - Hides IROM fetch latency
+ - Hides IROM fetch latency and pipeline delays
+ - Chose this over pipeline stalls because of better IPC
  - Chose this over branch delay slot because of easier programming
- - Also provides natural TX/RX, Read/Write, or Consumer/Producer thread seperation
+ - Reduced single thread performance, so need to keep both threads busy
+ - Also provides natural TX/RX, Read/Write, or Consumer/Producer thread separation
  - Both threads share same IROM, but start at different offsets
 
-Each thread has 8 x 32-bit registers: r6->stack, r7->link
+Each thread has 8 x 32-bit registers: r6->link, r7->stack
 
 
 32-bit instruction words formated as follows...
@@ -47,8 +49,9 @@ ___________________________________________
 10    [LS_OP]    [AU_OP]    - Parallel LS/AU Ops
 1100  [BR_OP]    [AU_OP]    - Parallel BR/AU Ops
 1101  [BR_OP]    [LS_OP]    - Parallel BR/AU Ops
-1110       [IMM_OP]         - Set Immediate MSB 28'bits
-1111       [CALL_OP]        - Call/Jmp
+1110       [IMM_HOLD]       - Set Immediate Hold MSB 28'bits
+11110      [IMM_LD]         - Load 24-bit signed exteded immediate to register
+111110     [CALL_OP]        - Call/Jmp
 
 
 AU Opcodes: 15-bits (triadic)
@@ -95,35 +98,116 @@ LS Opcodes: 15-bits
 
 NOTE: Post-increment, Pre-decrement
 
-st.w r6--1, rx  == push rx
-ld.w rx, r6++1  == pop rx
+st.w r7--1, rx  == push rx
+ld.w rx, r7++1  == pop rx
 
 
 BR Opcodes: 13-bits
 ------------------------------------------
 
-0 cccc iiii iiii  : br.cc -128,127 words
-1 iiii iiii iiii  : br -2048,2047 words
+0 iiii iiii iiii  : br -2048,2047 words
+1 xxxx 0000 0000  : rtn (pc->r6, r6->pc)
+1 cccc iiii iiii  : br.cc -128,127 words
 
+NOTE: rtn() saves pc back to r6, so it can be used
+      as an indirect call/jmp
 
-
-Call Opcodes: 28-bits
+Imm Hold: 24-bits
 ------------------------------------------
 
-0000 eeeeeeee eeeeeeee eeeeeeee : jmp a (a->pc)
-0010 xxxxxxxx xxxxxxxx xxxxxxxx ; jmp r7
+eeeeeeee eeeeeeee eeeeeeee : 24-bits are placed in a holding register
+                             for later use by AU Opcode 'imm' field
 
-0100 eeeeeeee eeeeeeee eeeeeeee : call a (pc->r7, ea->pc)
-1110 eeeeeeee eeeeeeee eeeeeeee : call r7, ec (pc->r7, r7->pc, ec->r0)
+Imm Load: 27-bits
+------------------------------------------
 
-1010 eeeeeeee eeeeeeee eeeeeeee : rtn (r7->pc, ec->r0)
+rrr eeeeeeee eeeeeeee eeeeeeee : Store signed extended 24-bit value
+                                 into Rx
+                                 
 
----1 pc rtn (e or r7)
---1- pc store (pc->r7)
--1-- ec store (ec->r0)  "exit code"
-1--- r7 push/pop (r7->r6--1) "push if pc_store, pop otherwise"
+Call Opcodes: 26-bits
+------------------------------------------
+
+00 eeeeeeee eeeeeeee eeeeeeee : jmp a (e->pc)
+01 eeeeeeee eeeeeeee eeeeeeee : call a (pc->r6, e->pc)
+11 eeeeeeee eeeeeeee eeeeeeee : call a (push(r6), pc->r6, e->pc)
+  
 
 
+ASSEMBLY OPCODES
+---------------------------
 
-strcmp:
+  call(label);
+  icall(r6);
+  rtn();
+  
+  nop();    // Single cycle NOP in one 32-bit word
+  nop2();   // Two cycle NOP in one 32-bit word
+  
+  jmp(label);
+  br(label);
+  br(cond, label);
+  
+  ldi(rX, Imm24); // sign extended to 32-bits
+
+  push(rX);
+  st(b|h|w, rX, rY++/--#); // pre-dec, post-inc, # in type size
+  st(b|h|w, rX, rY[#]);
+  
+  pop(rX);
+  ld(b|h|w, rX, rY++/--#);
+  ld(b|h|w, rX, rY[#]);
+  
+  mv(rX, rY);
+  mv(rX, Imm32);
+  
+  inv(rX);
+  inv(rX, rY);
+  
+  inc(rX, Imm3); // 1-8
+  inc(rX, rY, Imm3);
+  
+  dec(rX, Imm3);
+  dec(rX, rY, Imm3);
+  
+  lsl(rX, Imm3);
+  lsl(rX, rY, Imm3);
+  
+  lsr(rX, Imm3);
+  lsr(rX, rY, Imm3);
+  
+  asr(rX, Imm3);
+  asr(rX, rY, Imm3);
+  
+  sx(rX, {1,2,3});
+  sx(rX, rY, {1,2,3});
+  
+  cmp(rX, rY);
+  
+  Triadic Ops (t_op) = add, sub, and, or, xor
+  --------------------------------------------
+  t_op(rX);
+  t_op(rX, rY);
+  t_op(rX, rY, rZ);
+  t_op(rX, Imm32);
+  t_op(rX, rY, Imm32);
+  
+  
+  Full Word Ops
+  --------------
+  call (optionally can include 'push(r6)')
+  jmp
+  ldi
+  
+  Parallel Ops (Execute in same clock cycle)
+  ------------------------------------------
+  call; push(r6);
+  (br|rtn|icall); (mv|inv|inc|inc|dec|lsl|lsr|asr|sx|cmp|add|sub|and|or|xor);
+  (br|rtn|icall); (ld|st|push|pop);
+  (ld|st|push|pop); (mv|inv|inc|inc|dec|lsl|lsr|asr|sx|cmp|add|sub|and|or|xor);
+  
+  Serial Ops (Left instruction on first cycle, right instruction on second cycle)
+  --------------------------------------------------------------------------------
+  (mv|inv|inc|inc|dec|lsl|lsr|asr|sx|cmp|add|sub|and|or|xor); (mv|inv|inc|inc|dec|lsl|lsr|asr|sx|cmp|add|sub|and|or|xor);
+  (ld|st|push|pop); (ld|st|push|pop);
   

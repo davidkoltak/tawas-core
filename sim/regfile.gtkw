@@ -1,24 +1,26 @@
 [*]
 [*] GTKWave Analyzer v3.3.58 (w)1999-2014 BSI
-[*] Tue Mar  1 05:07:50 2016
+[*] Tue Mar  1 22:45:48 2016
 [*]
 [dumpfile] "/home/dkoltak/github/tawas-core/sim/results.vcd"
-[dumpfile_mtime] "Tue Mar  1 05:07:09 2016"
-[dumpfile_size] 76799
+[dumpfile_mtime] "Tue Mar  1 22:45:27 2016"
+[dumpfile_size] 130167
 [savefile] "/home/dkoltak/github/tawas-core/sim/regfile.gtkw"
 [timestart] 0
 [size] 1325 744
 [pos] -1 -1
-*-8.589123 1580 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-9.522443 500 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] testbench.
 [treeopen] testbench.tawas.
 [sst_width] 223
-[signals_width] 191
+[signals_width] 237
 [sst_expanded] 1
 [sst_vpaned_height] 211
 @28
 testbench.tawas.RST
 testbench.tawas.CLK
+@25
+testbench.cycle_count[31:0]
 @200
 -
 @22
@@ -50,7 +52,6 @@ testbench.tawas.tawas_ls.DWR
 testbench.tawas.tawas_ls.DADDR[31:0]
 testbench.tawas.tawas_ls.DMASK[3:0]
 testbench.tawas.tawas_ls.DOUT[31:0]
-@23
 testbench.tawas.tawas_ls.DIN[31:0]
 [pattern_trace] 1
 [pattern_trace] 0

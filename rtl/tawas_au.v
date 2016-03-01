@@ -41,8 +41,8 @@ module tawas_au
   input AU_OP_VLD,
   input [14:0] AU_OP,
 
-  input AU_OP_IMM_VLD,
-  input [27:0] AU_OP_IMM,
+  input AU_IMM_VLD,
+  input [27:0] AU_IMM,
   
   output [2:0] AU_RA_SEL,
   input [31:0] AU_RA,
@@ -65,14 +65,14 @@ module tawas_au
   always @ (posedge CLK or posedge RST)
     if (RST)
       imm_hold_0 <= 28'd0;
-    else if (AU_OP_IMM_VLD && (!SLICE))
-      imm_hold_0 <= AU_OP_IMM;
+    else if (AU_IMM_VLD && (!SLICE))
+      imm_hold_0 <= AU_IMM;
 
   always @ (posedge CLK or posedge RST)
     if (RST)
       imm_hold_1 <= 28'd0;
-    else if (AU_OP_IMM_VLD && SLICE)
-      imm_hold_1 <= AU_OP_IMM;
+    else if (AU_IMM_VLD && SLICE)
+      imm_hold_1 <= AU_IMM;
 
   //
   // OP DECODE

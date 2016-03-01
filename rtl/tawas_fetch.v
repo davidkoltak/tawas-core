@@ -48,16 +48,17 @@ module tawas_fetch
   output PC_STORE,
   output [23:0] PC,
   input [23:0] PC_RTN,
-  
-  output EC_STORE,
-  output [31:0] EC,
+
+  output RF_IMM_VLD,
+  output [2:0] RF_IMM_SEL,
+  output [31:0] RF_IMM,
 
   output AU_OP_VLD,
   output [14:0] AU_OP,
 
-  output AU_OP_IMM_VLD,
-  output [27:0] AU_OP_IMM,
-
+  output AU_IMM_VLD,
+  output [27:0] AU_IMM,
+  
   output LS_OP_VLD,
   output [14:0] LS_OP
 );
@@ -71,9 +72,8 @@ module tawas_fetch
   
   reg [23:0] pc_next;
   reg [23:0] pc_inc;
-  reg ec_store_en;
   reg pc_store_en;
-  reg r7_pp_en;
+  reg r6_push_en;
   
   reg instr_vld;
   reg pc_sel;
@@ -88,9 +88,6 @@ module tawas_fetch
   
   assign PC_STORE = pc_store_en;
   assign PC = pc_inc;
-  
-  assign EC_STORE = ec_store_en;
-  assign EC = {{8{IDATA[23]}}, IDATA[23:0]};
   
   assign IADDR = pc;
   
@@ -113,21 +110,24 @@ module tawas_fetch
   begin
     pc_next = (pc_sel) ? pc_0 : pc_1;
     pc_inc = pc_next + 24'd1;
-    r7_pp_en = 1'b0;
-    ec_store_en = 1'b0;
     pc_store_en = 1'b0;
+    r6_push_en = 1'b0;
     
-    if (IDATA[31:28] == 4'b1111)
+    if (IDATA[31:26] == 6'b111111)
     begin
-      r7_pp_en = IDATA[27];
-      ec_store_en = IDATA[26];
-      pc_store_en = IDATA[25];
-      pc_next = (IDATA[24]) ? PC_RTN : IDATA[23:0];
+      r6_push_en = IDATA[25];
+      pc_store_en = IDATA[24];
+      pc_next = IDATA[23:0];
     end
     else if (IDATA[31:29] == 3'b110)
     begin
-      if (IDATA[27] == 1'b1)
+      if (IDATA[27] == 1'b0)
         pc_next = pc_next + {{12{IDATA[26]}}, IDATA[26:15]};
+      else if (IDATA[22:15] == 8'd0)
+      begin
+        pc_store_en = 1'b1;
+        pc_next = PC_RTN;
+      end
       else if (au_cond_true)
         pc_next = pc_next + {{16{IDATA[22]}}, IDATA[22:15]};
       else
@@ -205,14 +205,14 @@ module tawas_fetch
   assign AU_OP_VLD = (IDATA[31:30] == 2'b00) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1100);
   assign AU_OP = (au_upper) ? IDATA[30:15] : IDATA[14:0];
   
-  assign AU_OP_IMM_VLD = (IDATA[31:28] == 4'hE);
-  assign AU_OP_IMM = IDATA[27:0];
+  assign AU_IMM_VLD = (IDATA[31:28] == 4'hE);
+  assign AU_IMM = IDATA[27:0];
   
-  wire [14:0] r7_pp_instr;
+  assign RF_IMM_VLD = (IDATA[31:27] == 5'h1E);
+  assign RF_IMM_SEL = IDATA[26:24];
+  assign RF_IMM = {{8{IDATA[23]}}, IDATA[23:0]};
   
-  assign r7_pp_instr = (pc_store_en) ? {3'h7, 6'h3F, 3'd6, 3'd7} : {3'h3, 6'h1, 3'd6, 3'd7};
-  
-  assign LS_OP_VLD = r7_pp_en || (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101);
-  assign LS_OP = (r7_pp_en) ? r7_pp_instr : (ls_upper) ? IDATA[30:15] : IDATA[14:0];
+  assign LS_OP_VLD = r6_push_en || (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101);
+  assign LS_OP = (r6_push_en) ? {3'h7, 6'h3F, 3'd7, 3'd6} : (ls_upper) ? IDATA[30:15] : IDATA[14:0];
         
 endmodule

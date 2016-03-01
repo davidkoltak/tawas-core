@@ -4,6 +4,7 @@ module testbench();
   reg sim_rst;
   reg sim_clk;
   reg sim_clk_gen;
+  integer cycle_count;
   
   initial
   begin
@@ -11,6 +12,7 @@ module testbench();
     sim_clk_gen = 0;
     $dumpfile("results.vcd");
     $dumpvars(0);
+    cycle_count = 0;
     #10 sim_rst = 0;
     #10 sim_clk_gen = ~sim_clk_gen;
     #10 sim_clk_gen = ~sim_clk_gen;
@@ -23,7 +25,11 @@ module testbench();
     #10 sim_clk_gen = ~sim_clk_gen;
     #10 sim_clk_gen = ~sim_clk_gen;
     #10 sim_clk_gen = ~sim_clk_gen; sim_rst = 0;
-    while (1) #10 sim_clk_gen = ~sim_clk_gen;
+    while (1)
+    begin
+      #10 sim_clk_gen = ~sim_clk_gen;
+      cycle_count = (sim_clk_gen) ? cycle_count : cycle_count + 1;
+    end
   end
   
   always @ (sim_clk_gen)

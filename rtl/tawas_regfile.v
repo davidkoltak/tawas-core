@@ -42,8 +42,9 @@ module tawas_regfile
   input [23:0] PC,
   output [23:0] PC_RTN,
 
-  input EC_STORE,
-  input [31:0] EC,
+  input RF_IMM_VLD,
+  input [2:0] RF_IMM_SEL,
+  input [31:0] RF_IMM,
   
   input [2:0] AU_RA_SEL,
   output [31:0] AU_RA,
@@ -89,10 +90,10 @@ module tawas_regfile
     begin
   
       if (PC_STORE)
-        regfile_1_nxt[7] = PC;
+        regfile_1_nxt[6] = {8'd0, PC};
         
-      if (EC_STORE)
-        regfile_1_nxt[0] = EC;
+      if (RF_IMM_VLD)
+        regfile_1_nxt[RF_IMM_SEL] = RF_IMM;
     
       if (AU_RC_VLD)
         regfile_0_nxt[AU_RC_SEL] = AU_RC;
@@ -108,10 +109,10 @@ module tawas_regfile
     begin
   
       if (PC_STORE)
-        regfile_0_nxt[7] = PC;
+        regfile_0_nxt[6] = {8'd0, PC};
         
-      if (EC_STORE)
-        regfile_0_nxt[0] = EC;
+      if (RF_IMM_VLD)
+        regfile_0_nxt[RF_IMM_SEL] = RF_IMM;
     
       if (AU_RC_VLD)
         regfile_1_nxt[AU_RC_SEL] = AU_RC;
@@ -139,7 +140,7 @@ module tawas_regfile
         regfile_1[x] <= regfile_1_nxt[x];
       end
 
-  assign PC_RTN = (SLICE) ? regfile_1[7] : regfile_0[7];
+  assign PC_RTN = (SLICE) ? regfile_1[6] : regfile_0[6];
   
   assign AU_RA = (SLICE) ? regfile_1[AU_RA_SEL] : regfile_0[AU_RA_SEL];  
   assign AU_RB = (SLICE) ? regfile_1[AU_RB_SEL] : regfile_0[AU_RB_SEL];

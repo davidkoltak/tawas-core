@@ -47,8 +47,10 @@ module tawas
   wire pc_store;
   wire [23:0] pc;
   wire [23:0] pc_rtn;
-  wire ec_store;
-  wire [31:0] ec_value;
+  
+  wire rf_imm_vld;
+  wire [2:0] rf_imm_sel;
+  wire [31:0] rf_imm;
   
   wire slice;
   wire [7:0] au_flags;
@@ -56,8 +58,8 @@ module tawas
   wire au_op_vld;
   wire [14:0] au_op;
 
-  wire au_op_imm_vld;
-  wire [27:0] au_op_imm;
+  wire au_imm_vld;
+  wire [27:0] au_imm;
   
   wire ls_op_vld;
   wire [14:0] ls_op;
@@ -76,15 +78,16 @@ module tawas
     .PC_STORE(pc_store),
     .PC(pc),
     .PC_RTN(pc_rtn),
-  
-    .EC_STORE(ec_store),
-    .EC(ec_value),
+
+    .RF_IMM_VLD(rf_imm_vld),
+    .RF_IMM_SEL(rf_imm_sel),
+    .RF_IMM(rf_imm),
     
     .AU_OP_VLD(au_op_vld),
     .AU_OP(au_op),
     
-    .AU_OP_IMM_VLD(ap_op_imm_vld),
-    .AU_OP_IMM(au_op_imm),
+    .AU_IMM_VLD(au_imm_vld),
+    .AU_IMM(au_imm),
     
     .LS_OP_VLD(ls_op_vld),
     .LS_OP(ls_op)
@@ -111,8 +114,8 @@ module tawas
     .AU_OP_VLD(au_op_vld),
     .AU_OP(au_op),
     
-    .AU_OP_IMM_VLD(ap_op_imm_vld),
-    .AU_OP_IMM(au_op_imm),
+    .AU_IMM_VLD(au_imm_vld),
+    .AU_IMM(au_imm),
      
     .AU_RA_SEL(au_ra_sel),
     .AU_RA(au_ra),
@@ -179,10 +182,11 @@ module tawas
     .PC_STORE(pc_store),
     .PC(pc),
     .PC_RTN(pc_rtn),
-    
-    .EC_STORE(ec_store),
-    .EC(ec_value),
-    
+
+    .RF_IMM_VLD(rf_imm_vld),
+    .RF_IMM_SEL(rf_imm_sel),
+    .RF_IMM(rf_imm),
+  
     .AU_RA_SEL(au_ra_sel),
     .AU_RA(au_ra),
     
