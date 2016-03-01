@@ -1,0 +1,56 @@
+[*]
+[*] GTKWave Analyzer v3.3.58 (w)1999-2014 BSI
+[*] Tue Mar  1 05:07:50 2016
+[*]
+[dumpfile] "/home/dkoltak/github/tawas-core/sim/results.vcd"
+[dumpfile_mtime] "Tue Mar  1 05:07:09 2016"
+[dumpfile_size] 76799
+[savefile] "/home/dkoltak/github/tawas-core/sim/regfile.gtkw"
+[timestart] 0
+[size] 1325 744
+[pos] -1 -1
+*-8.589123 1580 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] testbench.
+[treeopen] testbench.tawas.
+[sst_width] 223
+[signals_width] 191
+[sst_expanded] 1
+[sst_vpaned_height] 211
+@28
+testbench.tawas.RST
+testbench.tawas.CLK
+@200
+-
+@22
+testbench.tawas.tawas_regfile.s0_r0[31:0]
+testbench.tawas.tawas_regfile.s0_r1[31:0]
+testbench.tawas.tawas_regfile.s0_r2[31:0]
+testbench.tawas.tawas_regfile.s0_r3[31:0]
+testbench.tawas.tawas_regfile.s0_r4[31:0]
+testbench.tawas.tawas_regfile.s0_r5[31:0]
+testbench.tawas.tawas_regfile.s0_r6[31:0]
+testbench.tawas.tawas_regfile.s0_r7[31:0]
+@200
+-
+@22
+testbench.tawas.tawas_regfile.s1_r0[31:0]
+testbench.tawas.tawas_regfile.s1_r1[31:0]
+testbench.tawas.tawas_regfile.s1_r2[31:0]
+testbench.tawas.tawas_regfile.s1_r3[31:0]
+testbench.tawas.tawas_regfile.s1_r4[31:0]
+testbench.tawas.tawas_regfile.s1_r5[31:0]
+testbench.tawas.tawas_regfile.s1_r6[31:0]
+testbench.tawas.tawas_regfile.s1_r7[31:0]
+@200
+-
+@28
+testbench.tawas.tawas_ls.DCS
+testbench.tawas.tawas_ls.DWR
+@22
+testbench.tawas.tawas_ls.DADDR[31:0]
+testbench.tawas.tawas_ls.DMASK[3:0]
+testbench.tawas.tawas_ls.DOUT[31:0]
+@23
+testbench.tawas.tawas_ls.DIN[31:0]
+[pattern_trace] 1
+[pattern_trace] 0

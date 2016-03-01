@@ -43,7 +43,7 @@ module tawas_fetch
   input [31:0] IDATA,
 
   output SLICE,
-  input [15:0] AU_FLAGS,
+  input [7:0] AU_FLAGS,
   
   output PC_STORE,
   output [23:0] PC,
@@ -66,14 +66,14 @@ module tawas_fetch
   // PC Generation and Redirection for two threads - BR/CALL Decode
   //
   
-  reg [3:0] au_cond_sel;
+  reg au_cond_flag;
   reg au_cond_true;
   
   reg [23:0] pc_next;
   reg [23:0] pc_inc;
-  reg [23:0] pc_adj;
   reg ec_store_en;
   reg pc_store_en;
+  reg r7_pp_en;
   
   reg instr_vld;
   reg pc_sel;
@@ -96,57 +96,40 @@ module tawas_fetch
   
   always @ *
   begin
-      
-    if ((IDATA[31:29] == 3'b110) && (IDATA[27] == 1'b0))
-      au_cond_sel = IDATA[26:23];
-    else
-      au_cond_sel = 4'd0;
-    
-    case (au_cond_sel)
-    4'h0: au_cond_true = AU_FLAGS[0];
-    4'h1: au_cond_true = AU_FLAGS[1];
-    4'h2: au_cond_true = AU_FLAGS[2];
-    4'h3: au_cond_true = AU_FLAGS[3];
-    4'h4: au_cond_true = AU_FLAGS[4];
-    4'h5: au_cond_true = AU_FLAGS[5];
-    4'h6: au_cond_true = AU_FLAGS[6];
-    4'h7: au_cond_true = AU_FLAGS[7];
-    4'h8: au_cond_true = AU_FLAGS[8];
-    4'h9: au_cond_true = AU_FLAGS[9];
-    4'hA: au_cond_true = AU_FLAGS[10];
-    4'hB: au_cond_true = AU_FLAGS[11];
-    4'hC: au_cond_true = AU_FLAGS[12];
-    4'hD: au_cond_true = AU_FLAGS[13];
-    4'hE: au_cond_true = AU_FLAGS[14];
-    default: au_cond_true = AU_FLAGS[15];
+    case (IDATA[25:23])
+    4'h0: au_cond_flag = AU_FLAGS[0];
+    4'h1: au_cond_flag = AU_FLAGS[1];
+    4'h2: au_cond_flag = AU_FLAGS[2];
+    4'h3: au_cond_flag = AU_FLAGS[3];
+    4'h4: au_cond_flag = AU_FLAGS[4];
+    4'h5: au_cond_flag = AU_FLAGS[5];
+    4'h6: au_cond_flag = AU_FLAGS[6];
+    default: au_cond_flag = AU_FLAGS[7];
     endcase
+    au_cond_true = au_cond_flag ^ IDATA[26];
   end
   
   always @ *
   begin
     pc_next = (pc_sel) ? pc_0 : pc_1;
     pc_inc = pc_next + 24'd1;
+    r7_pp_en = 1'b0;
     ec_store_en = 1'b0;
     pc_store_en = 1'b0;
     
-    if (au_cond_true)
-    begin   
-      if (IDATA[31:28] == 4'b1111)
-      begin
-        ec_store_en = IDATA[27];
-        pc_store_en = IDATA[26];
-        pc_adj = (IDATA[25]) ? PC_RTN : IDATA[23:0];
-        pc_next = (IDATA[24]) ? pc_next + pc_adj : pc_adj;
-      end
-      else if (IDATA[31:29] == 3'b110)
-      begin
-        if (IDATA[27] == 1'b1)
-          pc_next = pc_next + {{12{IDATA[26]}}, IDATA[26:15]};
-        else if (au_cond_true)
-          pc_next = pc_next + {{16{IDATA[22]}}, IDATA[22:15]};
-        else
-          pc_next = pc_inc;
-      end
+    if (IDATA[31:28] == 4'b1111)
+    begin
+      r7_pp_en = IDATA[27];
+      ec_store_en = IDATA[26];
+      pc_store_en = IDATA[25];
+      pc_next = (IDATA[24]) ? PC_RTN : IDATA[23:0];
+    end
+    else if (IDATA[31:29] == 3'b110)
+    begin
+      if (IDATA[27] == 1'b1)
+        pc_next = pc_next + {{12{IDATA[26]}}, IDATA[26:15]};
+      else if (au_cond_true)
+        pc_next = pc_next + {{16{IDATA[22]}}, IDATA[22:15]};
       else
         pc_next = pc_inc;
     end
@@ -225,7 +208,11 @@ module tawas_fetch
   assign AU_OP_IMM_VLD = (IDATA[31:28] == 4'hE);
   assign AU_OP_IMM = IDATA[27:0];
   
-  assign LS_OP_VLD = (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101);
-  assign LS_OP = (ls_upper) ? IDATA[30:15] : IDATA[14:0];
+  wire [14:0] r7_pp_instr;
+  
+  assign r7_pp_instr = (pc_store_en) ? {3'h7, 6'h3F, 3'd6, 3'd7} : {3'h3, 6'h1, 3'd6, 3'd7};
+  
+  assign LS_OP_VLD = r7_pp_en || (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101);
+  assign LS_OP = (r7_pp_en) ? r7_pp_instr : (ls_upper) ? IDATA[30:15] : IDATA[14:0];
         
 endmodule

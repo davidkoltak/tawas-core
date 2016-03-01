@@ -59,21 +59,21 @@ AU Opcodes: 15-bits (triadic)
 
 00 : Move     (b) -> c    (NOTE: 00 = "mv r0, r0", aka "nop")
 01 : Inv      (~b) -> c
-02 : Inc      (a + #b) -> c
-03 : Dec      (a - #b) -> c
+02 : Dec      (a - #b) -> c
+03 : Inc      (a + #b) -> c
 04 : lsl      (a << #b) -> c
 05 : lsr      (a >> #b) -> c
 06 : asr      (a >> #b) -> c
 07 : sx       sign-extend(a, byte(b)) -> c
 
-08 : Add      (a + b) -> c
-09 : Sub      (a - b) -> c
-0A : And      (a & b) -> c
-0B : Or       (a | b) -> c
-0C : Xor      (a ^ b) -> c
-0D :
+08 : Cmp      (a - b) -> c
+09 : Add      (a + b) -> c
+0A : Sub      (a - b) -> c
+0B : And      (a & b) -> c
+0G : Or       (a | b) -> c
+0D : Xor      (a ^ b) -> c
 0E :
-0F :
+0E :
   ...
 1F :
 
@@ -111,19 +111,17 @@ Call Opcodes: 28-bits
 ------------------------------------------
 
 0000 eeeeeeee eeeeeeee eeeeeeee : jmp a (a->pc)
-0001 eeeeeeee eeeeeeee eeeeeeee : jmpr r (pc+r->pc)
 0010 xxxxxxxx xxxxxxxx xxxxxxxx ; jmp r7
 
 0100 eeeeeeee eeeeeeee eeeeeeee : call a (pc->r7, ea->pc)
-0101 eeeeeeee eeeeeeee eeeeeeee : callr r (pc->r7, pc+r->pc)
 1110 eeeeeeee eeeeeeee eeeeeeee : call r7, ec (pc->r7, r7->pc, ec->r0)
 
 1010 eeeeeeee eeeeeeee eeeeeeee : rtn (r7->pc, ec->r0)
 
----1 relative
---1- pc rtn (e or r7)
--1-- pc store (pc->r7)
-1--- ec store (ec->r0)  "exit code"
+---1 pc rtn (e or r7)
+--1- pc store (pc->r7)
+-1-- ec store (ec->r0)  "exit code"
+1--- r7 push/pop (r7->r6--1) "push if pc_store, pop otherwise"
 
 
 

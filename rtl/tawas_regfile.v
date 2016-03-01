@@ -85,52 +85,59 @@ module tawas_regfile
       regfile_1_nxt[x] = regfile_1[x];
     end
     
-    if (PC_STORE)
+    if (SLICE)
     begin
-      regfile_0_nxt[7] = PC;
-      regfile_1_nxt[7] = PC;
-    end
+  
+      if (PC_STORE)
+        regfile_1_nxt[7] = PC;
+        
+      if (EC_STORE)
+        regfile_1_nxt[0] = EC;
     
-    if (EC_STORE)
-    begin
-      regfile_0_nxt[0] = EC;
-      regfile_1_nxt[0] = EC;
-    end
+      if (AU_RC_VLD)
+        regfile_0_nxt[AU_RC_SEL] = AU_RC;
+        
+      if (LS_PTR_UPD_VLD)
+        regfile_0_nxt[LS_PTR_UPD_SEL] = LS_PTR_UPD;
     
-    if (AU_RC_VLD)
-    begin
-      regfile_0_nxt[AU_RC_SEL] = AU_RC;
-      regfile_1_nxt[AU_RC_SEL] = AU_RC;
+      if (LS_LOAD_VLD)
+        regfile_0_nxt[LS_LOAD_SEL] = LS_LOAD;
+        
     end
-    
-    if (LS_PTR_UPD_VLD)
+    else
     begin
-      regfile_0_nxt[LS_PTR_UPD_SEL] = LS_PTR_UPD;
-      regfile_1_nxt[LS_PTR_UPD_SEL] = LS_PTR_UPD;
-    end
+  
+      if (PC_STORE)
+        regfile_0_nxt[7] = PC;
+        
+      if (EC_STORE)
+        regfile_0_nxt[0] = EC;
     
-    if (LS_LOAD_VLD)
-    begin
-      regfile_0_nxt[LS_LOAD_SEL] = LS_LOAD;
-      regfile_1_nxt[LS_LOAD_SEL] = LS_LOAD;
+      if (AU_RC_VLD)
+        regfile_1_nxt[AU_RC_SEL] = AU_RC;
+        
+      if (LS_PTR_UPD_VLD)
+        regfile_1_nxt[LS_PTR_UPD_SEL] = LS_PTR_UPD;
+    
+      if (LS_LOAD_VLD)
+        regfile_1_nxt[LS_LOAD_SEL] = LS_LOAD;
+        
     end
   end
   
   always @ (posedge CLK or posedge RST)
     if (RST)
       for (x = 0; x < 8; x = x + 1)
+      begin
         regfile_0[x] <= 32'd0;
-    else if (SLICE == 1'b1)
-      for (x = 0; x < 8; x = x + 1)
-        regfile_0[x] <= regfile_0_nxt[x];
-      
-  always @ (posedge CLK or posedge RST)
-    if (RST)
-      for (x = 0; x < 8; x = x + 1)
         regfile_1[x] <= 32'd0;
-    else if (SLICE == 1'b0)
+      end
+    else
       for (x = 0; x < 8; x = x + 1)
+      begin
+        regfile_0[x] <= regfile_0_nxt[x];
         regfile_1[x] <= regfile_1_nxt[x];
+      end
 
   assign PC_RTN = (SLICE) ? regfile_1[7] : regfile_0[7];
   

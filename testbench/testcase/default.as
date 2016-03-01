@@ -17,6 +17,13 @@ T0_L1:
   nop(); nop();
   ld(w, r5, r7[5]); st(w, r5, r7[3]);
   nop(); nop();
+  nop(); nop();
+  nop(); nop();
+  nop(); nop();
+  nop(); nop();
+  mv(r0, 0xFFFFFFF8); clr(r1);
+  inc(r1, 1); nop();
+  st(w, r1, r0[0]); nop();
 T0_L2:
   br(T0_L2); inc(r0, 1);
   

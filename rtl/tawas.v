@@ -51,7 +51,7 @@ module tawas
   wire [31:0] ec_value;
   
   wire slice;
-  wire [15:0] au_flags;
+  wire [7:0] au_flags;
   
   wire au_op_vld;
   wire [14:0] au_op;

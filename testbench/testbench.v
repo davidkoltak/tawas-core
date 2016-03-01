@@ -64,6 +64,40 @@ module testbench();
   wire [31:0] dram_din;
   wire [31:0] dram_dout;
   
+  always @ (posedge sim_clk)
+    if (dram_cs && dram_wr)
+    begin
+      case (dram_addr)
+      32'hFFFFFFF0:
+      begin
+        $display("### SIMULATION INFO - 0x%08X ###", dram_din);
+      end
+      32'hFFFFFFF4:
+      begin
+        $display("### SIMULATION WARN - 0x%08X ###", dram_din);
+      end
+      32'hFFFFFFF8:
+      begin
+        $display("### SIMULATION PASSED - 0x%08X ###", dram_din);
+        @(posedge sim_clk);
+        @(posedge sim_clk);
+        @(posedge sim_clk);
+        @(posedge sim_clk);
+        $finish();
+      end
+      32'hFFFFFFFC:
+      begin
+        $display("### SIMULATION FAILED - 0x%08X ###", dram_din);
+        @(posedge sim_clk);
+        @(posedge sim_clk);
+        @(posedge sim_clk);
+        @(posedge sim_clk);
+        $finish();
+      end
+      default: ;
+      endcase
+    end
+    
   dram dram
   (
     .CLK(sim_clk),
