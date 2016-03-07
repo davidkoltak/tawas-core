@@ -57,8 +57,8 @@ ___________________________________________
 AU Opcodes: 15-bits (triadic)
 ------------------------------------------
 
-0 iiiii aaa bbb ccc  : i.op b, a       (c = a *i* b)
-1 biiii aaa bbb ccc : i.op b, imm      (b = a *i* imm(b))
+0 iiiii aaa bbb ccc  : i.op c, a, b      (c = a *i* b)
+1 biiii aaa bbb ccc : i.op c, a, imm      (c = a *i* imm(b))
 
 00 : Move     (b) -> c    (NOTE: 00 = "mv r0, r0", aka "nop")
 01 : Inv      (~b) -> c
@@ -106,7 +106,7 @@ BR Opcodes: 13-bits
 ------------------------------------------
 
 0 iiii iiii iiii  : br -2048,2047 words
-1 xxxx 0000 0000  : rtn (pc->r6, r6->pc)
+1 xxxx 0000 0001  : rtn (pc->r6, r6->pc)
 1 cccc iiii iiii  : br.cc -128,127 words
 
 NOTE: rtn() saves pc back to r6, so it can be used
@@ -210,4 +210,25 @@ ASSEMBLY OPCODES
   --------------------------------------------------------------------------------
   (mv|inv|inc|inc|dec|lsl|lsr|asr|sx|cmp|add|sub|and|or|xor); (mv|inv|inc|inc|dec|lsl|lsr|asr|sx|cmp|add|sub|and|or|xor);
   (ld|st|push|pop); (ld|st|push|pop);
+
+
+  ldi(r0, string1);
+  ldi(r1, string2);
+  call(strcmp); push(r6);
+  pop(r6); and(r0, r0);
+  br(zero, match);
+  br(dont_match);
   
+strmp:
+  push(r3); mv(r2, r0);             // NOTE: r0-r2, caller saved, r3-r5 callee saved, r6/r7 are link/stack
+  ld(b, r0, r2++); mv(r3, r1)
+strcmp_next:
+  ld(b, r1, r3++);
+  sub(r0, r1);
+  br(!zero, strcmp_end); and(r1, r1);
+  br(zero, strcmp_end);
+  br(strcmp_next); ld(b, r0, r2++); 
+strcmp_end:
+  rtn(); pop(r3);
+
+

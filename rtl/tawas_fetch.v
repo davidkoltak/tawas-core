@@ -123,7 +123,7 @@ module tawas_fetch
     begin
       if (IDATA[27] == 1'b0)
         pc_next = pc_next + {{12{IDATA[26]}}, IDATA[26:15]};
-      else if (IDATA[22:15] == 8'd0)
+      else if (IDATA[22:15] == 8'd1)
       begin
         pc_store_en = 1'b1;
         pc_next = PC_RTN;

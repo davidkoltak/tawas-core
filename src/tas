@@ -159,13 +159,6 @@ while ($#FileList >= 0)
       $i_upper = &brrtn($1, $2);
       $i_total = (12 << 28) | ($i_upper << 15) | ($i_lower);
     }
-    elsif ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
-    {
-      # ls, nop
-      $i_lower = 0;
-      $i_upper = &ldst($1, $2);
-      $i_total = (2 << 30) | ($i_upper << 15) | ($i_lower);
-    }
     elsif ($line =~ /\s*(ldi)\s*\((.+)\)\s*;/)
     {
       # ldi
@@ -180,6 +173,13 @@ while ($#FileList >= 0)
     {
       # nop2
       $i_total = 0x00000000;
+    }
+    elsif ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
+    {
+      # br, ls
+      $i_lower = &ldst($1, $2);
+      $i_upper = 1;
+      $i_total = (13 << 28) | ($i_upper << 15) | ($i_lower);
     }
     elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;/)
     {
@@ -488,7 +488,7 @@ sub brrtn
   }
   elsif (($cmd eq 'rtn') && ($args eq ''))
   {
-    $rtn = (1 << 12);
+    $rtn = (1 << 12) | (1 << 0);
   }
   elsif (($cmd eq 'icall') && ($args =~ /[rR]6/))
   {
