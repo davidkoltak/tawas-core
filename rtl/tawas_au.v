@@ -111,7 +111,7 @@ module tawas_au
     begin
       reg_a <= AU_RA;
       reg_b <= (imm_vld) ? imm : AU_RB;
-      reg_b_as_imm <= AU_OP[5:3];
+      reg_b_as_imm <= {1'b0, AU_OP[5:3]} + 4'd1;
       op_mux_d1 <= op_mux;
       reg_c_sel_d1 <= reg_c_sel;
     end
@@ -130,35 +130,38 @@ module tawas_au
   reg [32:0] add_sub;
   reg [32:0] add_result;
   reg [31:0] au_result;
+  reg [31:0] bit_mask;
   
   always @ *
   begin
-    add_value = (op_mux_d1[3]) ? {reg_b[31], reg_b} : {{29{1'b0}}, {1'b0, reg_b_as_imm[2:0]} + 4'd1};
+    add_value = (op_mux_d1[3]) ? {{29{1'b0}}, reg_b_as_imm} : {reg_b[31], reg_b};
     add_sub = (op_mux_d1[0]) ? add_value : (~add_value) + 33'd1;
     add_result = {reg_a[31], reg_a} + add_sub;
+    bit_mask = (1 << (reg_b_as_imm - 4'b1));
     
     case (op_mux_d1)
-    5'h00: au_result = reg_b;
-    5'h01: au_result = ~reg_b;
-    5'h02: au_result = add_result[31:0]; // a - imm_b
-    5'h03: au_result = add_result[31:0]; // a + imm_b
+    5'h00: au_result = reg_a | reg_b;
+    5'h01: au_result = reg_a ^ reg_b;
+    5'h02: au_result = add_result[31:0]; // a - b : compare (squash write-back)
+    5'h03: au_result = add_result[31:0]; // a + b
+    5'h04: au_result = add_result[31:0]; // a - b
+    5'h05: au_result = reg_a & reg_b;
     
-    5'h04: au_result = (reg_a << reg_b_as_imm[2:0]);
-    5'h05: au_result = {reg_a[0], (reg_a >> reg_b_as_imm[2:0])};
-    5'h06: au_result = {reg_a[0], (reg_a >>> reg_b_as_imm[2:0])};
+    5'h08: au_result = reg_a | bit_mask;
+    5'h09: au_result = reg_a & ~bit_mask;
+    5'h0A: au_result = add_result[31:0]; // a - imm_b
+    5'h0B: au_result = add_result[31:0]; // a + imm_b
     
-    5'h07: au_result = (reg_b_as_imm[1:0] == 2'b01) ? {{24{reg_a[7]}}, reg_a[7:0]} :
+    5'h0C: au_result = (reg_a << reg_b_as_imm);
+    5'h0D: au_result = (reg_a >> reg_b_as_imm);
+    5'h0E: au_result = (reg_a >>> reg_b_as_imm);
+    
+    5'h0F: au_result = (reg_b_as_imm[1:0] == 2'b01) ? {{24{reg_a[7]}}, reg_a[7:0]} :
                        (reg_b_as_imm[1:0] == 2'b10) ? {{16{reg_a[15]}}, reg_a[15:0]} :
                        (reg_b_as_imm[1:0] == 2'b11) ? {{8{reg_a[23]}}, reg_a[23:0]} : reg_a;
     
-    5'h08: au_result = add_result[31:0]; // a - b : compare (squash write-back)
-    5'h09: au_result = add_result[31:0]; // a + b
-    5'h0A: au_result = add_result[31:0]; // a - b
-    5'h0B: au_result = reg_a & reg_b;
-    5'h0C: au_result = reg_a | reg_b;
-    5'h0D: au_result = reg_a ^ reg_b;
     
-    default: ;
+    default: au_result = 32'd0;
     endcase
   end
   
@@ -178,14 +181,11 @@ module tawas_au
   begin
     result_flags = (!SLICE) ? s1_flags : s0_flags;
     
-    if (op_mux_d1 != 5'd0)
-    begin
-      result_flags[0] = (au_result == 32'd0);                               // zero
-      result_flags[1] = au_result[31];                                      // neg
-      result_flags[2] = add_result[32] ^ add_result[31];                    // sovfl
-      result_flags[3] = (reg_a[31] && !add_sub[32] && !add_result[32]) ||   // uovfl
-                        (!reg_a[31] && add_sub[32] && add_result[31]);
-    end
+    result_flags[0] = (au_result == 32'd0);                               // zero
+    result_flags[1] = au_result[31];                                      // neg
+    result_flags[2] = add_result[32] ^ add_result[31];                    // sovfl
+    result_flags[3] = (reg_a[31] && !add_sub[32] && !add_result[32]) ||   // uovfl
+                      (!reg_a[31] && add_sub[32] && add_result[31]);
   end
   
   always @ (posedge CLK or posedge RST)

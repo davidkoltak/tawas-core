@@ -60,23 +60,25 @@ AU Opcodes: 15-bits (triadic)
 0 iiiii aaa bbb ccc : i.op c, a, b      (c = a *i* b)
 1 biiii aaa bbb ccc : i.op c, a, imm    (c = a *i* imm(b))
 
-00 : Move     (b) -> c    (NOTE: 00 = "mv r0, r0", aka "nop")
-01 : Inv      (~b) -> c
-02 : Dec      (a - #b) -> c
-03 : Inc      (a + #b) -> c
-04 : lsl      (a << #b) -> c
-05 : lsr      (a >> #b) -> c
-06 : asr      (a >> #b) -> c
-07 : sx       sign-extend(a, byte(b)) -> c
+00 : Or       (a | b) -> c  (aka mv c, a) (aka nop)
+01 : Xor      (a ^ b) -> c
+02 : Cmp      (a - b) -> c
+03 : Add      (a + b) -> c
+04 : Sub      (a - b) -> c
+05 : And      (a & b) -> c
+06 :
+07 :
 
-08 : Cmp      (a - b) -> c
-09 : Add      (a + b) -> c
-0A : Sub      (a - b) -> c
-0B : And      (a & b) -> c
-0G : Or       (a | b) -> c
-0D : Xor      (a ^ b) -> c
-0E :
-0E :
+08 : bset     (a | (1 << #b) -> c  (bit 0-7 only)
+09 : bclr     (a & ~(1 << #b) -> c
+0A : Dec      (a - #b) -> c        (imm 1-8 only)
+0B : Inc      (a + #b) -> c
+0C : lsl      (a << #b) -> c       (shift 1-8 only)
+0D : lsr      (a >> #b) -> c
+0E : asr      (a >> #b) -> c
+0F : sx       sign-extend(a, byte(b)) -> c
+
+00 :
   ...
 1F :
 

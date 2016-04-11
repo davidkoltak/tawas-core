@@ -511,7 +511,8 @@ sub au
   if (($cmd eq 'nop') && ($args eq ''))
   { return $rtn; }
   
-  if (($cmd eq 'inc') || ($cmd eq 'dec') || ($cmd eq 'lsl') || ($cmd eq 'lsr') || ($cmd eq 'asr') || ($cmd eq 'sx'))
+  if (($cmd eq 'inc') || ($cmd eq 'dec') || ($cmd eq 'lsl') || ($cmd eq 'lsr') || ($cmd eq 'asr') || ($cmd eq 'sx') ||
+      ($cmd eq 'bset') || ($cmd eq 'bclr'))
   {
     if ($args =~ /[rR](\d+)\s*,\s*(\d\w*)/)
     {
@@ -644,21 +645,23 @@ sub au
   else
   { die "ERROR: AU '$cmd($args)' syntax error @ $input_filename:$linenum\n"; }
   
-  if ($cmd eq 'mv')     { $rtn |= (0x00 << 9); }
-  elsif ($cmd eq 'inv') { $rtn |= (0x01 << 9); }
-  elsif ($cmd eq 'dec') { $rtn |= (0x02 << 9); }
-  elsif ($cmd eq 'inc') { $rtn |= (0x03 << 9); }
-  elsif ($cmd eq 'lsl') { $rtn |= (0x04 << 9); }
-  elsif ($cmd eq 'lsr') { $rtn |= (0x05 << 9); }
-  elsif ($cmd eq 'asr') { $rtn |= (0x06 << 9); }
-  elsif ($cmd eq 'sx')  { $rtn |= (0x07 << 9); }
-  elsif ($cmd eq 'cmp') { $rtn |= (0x08 << 9); }
-  elsif ($cmd eq 'add') { $rtn |= (0x09 << 9); }
-  elsif ($cmd eq 'sub') { $rtn |= (0x0A << 9); }
-  elsif ($cmd eq 'and') { $rtn |= (0x0B << 9); }
-  elsif ($cmd eq 'or')  { $rtn |= (0x0C << 9); }
-  elsif ($cmd eq 'xor') { $rtn |= (0x0D << 9); }
-  elsif ($cmd eq 'clr') { $rtn |= (0x0D << 9); } # alias of XOR, but assuming all three registers are the same
+  if ($cmd eq 'or')  { $rtn |= (0x00 << 9); }
+  elsif ($cmd eq 'mv')  { $rtn |= (0x00 << 9); } # Alias of OR, assuming registers A & B are the same
+  elsif ($cmd eq 'xor') { $rtn |= (0x01 << 9); }
+  elsif ($cmd eq 'clr') { $rtn |= (0x01 << 9); } # alias of XOR, but assuming all three registers are the same
+  elsif ($cmd eq 'cmp') { $rtn |= (0x02 << 9); }
+  elsif ($cmd eq 'add') { $rtn |= (0x03 << 9); }
+  elsif ($cmd eq 'sub') { $rtn |= (0x04 << 9); }
+  elsif ($cmd eq 'and') { $rtn |= (0x05 << 9); }
+  
+  elsif ($cmd eq 'bset') { $rtn |= (0x08 << 9); }
+  elsif ($cmd eq 'bclr') { $rtn |= (0x09 << 9); }  
+  elsif ($cmd eq 'dec') { $rtn |= (0x0A << 9); }
+  elsif ($cmd eq 'inc') { $rtn |= (0x0B << 9); }
+  elsif ($cmd eq 'lsl') { $rtn |= (0x0C << 9); }
+  elsif ($cmd eq 'lsr') { $rtn |= (0x0D << 9); }
+  elsif ($cmd eq 'asr') { $rtn |= (0x0E << 9); }
+  elsif ($cmd eq 'sx')  { $rtn |= (0x0F << 9); }
   else
   { die "ERROR: Invalid AU command '$cmd' @ $input_filename:$linenum\n"; }
   
