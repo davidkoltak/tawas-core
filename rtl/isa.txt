@@ -73,19 +73,19 @@ AU Opcodes: 15-bits (triadic)
  ...
 0F:
 
-10:
- ...
-17:
+10 : bset     (a | (1 << #b) -> c  (bit 0-7 only)
+11 : bclr     (a & ~(1 << #b) -> c
+12 : Dec      (a - #b) -> c        (imm 0-7 only)
+13 : Inc      (a + #b) -> c
+14 : lsl      (a << #b) -> c       (shift 0-7 only)
+15 : lsr      (a >> #b) -> c
+16 : asr      (a >> #b) -> c
+17 : sx       sign-extend(a, byte(b)) -> c
 
-18 : bset     (a | (1 << #b) -> c  (bit 0-7 only)
-19 : bclr     (a & ~(1 << #b) -> c
-1A : Dec      (a - #b) -> c        (imm 1-8 only)
-1B : Inc      (a + #b) -> c
-1C : lsl      (a << #b) -> c       (shift 1-8 only)
-1D : lsr      (a >> #b) -> c
-1E : asr      (a >> #b) -> c
-1F : sx       sign-extend(a, byte(b)) -> c
-  
+18: (Same as 0x10-17, but with rb[2:0] as #b)
+ ...
+1F:
+
 LS Opcodes: 15-bits
 ------------------------------------------
 

@@ -11,6 +11,7 @@ t0_start:
   ldi(r0, 11);
   ldi(r6, 0x120);
   call(nested_call); push(r6);
+  ldi(r5, 0xff);
   pop(r6);
   nop();
   icall(r6); push(r6);
