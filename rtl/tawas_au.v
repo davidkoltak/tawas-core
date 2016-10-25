@@ -147,16 +147,16 @@ module tawas_au
     5'h04: au_result = add_result[31:0]; // a - b
     5'h05: au_result = reg_a & reg_b;
     
-    5'h08: au_result = reg_a | bit_mask;
-    5'h09: au_result = reg_a & ~bit_mask;
-    5'h0A: au_result = add_result[31:0]; // a - imm_b
-    5'h0B: au_result = add_result[31:0]; // a + imm_b
+    5'h18: au_result = reg_a | bit_mask;
+    5'h19: au_result = reg_a & ~bit_mask;
+    5'h1A: au_result = add_result[31:0]; // a - imm_b
+    5'h1B: au_result = add_result[31:0]; // a + imm_b
     
-    5'h0C: au_result = (reg_a << reg_b_as_imm);
-    5'h0D: au_result = (reg_a >> reg_b_as_imm);
-    5'h0E: au_result = (reg_a >>> reg_b_as_imm);
+    5'h1C: au_result = (reg_a << reg_b_as_imm);
+    5'h1D: au_result = (reg_a >> reg_b_as_imm);
+    5'h1E: au_result = (reg_a >>> reg_b_as_imm);
     
-    5'h0F: au_result = (reg_b_as_imm[1:0] == 2'b01) ? {{24{reg_a[7]}}, reg_a[7:0]} :
+    5'h1F: au_result = (reg_b_as_imm[1:0] == 2'b01) ? {{24{reg_a[7]}}, reg_a[7:0]} :
                        (reg_b_as_imm[1:0] == 2'b10) ? {{16{reg_a[15]}}, reg_a[15:0]} :
                        (reg_b_as_imm[1:0] == 2'b11) ? {{8{reg_a[23]}}, reg_a[23:0]} : reg_a;
     
