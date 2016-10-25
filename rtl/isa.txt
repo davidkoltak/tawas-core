@@ -60,8 +60,8 @@ AU Opcodes: 15-bits (triadic)
 0 iiiii aaa bbb ccc : i.op c, a, b      (c = a *i* b)
 1 biiii aaa bbb ccc : i.op c, a, imm    (c = a *i* imm(b))
 
-00 : Or       (a | b) -> c  (aka mv c, a) (aka nop)
-01 : Xor      (a ^ b) -> c
+00 : Or       (a | b) -> c  (aka nop) (aka mv c, a)
+01 : Xor      (a ^ b) -> c  (aka clr c)
 02 : Cmp      (a - b) -> c
 03 : Add      (a + b) -> c
 04 : Sub      (a - b) -> c
@@ -70,6 +70,10 @@ AU Opcodes: 15-bits (triadic)
 07 :
 
 08:
+ ...
+0F:
+
+10:
  ...
 17:
 
@@ -160,7 +164,7 @@ ASSEMBLY OPCODES
   ld(b|h|w, rX, rY[#]);
   
   mv(rX, rY);
-  mv(rX, Imm32);
+  clr(rX);
   
   inv(rX);
   inv(rX, rY);

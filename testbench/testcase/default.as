@@ -6,7 +6,8 @@ start:
   
   
 T0_L1:
-  mv(r7, 0x600); inc(r0, 1);
+  ldi(r7, 0x600); 
+  ldi(r0, 1);
   mv(r1, r0); inc(r0, 1);
   mv(r2, r0); inc(r0, 1);
   mv(r3, r0); inc(r0, 1);
@@ -20,15 +21,16 @@ T0_L1:
   nop(); nop();
   nop(); nop();
   nop(); nop();
-  nop(); nop();
-  mv(r0, 0xFFFFFFF8); clr(r1);
+  nop(); clr(r0);
+  or(r0, 0xFFFFFFF8); clr(r1);
   inc(r1, 1); nop();
   st(w, r1, r0[0]); nop();
 T0_L2:
   br(T0_L2); inc(r0, 1);
   
 T1_L1:
-  mv(r7, 0x800); inc(r0, 3);
+  ldi(r7, 0x800); 
+  ldi(r0, 3);
   mv(r1, r0); inc(r0, 3);
   mv(r2, r0); inc(r0, 3);
   mv(r3, r0); inc(r0, 3);

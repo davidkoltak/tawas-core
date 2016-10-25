@@ -343,6 +343,8 @@ sub parse_num
   { $rtn = oct($num); }
   elsif ($num =~ /^\s*[1-9][0-9]*\s*/)
   { $rtn = int($num); }
+  elsif ($num eq "0")
+  { $rtn = 0; }
   else
   { die "ERROR: Invalid number '$num' @ $input_filename:$linenum\n"; }
   
@@ -511,6 +513,44 @@ sub au
   if (($cmd eq 'nop') && ($args eq ''))
   { return $rtn; }
   
+  if ($cmd eq 'mv')
+  {
+    if ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)/)
+    {
+      my $rega = $1;
+      my $regb = $2;
+
+      if (($rega < 0) || ($rega > 7))
+      { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; } 
+
+      if (($regb < 0) || ($regb > 7))
+      { die "ERROR: Register B ($regb) must be r0-r7 @ $input_filename:$linenum\n"; } 
+
+      $rtn = ($regb << 6) | ($regb << 3) | ($rega);  
+    }  
+    else
+    { die "ERROR: Invalid 'mv' command format @ $input_filename:$linenum\n"; }
+    
+    return $rtn;
+  }
+
+  if ($cmd eq 'clr')
+  {
+    if ($args =~ /[rR](\d+)/)
+    {
+      my $rega = $1;
+
+      if (($rega < 0) || ($rega > 7))
+      { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; } 
+
+      $rtn = (0x01 << 9) | ($rega << 6) | ($rega << 3) | ($rega);  
+    }  
+    else
+    { die "ERROR: Invalid 'clr' command format @ $input_filename:$linenum\n"; }
+    
+    return $rtn;
+  }
+    
   if (($cmd eq 'inc') || ($cmd eq 'dec') || ($cmd eq 'lsl') || ($cmd eq 'lsr') || ($cmd eq 'asr') || ($cmd eq 'sx') ||
       ($cmd eq 'bset') || ($cmd eq 'bclr'))
   {
@@ -646,9 +686,7 @@ sub au
   { die "ERROR: AU '$cmd($args)' syntax error @ $input_filename:$linenum\n"; }
   
   if ($cmd eq 'or')  { $rtn |= (0x00 << 9); }
-  elsif ($cmd eq 'mv')  { $rtn |= (0x00 << 9); } # Alias of OR, assuming registers A & B are the same
   elsif ($cmd eq 'xor') { $rtn |= (0x01 << 9); }
-  elsif ($cmd eq 'clr') { $rtn |= (0x01 << 9); } # alias of XOR, but assuming all three registers are the same
   elsif ($cmd eq 'cmp') { $rtn |= (0x02 << 9); }
   elsif ($cmd eq 'add') { $rtn |= (0x03 << 9); }
   elsif ($cmd eq 'sub') { $rtn |= (0x04 << 9); }
