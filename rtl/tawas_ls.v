@@ -38,6 +38,7 @@ module tawas_ls
   output reg [31:0] DADDR,
   output reg DCS,
   output reg AXI_CS,
+  output reg [2:0] AXI_RC,
   output reg DWR,
   output reg [3:0] DMASK,
   output reg [31:0] DOUT,
@@ -146,6 +147,7 @@ module tawas_ls
       DADDR <= {addr_out[31:2], 2'b00};
       DCS <=  !axi_space;
       AXI_CS <= axi_space;
+      AXI_RC <= LS_OP[2:0];
       DWR <= LS_OP[14];
       DMASK <= data_mask;
       DOUT <= (LS_OP[14]) ? wr_data : 32'd0;
@@ -155,6 +157,7 @@ module tawas_ls
       DADDR <= 24'd0;
       DCS <= 1'b0;
       AXI_CS <= 1'b0;
+      AXI_RC <= 3'd0;
       DWR <= 1'b0;
       DMASK <= 4'b0000;
       DOUT <= 32'd0;

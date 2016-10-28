@@ -174,6 +174,7 @@ module tawas
   
   wire [31:0] daddr_out;
   wire axi_cs;
+  wire [2:0] axi_rc;
   wire dwr_out;
   wire [3:0] dmask_out;
   wire [31:0] dout_out;
@@ -205,6 +206,7 @@ module tawas
     .DADDR(daddr_out),
     .DCS(DCS),
     .AXI_CS(axi_cs),
+    .AXI_RC(axi_rc),
     .DWR(dwr_out),
     .DMASK(dmask_out),
     .DOUT(dout_out),
@@ -243,6 +245,7 @@ module tawas
 
     .DADDR(daddr_out),
     .AXI_CS(axi_cs),
+    .AXI_RC(axi_rc),
     .DWR(dwr_out),
     .DMASK(dmask_out),
     .DOUT(dout_out),
