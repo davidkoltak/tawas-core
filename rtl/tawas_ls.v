@@ -37,11 +37,12 @@ module tawas_ls
 
   output reg [31:0] DADDR,
   output reg DCS,
+  output reg AXI_CS,
   output reg DWR,
   output reg [3:0] DMASK,
   output reg [31:0] DOUT,
   input [31:0] DIN,
-
+  
   input LS_OP_VLD,
   input [14:0] LS_OP,
 
@@ -55,9 +56,9 @@ module tawas_ls
   output reg [2:0] LS_PTR_UPD_SEL,
   output reg [31:0] LS_PTR_UPD,
   
-  output LS_LOAD_VLD,
-  output [2:0] LS_LOAD_SEL,
-  output [31:0] LS_LOAD
+  output LSD_LOAD_VLD,
+  output [2:0] LSD_LOAD_SEL,
+  output [31:0] LSD_LOAD
 );
 
   //
@@ -68,6 +69,7 @@ module tawas_ls
   reg [7:0] ld_d2;
   reg [7:0] ld_d3;
   
+  wire axi_space;
   wire [31:0] addr_offset;
   wire [31:0] addr_adj;
   wire [31:0] addr_next;
@@ -89,6 +91,7 @@ module tawas_ls
   
   assign addr_next = LS_PTR + ((LS_OP[13]) ? addr_adj : addr_offset);
   assign addr_out = (LS_OP[13] && !addr_adj[31]) ? LS_PTR : addr_next;
+  assign axi_space = (addr_out[31]);
   
   assign wr_data = (LS_OP[12]) ? LS_STORE[31:0] :
                    (LS_OP[11]) ? {LS_STORE[15:0], LS_STORE[15:0]}
@@ -100,12 +103,34 @@ module tawas_ls
                                    (addr_out[1]               ) ? 4'b0100 :
                                    (               addr_out[0]) ? 4'b0100
                                                                    : 4'b0001;
-                  
+  
+  //
+  // Update pointers
+  //
+  
+  always @ (posedge CLK)
+    if (LS_OP_VLD)
+    begin
+      LS_PTR_UPD_VLD <= LS_OP[13];
+      LS_PTR_UPD_SEL <= LS_OP[5:3];
+      LS_PTR_UPD <= addr_next;
+    end
+    else
+    begin     
+      LS_PTR_UPD_VLD <= 1'b0;
+      LS_PTR_UPD_SEL <= 3'b0;
+      LS_PTR_UPD <= 32'd0;
+    end
+      
+  //
+  // Send no-wait bus request
+  //
+  
   always @ (posedge CLK or posedge RST)
     if (RST)
       ld_d1 <= {8{1'b0}};
     else if (LS_OP_VLD)
-      ld_d1 <= {!LS_OP[14], LS_OP[12:11], addr_out[1:0], LS_OP[2:0]};
+      ld_d1 <= {!LS_OP[14] && !axi_space, LS_OP[12:11], addr_out[1:0], LS_OP[2:0]};
     else
       ld_d1 <= {8{1'b0}};
   
@@ -119,30 +144,24 @@ module tawas_ls
     if (LS_OP_VLD)
     begin
       DADDR <= {addr_out[31:2], 2'b00};
-      DCS <= 1'b1;
+      DCS <=  !axi_space;
+      AXI_CS <= axi_space;
       DWR <= LS_OP[14];
       DMASK <= data_mask;
       DOUT <= (LS_OP[14]) ? wr_data : 32'd0;
-      
-      LS_PTR_UPD_VLD <= LS_OP[13];
-      LS_PTR_UPD_SEL <= LS_OP[5:3];
-      LS_PTR_UPD <= addr_next;
     end
     else
     begin
-      DADDR <= 32'd0;
+      DADDR <= 24'd0;
       DCS <= 1'b0;
+      AXI_CS <= 1'b0;
       DWR <= 1'b0;
       DMASK <= 4'b0000;
       DOUT <= 32'd0;
-      
-      LS_PTR_UPD_VLD <= 1'b0;
-      LS_PTR_UPD_SEL <= 3'b0;
-      LS_PTR_UPD <= 32'd0;
     end
     
   //
-  // Register read data and send to regfile
+  // Register no-wait read data (D BUS) and send to regfile
   //
   
   reg [31:0] rd_data;
@@ -160,9 +179,9 @@ module tawas_ls
                                       (            ld_d3[3]) ? {24'd0, rd_data[15:8]}
                                                              : {24'd0, rd_data[7:0]};        
   
-  assign LS_LOAD_VLD = ld_d3[7];
-  assign LS_LOAD_SEL = ld_d3[2:0];
-  assign LS_LOAD = rd_data_final;
+  assign LSD_LOAD_VLD = ld_d3[7];
+  assign LSD_LOAD_SEL = ld_d3[2:0];
+  assign LSD_LOAD = rd_data_final;
   
 endmodule
   

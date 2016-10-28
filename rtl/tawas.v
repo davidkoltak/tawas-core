@@ -41,7 +41,48 @@ module tawas
   output DWR,
   output [3:0] DMASK,
   output [31:0] DOUT,
-  input [31:0] DIN
+  input [31:0] DIN,
+  
+  output [1:0] AWID,
+  output [31:0] AWADDR,
+  output [3:0] AWLEN,
+  output [2:0] AWSIZE,
+  output [1:0] AWBURST,
+  output [1:0] AWLOCK,
+  output [3:0] AWCACHE,
+  output [2:0] AWPROT,
+  output AWVALID,
+  input AWREADY,
+
+  output [1:0] WID,
+  output [63:0] WDATA,
+  output [7:0] WSTRB,
+  output WLAST,
+  output WVALID,
+  input WREADY,
+
+  input [1:0] BID,
+  input [1:0] BRESP,
+  input BVALID,
+  output BREADY,
+
+  output [1:0] ARID,
+  output [31:0] ARADDR,
+  output [3:0] ARLEN,
+  output [2:0] ARSIZE,
+  output [1:0] ARBURST,
+  output [1:0] ARLOCK,
+  output [3:0] ARCACHE,
+  output [2:0] ARPROT,
+  output ARVALID,
+  input ARREADY,
+
+  input [1:0] RID,
+  input [63:0] RDATA,
+  input [1:0] RRESP,
+  input RLAST,
+  input RVALID,
+  output RREADY
 );
   
   wire pc_store;
@@ -64,6 +105,8 @@ module tawas
   wire ls_op_vld;
   wire [14:0] ls_op;
   
+  wire [3:0] axi_stall;
+  
   tawas_fetch tawas_fetch
   (
     .CLK(CLK),
@@ -74,6 +117,7 @@ module tawas
     
     .SLICE(slice),
     .AU_FLAGS(au_flags),
+    .AXI_STALL(axi_stall),
     
     .PC_STORE(pc_store),
     .PC(pc),
@@ -128,6 +172,17 @@ module tawas
     .AU_RC(au_rc)
   );
   
+  wire [31:0] daddr_out;
+  wire axi_cs;
+  wire dwr_out;
+  wire [3:0] dmask_out;
+  wire [31:0] dout_out;
+  
+  assign DADDR = daddr_out;
+  assign DWR = dwr_out;
+  assign DMASK = dmask_out;
+  assign DOUT = dout_out;
+  
   wire [2:0] ls_ptr_sel;
   wire [31:0] ls_ptr;
   
@@ -138,20 +193,21 @@ module tawas
   wire [2:0] ls_ptr_upd_sel;
   wire [31:0] ls_ptr_upd;
   
-  wire ls_load_vld;
-  wire [2:0] ls_load_sel;
-  wire [31:0] ls_load;
+  wire lsd_load_vld;
+  wire [2:0] lsd_load_sel;
+  wire [31:0] lsd_load;
   
   tawas_ls tawas_ls
   (
     .CLK(CLK),
     .RST(RST),
     
-    .DADDR(DADDR),
+    .DADDR(daddr_out),
     .DCS(DCS),
-    .DWR(DWR),
-    .DMASK(DMASK),
-    .DOUT(DOUT),
+    .AXI_CS(axi_cs),
+    .DWR(dwr_out),
+    .DMASK(dmask_out),
+    .DOUT(dout_out),
     .DIN(DIN),
   
     .LS_OP_VLD(ls_op_vld),
@@ -170,6 +226,72 @@ module tawas
     .LS_LOAD_VLD(ls_load_vld),
     .LS_LOAD_SEL(ls_load_sel),
     .LS_LOAD(ls_load)
+  );
+  
+  wire axi_load_vld;
+  wire [1:0] axi_load_slice;
+  wire [2:0] axi_load_sel;
+  wire [31:0] axi_load;
+
+  tawas_axi
+  (
+    .CLK(CLK),
+    .RST(RST),
+
+    .SLICE(slice),
+    .AXI_STALL(axi_stall),
+
+    .DADDR(daddr_out),
+    .AXI_CS(axi_cs),
+    .DWR(dwr_out),
+    .DMASK(dmask_out),
+    .DOUT(dout_out),
+
+    .AXI_LOAD_VLD(axi_load_vld),
+    .AXI_LOAD_SLICE(axi_load_slice),
+    .AXI_LOAD_SEL(axi_load_sel),
+    .AXI_LOAD(axi_load),
+
+    .AWID(AWID),
+    .AWADDR(AWADDR),
+    .AWLEN(AWLEN),
+    .AWSIZE(AWSIZE),
+    .AWBURST(AWBURST),
+    .AWLOCK(AWLOCK),
+    .AWCACHE(AWCACHE),
+    .AWPROT(AWPROT),
+    .AWVALID(AWVALID),
+    .AWREADY(AWREADY),
+
+    .WID(WID),
+    .WDATA(WDATA),
+    .WSTRB(WSTRB),
+    .WLAST(WLAST),
+    .WVALID(WVALID),
+    .WREADY(WREADY),
+
+    .BID(BID),
+    .BRESP(BRESP),
+    .BVALID(BVALID),
+    .BREADY(BREADY),
+
+    .ARID(ARID),
+    .ARADDR(ARADDR),
+    .ARLEN(ARLEN),
+    .ARSIZE(ARSIZE),
+    .ARBURST(ARBURST),
+    .ARLOCK(ARLOCK),
+    .ARCACHE(ARCACHE),
+    .ARPROT(ARPROT),
+    .ARVALID(ARVALID),
+    .ARREADY(ARREADY),
+
+    .RID(RID),
+    .RDATA(RDATA),
+    .RRESP(RRESP),
+    .RLAST(RLAST),
+    .RVALID(RVALID),
+    .RREADY(RREADY)
   );
   
   tawas_regfile tawas_regfile
@@ -209,7 +331,12 @@ module tawas
     
     .LS_LOAD_VLD(ls_load_vld),
     .LS_LOAD_SEL(ls_load_sel),
-    .LS_LOAD(ls_load)    
+    .LS_LOAD(ls_load),
+    
+    .AXI_LOAD_VLD(axi_load_vld),
+    .AXI_LOAD_SLICE(axi_load_slice),
+    .AXI_LOAD_SEL(axi_load_sel),
+    .AXI_LOAD(axi_load)
   );
   
 endmodule

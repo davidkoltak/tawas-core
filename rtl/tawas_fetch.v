@@ -46,6 +46,7 @@ module tawas_fetch
 
   output [1:0] SLICE,
   input [7:0] AU_FLAGS,
+  input [3:0] AXI_STALL,
   
   output PC_STORE,
   output [23:0] PC,
