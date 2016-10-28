@@ -1,6 +1,8 @@
 
   jmp(t0_start);
   jmp(t1_start);
+  jmp(stall_loop);
+  jmp(stall_loop);
 
 
 t0_start:

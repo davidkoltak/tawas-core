@@ -4,10 +4,12 @@
 //
 // Fetch instructions from the instruction ROM and execute
 // BR, CALL, and IMM instructions.  Generate AU and LS opcode
-// control output signals for two "slices" (threads).
+// control output signals for four "slices" (threads).
 //
 // Slice 0 starts at instruction offset 0x000000
 // Slice 1 starts at instruction offset 0x000001
+// Slice 1 starts at instruction offset 0x000002
+// Slice 1 starts at instruction offset 0x000003
 //
 // by
 //   David M. Koltak  02/11/2016
@@ -42,7 +44,7 @@ module tawas_fetch
   output [23:0] IADDR,
   input [31:0] IDATA,
 
-  output SLICE,
+  output [1:0] SLICE,
   input [7:0] AU_FLAGS,
   
   output PC_STORE,
@@ -76,15 +78,19 @@ module tawas_fetch
   reg r6_push_en;
   
   reg instr_vld;
-  reg pc_sel;
+  reg [1:0] pc_sel;
   
   reg [23:0] pc;
   reg [23:0] pc_0;
   reg [23:0] pc_1;
+  reg [23:0] pc_2;
+  reg [23:0] pc_3;
   reg series_cmd_0;
   reg series_cmd_1;
+  reg series_cmd_2;
+  reg series_cmd_3;
   
-  assign SLICE = ~pc_sel;
+  assign SLICE = pc_sel[1:0];
   
   assign PC_STORE = pc_store_en;
   assign PC = pc_inc;
@@ -108,7 +114,13 @@ module tawas_fetch
   
   always @ *
   begin
-    pc_next = (pc_sel) ? pc_0 : pc_1;
+    case (pc_sel[1:0])
+    2'd0: pc_next = pc_3;
+    2'd1: pc_next = pc_0;
+    2'd2: pc_next = pc_1;
+    default: pc_next = pc_2;
+    endcase
+    
     pc_inc = pc_next + 24'd1;
     pc_store_en = 1'b0;
     r6_push_en = 1'b0;
@@ -140,12 +152,12 @@ module tawas_fetch
   always @ (posedge CLK or posedge RST)
     if (RST)
     begin
-      pc_sel <= 1'b0;
+      pc_sel <= 2'd0;
       instr_vld <= 1'b0;
     end
     else
     begin
-      pc_sel <= ~pc_sel;
+      pc_sel <= pc_sel + 2'd1;
       instr_vld <= 1'b1;
     end
       
@@ -155,51 +167,97 @@ module tawas_fetch
       pc <= 24'd0;
       pc_0 <= 24'd0;
       pc_1 <= 24'd1;
+      pc_2 <= 24'd2;
+      pc_3 <= 24'd3;
       series_cmd_0 <= 1'b0;
       series_cmd_1 <= 1'b0;
+      series_cmd_2 <= 1'b0;
+      series_cmd_3 <= 1'b0;
     end
     else if (~instr_vld)
       pc <= pc_1;
     else
     begin
-      if (pc_sel)
+      case (pc_sel[1:0])
+      2'd0:
       begin
+        pc <= pc_1;
+          
+        if ((IDATA[31]) || series_cmd_3)
+        begin
+          pc_3 <= pc_next;
+          series_cmd_3 <= 1'b0;
+        end
+        else
+        begin
+          series_cmd_3 <= 1'b1;
+        end
+      end
+      
+      2'd1:
+      begin
+        pc <= pc_2;
+          
         if ((IDATA[31]) || series_cmd_0)
         begin
-          pc <= pc_next;
           pc_0 <= pc_next;
           series_cmd_0 <= 1'b0;
         end
         else
         begin
-          pc <= pc_0;
           series_cmd_0 <= 1'b1;
         end
       end
-      else
+      
+      2'd2:
       begin
+        pc <= pc_3;
+          
         if ((IDATA[31]) || series_cmd_1)
         begin
-          pc <= pc_next;
           pc_1 <= pc_next;
           series_cmd_1 <= 1'b0;
         end
         else
         begin
-          pc <= pc_1;
           series_cmd_1 <= 1'b1;
         end
       end
+      
+      default:
+      begin
+        pc <= pc_0;
+          
+        if ((IDATA[31]) || series_cmd_2)
+        begin
+          pc_2 <= pc_next;
+          series_cmd_2 <= 1'b0;
+        end
+        else
+        begin
+          series_cmd_2 <= 1'b1;
+        end
+      end
+      endcase
+      
+
     end
 
   //
   // Pick opcodes from instruction words
   //  
 
-  wire au_upper;
+  reg au_upper;
   wire ls_upper;
   
-  assign au_upper = (pc_sel) ? series_cmd_0 : series_cmd_1;
+  always @ *
+    case (pc_sel[1:0])
+    2'd0: au_upper = series_cmd_3;
+    2'd1: au_upper = series_cmd_0;
+    2'd2: au_upper = series_cmd_1;
+    default: au_upper = series_cmd_2;
+    endcase
+  
   assign ls_upper = au_upper || (IDATA[31:30] == 2'b10);
   
   assign AU_OP_VLD = (IDATA[31:30] == 2'b00) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1100);

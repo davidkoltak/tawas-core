@@ -52,7 +52,7 @@ module tawas
   wire [2:0] rf_imm_sel;
   wire [31:0] rf_imm;
   
-  wire slice;
+  wire [1:0] slice;
   wire [7:0] au_flags;
   
   wire au_op_vld;

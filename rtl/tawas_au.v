@@ -35,7 +35,7 @@ module tawas_au
   input CLK,
   input RST,
 
-  input SLICE,
+  input [1:0] SLICE,
   output [7:0] AU_FLAGS,
 
   input AU_OP_VLD,
@@ -61,18 +61,32 @@ module tawas_au
   
   reg [27:0] imm_hold_0;
   reg [27:0] imm_hold_1;
+  reg [27:0] imm_hold_2;
+  reg [27:0] imm_hold_3;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
       imm_hold_0 <= 28'd0;
-    else if (AU_IMM_VLD && (!SLICE))
+    else if (AU_IMM_VLD && (SLICE == 2'd0))
       imm_hold_0 <= AU_IMM;
 
   always @ (posedge CLK or posedge RST)
     if (RST)
       imm_hold_1 <= 28'd0;
-    else if (AU_IMM_VLD && SLICE)
+    else if (AU_IMM_VLD && (SLICE == 2'd1))
       imm_hold_1 <= AU_IMM;
+
+  always @ (posedge CLK or posedge RST)
+    if (RST)
+      imm_hold_2 <= 28'd0;
+    else if (AU_IMM_VLD && (SLICE == 2'd2))
+      imm_hold_2 <= AU_IMM;
+
+  always @ (posedge CLK or posedge RST)
+    if (RST)
+      imm_hold_3 <= 28'd0;
+    else if (AU_IMM_VLD && (SLICE == 2'd3))
+      imm_hold_3 <= AU_IMM;
 
   //
   // OP DECODE
@@ -84,7 +98,9 @@ module tawas_au
   wire [2:0] reg_c_sel;
   
   assign imm_vld = AU_OP[14];
-  assign imm[31:4] = (SLICE) ? imm_hold_1 : imm_hold_0;
+  assign imm[31:4] = (SLICE == 2'd3) ? imm_hold_3 :
+                     (SLICE == 2'd2) ? imm_hold_2 :
+                     (SLICE == 2'd1) ? imm_hold_1 : imm_hold_0;
   assign imm[3] = AU_OP[13];
   assign imm[2:0] = AU_OP[5:3];
   
@@ -101,10 +117,13 @@ module tawas_au
   reg [31:0] reg_a;
   reg [31:0] reg_b;
   reg [4:0] op_mux_d1;
+  reg [4:0] op_mux_d2;
   reg [2:0] reg_b_as_imm;
   reg [3:0] reg_c_sel_d1;
+  reg [3:0] reg_c_sel_d2;
   
   reg au_result_vld;
+  reg au_result_vld_d1;
   
   always @ (posedge CLK)
     if (AU_OP_VLD)
@@ -113,14 +132,22 @@ module tawas_au
       reg_b <= (imm_vld) ? imm : AU_RB;
       reg_b_as_imm <= (op_mux[3]) ? AU_RB[2:0] : AU_OP[5:3];
       op_mux_d1 <= op_mux;
+      op_mux_d2 <= op_mux_d1;
       reg_c_sel_d1 <= reg_c_sel;
+      reg_c_sel_d2 <= reg_c_sel_d1;
     end
   
   always @ (posedge CLK or posedge RST)
     if (RST)
+    begin
       au_result_vld <= 1'b0;
+      au_result_vld_d1 <= 1'b0;
+    end
     else
+    begin
       au_result_vld <= AU_OP_VLD;
+      au_result_vld_d1 <= au_result_vld;
+    end
   
   //
   // Generate AU results
@@ -138,36 +165,39 @@ module tawas_au
     add_sub = (op_mux_d1[0]) ? add_value : (~add_value) + 33'd1;
     add_result = {reg_a[31], reg_a} + add_sub;
     bit_mask = (1 << reg_b_as_imm);
-    
+  end
+  
+  always @ (posedge CLK)
+  begin
     case (op_mux_d1)
-    5'h00: au_result = reg_a | reg_b;
-    5'h01: au_result = reg_a ^ reg_b;
-    5'h02: au_result = add_result[31:0]; // a - b : compare (squash write-back)
-    5'h03: au_result = add_result[31:0]; // a + b
-    5'h04: au_result = add_result[31:0]; // a - b
-    5'h05: au_result = reg_a & reg_b;
+    5'h00: au_result <= reg_a | reg_b;
+    5'h01: au_result <= reg_a ^ reg_b;
+    5'h02: au_result <= add_result[31:0]; // a - b : compare (squash write-back)
+    5'h03: au_result <= add_result[31:0]; // a + b
+    5'h04: au_result <= add_result[31:0]; // a - b
+    5'h05: au_result <= reg_a & reg_b;
     
-    5'h10, 5'h18: au_result = reg_a | bit_mask;
-    5'h11, 5'h19: au_result = reg_a & ~bit_mask;
-    5'h12, 5'h1A: au_result = add_result[31:0]; // a - imm_b
-    5'h13, 5'h1B: au_result = add_result[31:0]; // a + imm_b
+    5'h10, 5'h18: au_result <= reg_a | bit_mask;
+    5'h11, 5'h19: au_result <= reg_a & ~bit_mask;
+    5'h12, 5'h1A: au_result <= add_result[31:0]; // a - imm_b
+    5'h13, 5'h1B: au_result <= add_result[31:0]; // a + imm_b
     
-    5'h14, 5'h1C: au_result = (reg_a << reg_b_as_imm);
-    5'h15, 5'h1D: au_result = (reg_a >> reg_b_as_imm);
-    5'h16, 5'h1E: au_result = (reg_a >>> reg_b_as_imm);
+    5'h14, 5'h1C: au_result <= (reg_a << reg_b_as_imm);
+    5'h15, 5'h1D: au_result <= (reg_a >> reg_b_as_imm);
+    5'h16, 5'h1E: au_result <= (reg_a >>> reg_b_as_imm);
     
-    5'h17, 5'h1F: au_result = (reg_b_as_imm[1:0] == 2'b00) ? {32{reg_a[0]}}:
+    5'h17, 5'h1F: au_result <= (reg_b_as_imm[1:0] == 2'b00) ? {32{reg_a[0]}}:
                               (reg_b_as_imm[1:0] == 2'b01) ? {{24{reg_a[7]}}, reg_a[7:0]} :
                               (reg_b_as_imm[1:0] == 2'b10) ? {{16{reg_a[15]}}, reg_a[15:0]} :
                               (reg_b_as_imm[1:0] == 2'b11) ? {{8{reg_a[23]}}, reg_a[23:0]} : reg_a;
     
     
-    default: au_result = 32'd0;
+    default: au_result <= 32'd0;
     endcase
   end
   
-  assign AU_RC_VLD = au_result_vld && (op_mux_d1 != 5'h02);
-  assign AU_RC_SEL = reg_c_sel_d1;
+  assign AU_RC_VLD = au_result_vld_d1 && (op_mux_d2 != 5'h02);
+  assign AU_RC_SEL = reg_c_sel_d2;
   assign AU_RC = au_result;
   
   //
@@ -177,10 +207,17 @@ module tawas_au
   reg [7:0] result_flags;
   reg [7:0] s0_flags;
   reg [7:0] s1_flags;
+  reg [7:0] s2_flags;
+  reg [7:0] s3_flags;
   
   always @ *
   begin
-    result_flags = (!SLICE) ? s1_flags : s0_flags;
+    case (SLICE[1:0])
+    2'd0: result_flags = s0_flags;
+    2'd1: result_flags = s1_flags;
+    2'd2: result_flags = s2_flags;
+    default: result_flags = s3_flags;
+    endcase
     
     result_flags[0] = (au_result == 32'd0);                               // zero
     result_flags[1] = au_result[31];                                      // neg
@@ -192,15 +229,29 @@ module tawas_au
   always @ (posedge CLK or posedge RST)
     if (RST)
       s0_flags <= 8'd0;
-    else if (au_result_vld && SLICE)
+    else if (au_result_vld_d1 && (SLICE == 2'd0))
       s0_flags <= result_flags;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
       s1_flags <= 8'd0;
-    else if (au_result_vld && !SLICE)
+    else if (au_result_vld_d1 && (SLICE == 2'd1))
       s1_flags <= result_flags;
+  
+  always @ (posedge CLK or posedge RST)
+    if (RST)
+      s2_flags <= 8'd0;
+    else if (au_result_vld_d1 && (SLICE == 2'd2))
+      s2_flags <= result_flags;
+  
+  always @ (posedge CLK or posedge RST)
+    if (RST)
+      s3_flags <= 8'd0;
+    else if (au_result_vld_d1 && (SLICE == 2'd3))
+      s3_flags <= result_flags;
       
-  assign AU_FLAGS = (SLICE) ? s1_flags : s0_flags;
+  assign AU_FLAGS = (SLICE == 2'd3) ? s3_flags :
+                    (SLICE == 2'd2) ? s2_flags :
+                    (SLICE == 2'd1) ? s1_flags : s0_flags;
   
 endmodule

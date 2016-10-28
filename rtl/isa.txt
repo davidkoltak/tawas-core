@@ -30,13 +30,13 @@
 // SOFTWARE.
 // 
 
-Symetrical Dual-threaded (50% clocks each)
+Symetrical Quad-threaded (25% clocks each)
  - Hides IROM fetch latency and pipeline delays
  - Chose this over pipeline stalls because of better IPC
  - Chose this over branch delay slot because of easier programming
- - Reduced single thread performance, so need to keep both threads busy
+ - Reduced single thread performance, so need to keep all threads busy
  - Also provides natural TX/RX, Read/Write, or Consumer/Producer thread separation
- - Both threads share same IROM, but start at different offsets
+ - All threads share same IROM, but start at different offsets
 
 Each thread has 8 x 32-bit registers: r6->link, r7->stack
 
