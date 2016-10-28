@@ -213,10 +213,10 @@ module tawas_au
   always @ *
   begin
     case (SLICE[1:0])
-    2'd0: result_flags = s0_flags;
-    2'd1: result_flags = s1_flags;
-    2'd2: result_flags = s2_flags;
-    default: result_flags = s3_flags;
+    2'd0: result_flags = s1_flags;
+    2'd1: result_flags = s2_flags;
+    2'd2: result_flags = s3_flags;
+    default: result_flags = s0_flags;
     endcase
     
     result_flags[0] = (au_result == 32'd0);                               // zero
@@ -229,29 +229,29 @@ module tawas_au
   always @ (posedge CLK or posedge RST)
     if (RST)
       s0_flags <= 8'd0;
-    else if (au_result_vld_d1 && (SLICE == 2'd0))
+    else if (au_result_vld_d1 && (SLICE == 2'd3))
       s0_flags <= result_flags;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
       s1_flags <= 8'd0;
-    else if (au_result_vld_d1 && (SLICE == 2'd1))
+    else if (au_result_vld_d1 && (SLICE == 2'd0))
       s1_flags <= result_flags;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
       s2_flags <= 8'd0;
-    else if (au_result_vld_d1 && (SLICE == 2'd2))
+    else if (au_result_vld_d1 && (SLICE == 2'd1))
       s2_flags <= result_flags;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
       s3_flags <= 8'd0;
-    else if (au_result_vld_d1 && (SLICE == 2'd3))
+    else if (au_result_vld_d1 && (SLICE == 2'd2))
       s3_flags <= result_flags;
       
-  assign AU_FLAGS = (SLICE == 2'd3) ? s3_flags :
-                    (SLICE == 2'd2) ? s2_flags :
-                    (SLICE == 2'd1) ? s1_flags : s0_flags;
+  assign AU_FLAGS = (SLICE == 2'd3) ? s2_flags :
+                    (SLICE == 2'd2) ? s1_flags :
+                    (SLICE == 2'd1) ? s0_flags : s3_flags;
   
 endmodule

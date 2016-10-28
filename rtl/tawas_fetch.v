@@ -8,8 +8,8 @@
 //
 // Slice 0 starts at instruction offset 0x000000
 // Slice 1 starts at instruction offset 0x000001
-// Slice 1 starts at instruction offset 0x000002
-// Slice 1 starts at instruction offset 0x000003
+// Slice 2 starts at instruction offset 0x000002
+// Slice 3 starts at instruction offset 0x000003
 //
 // by
 //   David M. Koltak  02/11/2016
