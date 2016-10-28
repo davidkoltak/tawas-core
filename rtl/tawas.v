@@ -194,9 +194,9 @@ module tawas
   wire [2:0] ls_ptr_upd_sel;
   wire [31:0] ls_ptr_upd;
   
-  wire lsd_load_vld;
-  wire [2:0] lsd_load_sel;
-  wire [31:0] lsd_load;
+  wire ls_load_vld;
+  wire [2:0] ls_load_sel;
+  wire [31:0] ls_load;
   
   tawas_ls tawas_ls
   (
@@ -235,7 +235,7 @@ module tawas
   wire [2:0] axi_load_sel;
   wire [31:0] axi_load;
 
-  tawas_axi
+  tawas_axi tawas_axi
   (
     .CLK(CLK),
     .RST(RST),

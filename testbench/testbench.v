@@ -74,15 +74,15 @@ module testbench();
     if (dram_cs && dram_wr)
     begin
       case (dram_addr)
-      32'hFFFFFFF0:
+      32'h7FFFFFF0:
       begin
         $display("### SIMULATION INFO - 0x%08X ###", dram_din);
       end
-      32'hFFFFFFF4:
+      32'h7FFFFFF4:
       begin
         $display("### SIMULATION WARN - 0x%08X ###", dram_din);
       end
-      32'hFFFFFFF8:
+      32'h7FFFFFF8:
       begin
         $display("### SIMULATION PASSED - 0x%08X ###", dram_din);
         @(posedge sim_clk);
@@ -91,7 +91,7 @@ module testbench();
         @(posedge sim_clk);
         $finish();
       end
-      32'hFFFFFFFC:
+      32'h7FFFFFFC:
       begin
         $display("### SIMULATION FAILED - 0x%08X ###", dram_din);
         @(posedge sim_clk);
@@ -116,6 +116,47 @@ module testbench();
     .DOUT(dram_dout)
   );
 
+  wire [1:0] AWID;
+  wire [31:0] AWADDR;
+  wire [3:0] AWLEN;
+  wire [2:0] AWSIZE;
+  wire [1:0] AWBURST;
+  wire [1:0] AWLOCK;
+  wire [3:0] AWCACHE;
+  wire [2:0] AWPROT;
+  wire AWVALID;
+  wire AWREADY;
+
+  wire [1:0] WID;
+  wire [63:0] WDATA;
+  wire [7:0] WSTRB;
+  wire WLAST;
+  wire WVALID;
+  wire WREADY;
+
+  wire [1:0] BID;
+  wire [1:0] BRESP;
+  wire BVALID;
+  wire BREADY;
+
+  wire [1:0] ARID;
+  wire [31:0] ARADDR;
+  wire [3:0] ARLEN;
+  wire [2:0] ARSIZE;
+  wire [1:0] ARBURST;
+  wire [1:0] ARLOCK;
+  wire [3:0] ARCACHE;
+  wire [2:0] ARPROT;
+  wire ARVALID;
+  wire ARREADY;
+
+  wire [1:0] RID;
+  wire [63:0] RDATA;
+  wire [1:0] RRESP;
+  wire RLAST;
+  wire RVALID;
+  wire RREADY;
+  
   tawas tawas
   (
     .CLK(sim_clk),
@@ -129,7 +170,151 @@ module testbench();
     .DWR(dram_wr),
     .DMASK(dram_mask),
     .DOUT(dram_din),
-    .DIN(dram_dout)
+    .DIN(dram_dout),
+    
+    .AWID(AWID),
+    .AWADDR(AWADDR),
+    .AWLEN(AWLEN),
+    .AWSIZE(AWSIZE),
+    .AWBURST(AWBURST),
+    .AWLOCK(AWLOCK),
+    .AWCACHE(AWCACHE),
+    .AWPROT(AWPROT),
+    .AWVALID(AWVALID),
+    .AWREADY(AWREADY),
+
+    .WID(WID),
+    .WDATA(WDATA),
+    .WSTRB(WSTRB),
+    .WLAST(WLAST),
+    .WVALID(WVALID),
+    .WREADY(WREADY),
+
+    .BID(BID),
+    .BRESP(BRESP),
+    .BVALID(BVALID),
+    .BREADY(BREADY),
+
+    .ARID(ARID),
+    .ARADDR(ARADDR),
+    .ARLEN(ARLEN),
+    .ARSIZE(ARSIZE),
+    .ARBURST(ARBURST),
+    .ARLOCK(ARLOCK),
+    .ARCACHE(ARCACHE),
+    .ARPROT(ARPROT),
+    .ARVALID(ARVALID),
+    .ARREADY(ARREADY),
+
+    .RID(RID),
+    .RDATA(RDATA),
+    .RRESP(RRESP),
+    .RLAST(RLAST),
+    .RVALID(RVALID),
+    .RREADY(RREADY)
+  );
+
+  wire [65:0] SpMBUS;
+  wire SpMVLD;
+  wire SpMRDY;
+    
+  wire [65:0] SpSBUS;
+  wire SpSVLD;
+  wire SpSRDY;
+    
+  axi2spartan #(.ID_WIDTH(2), .BWIDTH(64)) axi2spartan
+  (
+    .CLK(sim_clk),
+    .RST(sim_rst),
+
+    .AWID(AWID),
+    .AWADDR(AWADDR),
+    .AWLEN(AWLEN),
+    .AWSIZE(AWSIZE),
+    .AWBURST(AWBURST),
+    .AWLOCK(AWLOCK),
+    .AWCACHE(AWCACHE),
+    .AWPROT(AWPROT),
+    .AWVALID(AWVALID),
+    .AWREADY(AWREADY),
+
+    .WID(WID),
+    .WDATA(WDATA),
+    .WSTRB(WSTRB),
+    .WLAST(WLAST),
+    .WVALID(WVALID),
+    .WREADY(WREADY),
+
+    .BID(BID),
+    .BRESP(BRESP),
+    .BVALID(BVALID),
+    .BREADY(BREADY),
+
+    .ARID(ARID),
+    .ARADDR(ARADDR),
+    .ARLEN(ARLEN),
+    .ARSIZE(ARSIZE),
+    .ARBURST(ARBURST),
+    .ARLOCK(ARLOCK),
+    .ARCACHE(ARCACHE),
+    .ARPROT(ARPROT),
+    .ARVALID(ARVALID),
+    .ARREADY(ARREADY),
+
+    .RID(RID),
+    .RDATA(RDATA),
+    .RRESP(RRESP),
+    .RLAST(RLAST),
+    .RVALID(RVALID),
+    .RREADY(RREADY),
+
+    .SpMBUS(SpMBUS),
+    .SpMVLD(SpMVLD),
+    .SpMRDY(SpMRDY),
+
+    .SpSBUS(SpSBUS),
+    .SpSVLD(SpSVLD),
+    .SpSRDY(SpSRDY)
+  );
+
+  wire [31:0] axi_ram_addr;
+  wire axi_ram_cs;
+  wire axi_ram_wr;
+  wire [63:0] axi_ram_mask;
+  wire [63:0] axi_ram_din;
+  wire [63:0] axi_ram_dout;
+    
+  spartan2ram #(.BWIDTH(64)) spartan2ram
+  (
+    .CLK(sim_clk),
+    .RST(sim_rst),
+
+    .SpMBUS(SpMBUS),
+    .SpMVLD(SpMVLD),
+    .SpMRDY(SpMRDY),
+
+    .SpSBUS(SpSBUS),
+    .SpSVLD(SpSVLD),
+    .SpSRDY(SpSRDY),
+
+    .CS(axi_ram_cs),
+    .WE(axi_ram_wr),
+    .ADDR(axi_ram_addr),
+    .MASK(axi_ram_mask),
+    .WR_DATA(axi_ram_din),
+    .RD_DATA(axi_ram_dout)
+  );
+
+  axi_ram axi_ram
+  (
+    .CLK(sim_clk),
+
+    .ADDR(axi_ram_addr),
+    .CS(axi_ram_cs),
+    .WR(axi_ram_wr),
+    .MASK(axi_ram_mask),
+    .DIN(axi_ram_din),
+    .DOUT(axi_ram_dout)
   );
   
 endmodule

@@ -1,11 +1,12 @@
 
 TESTCASE ?= default
 
-DESIGN_VERILOG  = ../rtl/tawas_regfile.v ../rtl/tawas_ls.v
+DESIGN_VERILOG  = ../rtl/tawas_regfile.v ../rtl/tawas_ls.v ../rtl/tawas_axi.v
 DESIGN_VERILOG += ../rtl/tawas_au.v ../rtl/tawas_fetch.v ../rtl/tawas.v
 
 MAX_CLOCKS = 500
-TESTBENCH_VERILOG = ../testbench/irom.v ../testbench/dram.v ../testbench/testbench.v
+TESTBENCH_VERILOG = ../testbench/irom.v ../testbench/dram.v ../testbench/axi_ram.v ../testbench/testbench.v
+TESTBENCH_VERILOG += ../testbench/spartan/rtl/axi2spartan.v ../testbench/spartan/rtl/spartan2ram.v
 TESTBENCH_DATA = ./irom.hex ./dram.hex
 
 TOPLEVEL = testbench.v

@@ -57,9 +57,9 @@ module tawas_ls
   output reg [2:0] LS_PTR_UPD_SEL,
   output reg [31:0] LS_PTR_UPD,
   
-  output LSD_LOAD_VLD,
-  output [2:0] LSD_LOAD_SEL,
-  output [31:0] LSD_LOAD
+  output LS_LOAD_VLD,
+  output [2:0] LS_LOAD_SEL,
+  output [31:0] LS_LOAD
 );
 
   //
@@ -182,9 +182,9 @@ module tawas_ls
                                       (            ld_d3[3]) ? {24'd0, rd_data[15:8]}
                                                              : {24'd0, rd_data[7:0]};        
   
-  assign LSD_LOAD_VLD = ld_d3[7];
-  assign LSD_LOAD_SEL = ld_d3[2:0];
-  assign LSD_LOAD = rd_data_final;
+  assign LS_LOAD_VLD = ld_d3[7];
+  assign LS_LOAD_SEL = ld_d3[2:0];
+  assign LS_LOAD = rd_data_final;
   
 endmodule
   

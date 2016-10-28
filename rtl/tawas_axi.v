@@ -224,12 +224,12 @@ module tawas_axi
   reg [3:0] write_state;
   reg [3:0] write_sent;
   
-  assign [3:0] AWLEN = 4'd0;
-  assign [2:0] AWSIZE = 3'd2;
-  assign [1:0] AWBURST = 2'd0;
-  assign [1:0] AWLOCK = 2'd0;
-  assign [3:0] AWCACHE = 4'd0;
-  assign [2:0] AWPROT = 3'd0;
+  assign AWLEN = 4'd0;
+  assign AWSIZE = 3'd2;
+  assign AWBURST = 2'd0;
+  assign AWLOCK = 2'd0;
+  assign AWCACHE = 4'd0;
+  assign AWPROT = 3'd0;
   assign WLAST = 1'b1;
   
   always @ (posedge CLK or posedge RST)
@@ -271,7 +271,7 @@ module tawas_axi
           WVALID <= 1'b1;
           WID <= 2'd0;
           WDATA <= {dout_0, dout_0};
-          WSTRB <= (addr_0[2]) ? {dmask_0, 4'd0} : {4'd0, dmask_0};
+          WSTRB <= (addr_0[2]) ? {mask_0, 4'd0} : {4'd0, mask_0};
         end
       4'd2:
         if (WREADY)
@@ -298,7 +298,7 @@ module tawas_axi
           WVALID <= 1'b1;
           WID <= 2'd1;
           WDATA <= {dout_1, dout_1};
-          WSTRB <= (addr_1[2]) ? {dmask_1, 4'd0} : {4'd0, dmask_1};
+          WSTRB <= (addr_1[2]) ? {mask_1, 4'd0} : {4'd0, mask_1};
         end
       4'd5:
         if (WREADY)
@@ -325,7 +325,7 @@ module tawas_axi
           WVALID <= 1'b1;
           WID <= 2'd2;
           WDATA <= {dout_2, dout_2};
-          WSTRB <= (addr_2[2]) ? {dmask_2, 4'd0} : {4'd0, dmask_2};
+          WSTRB <= (addr_2[2]) ? {mask_2, 4'd0} : {4'd0, mask_2};
         end
       4'd8:
         if (WREADY)
@@ -352,7 +352,7 @@ module tawas_axi
           WVALID <= 1'b1;
           WID <= 2'd3;
           WDATA <= {dout_3, dout_3};
-          WSTRB <= (addr_3[2]) ? {dmask_3, 4'd0} : {4'd0, dmask_3};
+          WSTRB <= (addr_3[2]) ? {mask_3, 4'd0} : {4'd0, mask_3};
         end
       4'd11:
         if (WREADY)
