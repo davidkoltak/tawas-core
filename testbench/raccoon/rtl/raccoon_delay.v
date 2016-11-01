@@ -1,5 +1,5 @@
 //
-// Raccoon bus interface to generic RAM style interface.
+// Raccoon bus sync delay
 //
 // by
 //     David Koltak  11/01/2016
@@ -27,66 +27,39 @@
 // SOFTWARE.
 // 
 
-module raccoon2ram
+module raccoon_delay
 (
   CLK,
   RST,
 
   RaccIn,
-  RaccOut,
-
-  CS,
-  WE,
-  ADDR,
-  MASK,
-  WR_DATA,
-  RD_DATA
+  RaccOut
 );
-  parameter ADDR_MASK = 32'hFFFF0000;
-  parameter ADDR_BASE = 32'h00010000;
-  
+  parameter DELAY_CYCLES = 7;
+
   input CLK;
   input RST;
-
+  
   input [78:0] RaccIn;
   output [78:0] RaccOut;
-
-  output CS;
-  output WE;
-  output [31:0] ADDR;
-  output [3:0] MASK;
-  output [31:0] WR_DATA;
-  input [31:0] RD_DATA;
-
-  reg [78:0] din;
-  reg [78:0] din_d1;
-  reg [78:0] dout;
   
-  wire addr_match = din[78] && ((din[31:0] & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
-  reg addr_match_d1;
+  reg [78:0] bus_delay[(DELAY_CYCLES-1):0];
   
-  assign RaccOut = dout;
+  integer x;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
     begin
-      din <= 79'd0;
-      addr_match_d1 <= 1'b0;
-      din_d1 <= 79'd0;
-      dout <= 79'd0;
+      for (x = 0; x < DELAY_CYCLES; x = x + 1)
+        bus_delay[x] <= 78'd0;
     end
     else
     begin
-      din <= RaccIn;
-      addr_match_d1 <= addr_match;
-      din_d1 <= din;
-      dout <= (addr_match_d1) ? {din_d1[78:77], 1'b1, din_d1[75:64], RD_DATA[31:0], din_d1[31:0]} : din_d1[78:0];
+      bus_delay[(DELAY_CYCLES-1)] <= RaccIn;
+      for (x = 1; x < DELAY_CYCLES; x = x + 1)
+        bus_delay[x-1] <= bus_delay[x];
     end
-   
-  assign CS = addr_match;
-  assign WE = din[77];
-  assign ADDR = din[31:0];
-  assign MASK = din[67:64];
-  assign WR_DATA = din[63:32];
   
+  assign RaccOut = bus_delay[0];
+    
 endmodule

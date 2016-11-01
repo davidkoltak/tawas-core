@@ -43,6 +43,9 @@ module tawas
   output [31:0] DOUT,
   input [31:0] DIN,
   
+  output [78:0] RaccOut,
+  input [78:0] RaccIn,
+  
   output [1:0] AWID,
   output [31:0] AWADDR,
   output [3:0] AWLEN,
@@ -106,6 +109,7 @@ module tawas
   wire [14:0] ls_op;
   
   wire [3:0] axi_stall;
+  wire [3:0] raccoon_stall;
   
   tawas_fetch tawas_fetch
   (
@@ -118,6 +122,7 @@ module tawas
     .SLICE(slice),
     .AU_FLAGS(au_flags),
     .AXI_STALL(axi_stall),
+    .RACCOON_STALL(raccoon_stall),
     
     .PC_STORE(pc_store),
     .PC(pc),
@@ -174,7 +179,8 @@ module tawas
   
   wire [31:0] daddr_out;
   wire axi_cs;
-  wire [2:0] axi_rc;
+  wire raccoon_cs;
+  wire [2:0] writeback_reg;
   wire dwr_out;
   wire [3:0] dmask_out;
   wire [31:0] dout_out;
@@ -206,7 +212,8 @@ module tawas
     .DADDR(daddr_out),
     .DCS(DCS),
     .AXI_CS(axi_cs),
-    .AXI_RC(axi_rc),
+    .RACCOON_CS(raccoon_cs),
+    .WRITEBACK_REG(writeback_reg),
     .DWR(dwr_out),
     .DMASK(dmask_out),
     .DOUT(dout_out),
@@ -245,7 +252,7 @@ module tawas
 
     .DADDR(daddr_out),
     .AXI_CS(axi_cs),
-    .AXI_RC(axi_rc),
+    .WRITEBACK_REG(writeback_reg),
     .DWR(dwr_out),
     .DMASK(dmask_out),
     .DOUT(dout_out),
@@ -296,7 +303,36 @@ module tawas
     .RVALID(RVALID),
     .RREADY(RREADY)
   );
-  
+
+  wire raccoon_load_vld;
+  wire [1:0] raccoon_load_slice;
+  wire [2:0] raccoon_load_sel;
+  wire [31:0] raccoon_load;
+
+  tawas_raccoon tawas_raccoon
+  (
+    .CLK(CLK),
+    .RST(RST),
+
+    .SLICE(slice),
+    .RACCOON_STALL(raccoon_stall),
+
+    .DADDR(daddr_out),
+    .RACCOON_CS(raccoon_cs),
+    .WRITEBACK_REG(writeback_reg),
+    .DWR(dwr_out),
+    .DMASK(dmask_out),
+    .DOUT(dout_out),
+
+    .RACCOON_LOAD_VLD(raccoon_load_vld),
+    .RACCOON_LOAD_SLICE(raccoon_load_slice),
+    .RACCOON_LOAD_SEL(raccoon_load_sel),
+    .RACCOON_LOAD(raccoon_load),
+
+    .RaccOut(RaccOut),
+    .RaccIn(RaccIn)
+  );
+    
   tawas_regfile tawas_regfile
   (
     .CLK(CLK),
@@ -339,7 +375,12 @@ module tawas
     .AXI_LOAD_VLD(axi_load_vld),
     .AXI_LOAD_SLICE(axi_load_slice),
     .AXI_LOAD_SEL(axi_load_sel),
-    .AXI_LOAD(axi_load)
+    .AXI_LOAD(axi_load),
+    
+    .RACCOON_LOAD_VLD(raccoon_load_vld),
+    .RACCOON_LOAD_SLICE(raccoon_load_slice),
+    .RACCOON_LOAD_SEL(raccoon_load_sel),
+    .RACCOON_LOAD(raccoon_load)
   );
   
 endmodule

@@ -82,6 +82,12 @@ module testbench();
     .DOUT(dram_dout)
   );
 
+  wire [78:0] RaccOut;
+  wire [78:0] RaccIn;
+  
+  wire [78:0] RaccOut_Delayed;
+  wire [78:0] RaccIn_Delayed;
+  
   wire [1:0] AWID;
   wire [31:0] AWADDR;
   wire [3:0] AWLEN;
@@ -138,6 +144,9 @@ module testbench();
     .DOUT(dram_din),
     .DIN(dram_dout),
     
+    .RaccOut(RaccOut),
+    .RaccIn(RaccIn_Delayed),
+  
     .AWID(AWID),
     .AWADDR(AWADDR),
     .AWLEN(AWLEN),
@@ -178,6 +187,59 @@ module testbench();
     .RLAST(RLAST),
     .RVALID(RVALID),
     .RREADY(RREADY)
+  );
+
+  raccoon_delay #(.DELAY_CYCLES(3)) raccoon_delay_out
+  (
+    .CLK(sim_clk),
+    .RST(sim_rst),
+
+    .RaccIn(RaccOut),
+    .RaccOut(RaccOut_Delayed)
+  );
+
+  raccoon_delay #(.DELAY_CYCLES(2)) raccoon_delay_in
+  (
+    .CLK(sim_clk),
+    .RST(sim_rst),
+
+    .RaccIn(RaccIn),
+    .RaccOut(RaccIn_Delayed)
+  );
+  
+  wire racc_ram_cs;
+  wire racc_ram_we;
+  wire [31:0] racc_ram_addr;
+  wire [3:0] racc_ram_mask;
+  wire [31:0] racc_ram_wdata;
+  wire [31:0] racc_ram_rdata;
+  
+  raccoon2ram #(.ADDR_MASK(32'hFFFF0000), .ADDR_BASE(32'hE0000000)) raccoon2ram
+  (
+    .CLK(sim_clk),
+    .RST(sim_rst),
+
+    .RaccIn(RaccOut_Delayed),
+    .RaccOut(RaccIn),
+
+    .CS(racc_ram_cs),
+    .WE(racc_ram_we),
+    .ADDR(racc_ram_addr),
+    .MASK(racc_ram_mask),
+    .WR_DATA(racc_ram_wdata),
+    .RD_DATA(racc_ram_rdata)
+  );
+
+  racc_ram racc_ram
+  (
+    .CLK(sim_clk),
+
+    .ADDR(racc_ram_addr),
+    .CS(racc_ram_cs),
+    .WR(racc_ram_we),
+    .MASK(racc_ram_mask),
+    .DIN(racc_ram_wdata),
+    .DOUT(racc_ram_rdata)
   );
 
   wire [65:0] SpMBUS_A;

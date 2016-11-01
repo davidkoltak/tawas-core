@@ -40,7 +40,7 @@ module tawas_axi
   
   input [31:0] DADDR,
   input AXI_CS,
-  input [2:0] AXI_RC,
+  input [2:0] WRITEBACK_REG,
   input DWR,
   input [3:0] DMASK,
   input [31:0] DOUT,
@@ -192,7 +192,7 @@ module tawas_axi
       addr_0 <= DADDR;
       mask_0 <= DMASK;
       dout_0 <= DOUT;
-      rc_0 <= AXI_RC;
+      rc_0 <= WRITEBACK_REG;
     end
 
   always @ (posedge CLK)
@@ -201,7 +201,7 @@ module tawas_axi
       addr_1 <= DADDR;
       mask_1 <= DMASK;
       dout_1 <= DOUT;
-      rc_1 <= AXI_RC;
+      rc_1 <= WRITEBACK_REG;
     end
     
   always @ (posedge CLK)
@@ -210,7 +210,7 @@ module tawas_axi
       addr_2 <= DADDR;
       mask_2 <= DMASK;
       dout_2 <= DOUT;
-      rc_2 <= AXI_RC;
+      rc_2 <= WRITEBACK_REG;
     end
     
   always @ (posedge CLK)
@@ -219,14 +219,14 @@ module tawas_axi
       addr_3 <= DADDR;
       mask_3 <= DMASK;
       dout_3 <= DOUT;
-      rc_3 <= AXI_RC;
+      rc_3 <= WRITEBACK_REG;
     end
 
   //
   // Arbitrate write requests and send out AXI bus
   //
   
-  reg [3:0] write_state;
+  reg [2:0] write_state;
   reg [3:0] write_sent;
   
   reg awvalid_out;
@@ -248,10 +248,10 @@ module tawas_axi
       write_sent <= 4'd0;
     else
     begin
-      write_sent[0] <= (write_sent[0] | (write_state == 3'd1)) && !write_ack[0];
-      write_sent[1] <= (write_sent[1] | (write_state == 3'd3)) && !write_ack[1];
-      write_sent[2] <= (write_sent[2] | (write_state == 3'd5)) && !write_ack[2];
-      write_sent[3] <= (write_sent[3] | (write_state == 3'd7)) && !write_ack[3];
+      write_sent[0] <= (write_sent[0] || (write_state == 3'd1)) && !write_ack[0];
+      write_sent[1] <= (write_sent[1] || (write_state == 3'd3)) && !write_ack[1];
+      write_sent[2] <= (write_sent[2] || (write_state == 3'd5)) && !write_ack[2];
+      write_sent[3] <= (write_sent[3] || (write_state == 3'd7)) && !write_ack[3];
     end
     
   always @ (posedge CLK or posedge RST)
@@ -263,7 +263,7 @@ module tawas_axi
     end
     else
     begin
-      case (write_state[3:0])
+      case (write_state[2:0])
       3'd0:
         if (write_sent[0] || !pending_write[0])
           write_state <= write_state + 3'd2;
@@ -375,10 +375,10 @@ module tawas_axi
       read_sent <= 4'd0;
     else
     begin
-      read_sent[0] <= (read_sent[0] | (read_state == 4'd1)) && !read_ack[0];
-      read_sent[1] <= (read_sent[1] | (read_state == 4'd3)) && !read_ack[1];
-      read_sent[2] <= (read_sent[2] | (read_state == 4'd5)) && !read_ack[2];
-      read_sent[3] <= (read_sent[3] | (read_state == 4'd7)) && !read_ack[3];
+      read_sent[0] <= (read_sent[0] || (read_state == 4'd1)) && !read_ack[0];
+      read_sent[1] <= (read_sent[1] || (read_state == 4'd3)) && !read_ack[1];
+      read_sent[2] <= (read_sent[2] || (read_state == 4'd5)) && !read_ack[2];
+      read_sent[3] <= (read_sent[3] || (read_state == 4'd7)) && !read_ack[3];
     end
     
   always @ (posedge CLK or posedge RST)

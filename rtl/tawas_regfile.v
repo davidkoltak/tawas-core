@@ -73,7 +73,12 @@ module tawas_regfile
   input AXI_LOAD_VLD,
   input [1:0] AXI_LOAD_SLICE,
   input [2:0] AXI_LOAD_SEL,
-  input [31:0] AXI_LOAD
+  input [31:0] AXI_LOAD,
+  
+  input RACCOON_LOAD_VLD,
+  input [1:0] RACCOON_LOAD_SLICE,
+  input [2:0] RACCOON_LOAD_SEL,
+  input [31:0] RACCOON_LOAD
 );
 
   reg [31:0] regfile_0[7:0];
@@ -104,7 +109,15 @@ module tawas_regfile
       2'd2: regfile_2_nxt[AXI_LOAD_SEL] = AXI_LOAD;
       default: regfile_3_nxt[AXI_LOAD_SEL] = AXI_LOAD;
       endcase
-      
+
+    if (RACCOON_LOAD_VLD)
+      case (RACCOON_LOAD_SLICE[1:0])
+      2'd0: regfile_0_nxt[RACCOON_LOAD_SEL] = RACCOON_LOAD;
+      2'd1: regfile_1_nxt[RACCOON_LOAD_SEL] = RACCOON_LOAD;
+      2'd2: regfile_2_nxt[RACCOON_LOAD_SEL] = RACCOON_LOAD;
+      default: regfile_3_nxt[RACCOON_LOAD_SEL] = RACCOON_LOAD;
+      endcase
+            
     case (SLICE[1:0])
     2'd0:
     begin
