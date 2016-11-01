@@ -75,6 +75,7 @@ module tawas_fetch
   
   reg [23:0] pc_next;
   reg [23:0] pc_inc;
+  reg pc_stall;
   reg pc_store_en;
   reg r6_push_en;
   
@@ -120,6 +121,13 @@ module tawas_fetch
     2'd1: pc_next = pc_0;
     2'd2: pc_next = pc_1;
     default: pc_next = pc_2;
+    endcase
+    
+    case (pc_sel[1:0])
+    2'd0: pc_stall = AXI_STALL[3];
+    2'd1: pc_stall = AXI_STALL[0];
+    2'd2: pc_stall = AXI_STALL[1];
+    default: pc_stall = AXI_STALL[2];
     endcase
     
     pc_inc = pc_next + 24'd1;
@@ -184,64 +192,67 @@ module tawas_fetch
       begin
         pc <= pc_1;
           
-        if ((IDATA[31]) || series_cmd_3)
+        if (pc_stall)
+          pc_3 <= pc_3;
+        else if (!IDATA[31] && !series_cmd_3)
+          series_cmd_3 <= 1'b1;
+        else
         begin
           pc_3 <= pc_next;
           series_cmd_3 <= 1'b0;
         end
-        else
-        begin
-          series_cmd_3 <= 1'b1;
-        end
+        
       end
       
       2'd1:
       begin
         pc <= pc_2;
           
-        if ((IDATA[31]) || series_cmd_0)
+        if (pc_stall)
+          pc_0 <= pc_0;
+        else if (!IDATA[31] && !series_cmd_0)
+          series_cmd_0 <= 1'b1;
+        else
         begin
           pc_0 <= pc_next;
           series_cmd_0 <= 1'b0;
         end
-        else
-        begin
-          series_cmd_0 <= 1'b1;
-        end
+        
       end
       
       2'd2:
       begin
         pc <= pc_3;
           
-        if ((IDATA[31]) || series_cmd_1)
+        if (pc_stall)
+          pc_1 <= pc_1;
+        else if (!IDATA[31] && !series_cmd_1)
+          series_cmd_1 <= 1'b1;
+        else
         begin
           pc_1 <= pc_next;
           series_cmd_1 <= 1'b0;
         end
-        else
-        begin
-          series_cmd_1 <= 1'b1;
-        end
+        
       end
       
       default:
       begin
         pc <= pc_0;
           
-        if ((IDATA[31]) || series_cmd_2)
+        if (pc_stall)
+          pc_2 <= pc_2;
+        else if (!IDATA[31] && !series_cmd_2)
+          series_cmd_2 <= 1'b1;
+        else
         begin
           pc_2 <= pc_next;
           series_cmd_2 <= 1'b0;
         end
-        else
-        begin
-          series_cmd_2 <= 1'b1;
-        end
+        
       end
       endcase
       
-
     end
 
   //
@@ -261,17 +272,17 @@ module tawas_fetch
   
   assign ls_upper = au_upper || (IDATA[31:30] == 2'b10);
   
-  assign AU_OP_VLD = (IDATA[31:30] == 2'b00) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1100);
+  assign AU_OP_VLD = !pc_stall && ((IDATA[31:30] == 2'b00) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1100));
   assign AU_OP = (au_upper) ? IDATA[30:15] : IDATA[14:0];
   
-  assign AU_IMM_VLD = (IDATA[31:28] == 4'hE);
+  assign AU_IMM_VLD = !pc_stall && (IDATA[31:28] == 4'hE);
   assign AU_IMM = IDATA[27:0];
   
-  assign RF_IMM_VLD = (IDATA[31:27] == 5'h1E);
+  assign RF_IMM_VLD = !pc_stall && (IDATA[31:27] == 5'h1E);
   assign RF_IMM_SEL = IDATA[26:24];
   assign RF_IMM = {{8{IDATA[23]}}, IDATA[23:0]};
   
-  assign LS_OP_VLD = r6_push_en || (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101);
+  assign LS_OP_VLD = !pc_stall && (r6_push_en || (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101));
   assign LS_OP = (r6_push_en) ? {3'h7, 6'h3F, 3'd7, 3'd6} : (ls_upper) ? IDATA[30:15] : IDATA[14:0];
         
 endmodule

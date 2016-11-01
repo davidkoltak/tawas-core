@@ -58,14 +58,14 @@ module tawas_axi
   output [1:0] AWLOCK,
   output [3:0] AWCACHE,
   output [2:0] AWPROT,
-  output reg AWVALID,
+  output AWVALID,
   input AWREADY,
 
   output reg [1:0] WID,
   output reg [63:0] WDATA,
   output reg [7:0] WSTRB,
   output WLAST,
-  output reg WVALID,
+  output WVALID,
   input WREADY,
 
   input [1:0] BID,
@@ -110,6 +110,11 @@ module tawas_axi
   
   always @ *
   begin
+    write_req = 4'd0;
+    write_ack = 4'd0;
+    read_req = 4'd0;
+    read_ack = 4'd0;
+    
     if (AXI_CS & DWR)
       case (SLICE[1:0])
       2'd0: write_req = 4'b0100;
@@ -224,12 +229,18 @@ module tawas_axi
   reg [3:0] write_state;
   reg [3:0] write_sent;
   
+  reg awvalid_out;
+  reg wvalid_out;
+  
+  assign AWVALID = awvalid_out;
   assign AWLEN = 4'd0;
   assign AWSIZE = 3'd2;
   assign AWBURST = 2'd0;
   assign AWLOCK = 2'd0;
   assign AWCACHE = 4'd0;
   assign AWPROT = 3'd0;
+  
+  assign WVALID = wvalid_out;
   assign WLAST = 1'b1;
   
   always @ (posedge CLK or posedge RST)
@@ -237,131 +248,110 @@ module tawas_axi
       write_sent <= 4'd0;
     else
     begin
-      write_sent[0] <= (write_sent[0] | (write_state == 4'd2)) && !write_ack[0];
-      write_sent[1] <= (write_sent[1] | (write_state == 4'd5)) && !write_ack[1];
-      write_sent[2] <= (write_sent[2] | (write_state == 4'd8)) && !write_ack[2];
-      write_sent[3] <= (write_sent[3] | (write_state == 4'd11)) && !write_ack[3];
+      write_sent[0] <= (write_sent[0] | (write_state == 3'd1)) && !write_ack[0];
+      write_sent[1] <= (write_sent[1] | (write_state == 3'd3)) && !write_ack[1];
+      write_sent[2] <= (write_sent[2] | (write_state == 3'd5)) && !write_ack[2];
+      write_sent[3] <= (write_sent[3] | (write_state == 3'd7)) && !write_ack[3];
     end
     
   always @ (posedge CLK or posedge RST)
     if (RST)
     begin
-      write_state <= 4'd0;
-      AWVALID <= 1'b0;
-      WVALID <= 1'b0;
+      write_state <= 3'd0;
+      awvalid_out <= 1'b0;
+      wvalid_out <= 1'b0;
     end
     else
     begin
       case (write_state[3:0])
-      4'd0:
+      3'd0:
         if (write_sent[0] || !pending_write[0])
-          write_state <= write_state + 4'd3;
+          write_state <= write_state + 3'd2;
         else
         begin
-          write_state <= write_state + 4'd1;
-          AWVALID <= 1'b1;
+          write_state <= write_state + 3'd1;
+          awvalid_out <= 1'b1;
           AWID <= 2'd0;
           AWADDR <= addr_0;
-        end       
-      4'd1:
-        if (AWREADY)
-        begin
-          write_state <= write_state + 4'd1;
-          AWVALID <= 1'b0;
-          WVALID <= 1'b1;
+          wvalid_out <= 1'b1;
           WID <= 2'd0;
           WDATA <= {dout_0, dout_0};
           WSTRB <= (addr_0[2]) ? {mask_0, 4'd0} : {4'd0, mask_0};
-        end
-      4'd2:
-        if (WREADY)
-        begin
+        end       
+      3'd1:
+      begin
+        awvalid_out <= awvalid_out && !AWREADY;
+        wvalid_out <= wvalid_out && !WREADY;
+        if (!awvalid_out && !wvalid_out)
           write_state <= write_state + 4'd1;
-          WVALID <= 1'b0;
-        end
-
-      4'd3:
+      end
+      
+      3'd2:
         if (write_sent[1] || !pending_write[1])
-          write_state <= write_state + 4'd3;
+          write_state <= write_state + 3'd2;
         else
         begin
-          write_state <= write_state + 4'd1;
-          AWVALID <= 1'b1;
+          write_state <= write_state + 3'd1;
+          awvalid_out <= 1'b1;
           AWID <= 2'd1;
           AWADDR <= addr_1;
-        end       
-      4'd4:
-        if (AWREADY)
-        begin
-          write_state <= write_state + 4'd1;
-          AWVALID <= 1'b0;
-          WVALID <= 1'b1;
+          wvalid_out <= 1'b1;
           WID <= 2'd1;
           WDATA <= {dout_1, dout_1};
           WSTRB <= (addr_1[2]) ? {mask_1, 4'd0} : {4'd0, mask_1};
-        end
-      4'd5:
-        if (WREADY)
-        begin
+        end       
+      3'd3:
+      begin
+        awvalid_out <= awvalid_out && !AWREADY;
+        wvalid_out <= wvalid_out && !WREADY;
+        if (!awvalid_out && !wvalid_out)
           write_state <= write_state + 4'd1;
-          WVALID <= 1'b0;
-        end
+      end
 
-      4'd6:
+      3'd4:
         if (write_sent[2] || !pending_write[2])
-          write_state <= write_state + 4'd3;
+          write_state <= write_state + 3'd2;
         else
         begin
-          write_state <= write_state + 4'd1;
-          AWVALID <= 1'b1;
+          write_state <= write_state + 3'd1;
+          awvalid_out <= 1'b1;
           AWID <= 2'd2;
           AWADDR <= addr_2;
-        end       
-      4'd7:
-        if (AWREADY)
-        begin
-          write_state <= write_state + 4'd1;
-          AWVALID <= 1'b0;
-          WVALID <= 1'b1;
+          wvalid_out <= 1'b1;
           WID <= 2'd2;
           WDATA <= {dout_2, dout_2};
-          WSTRB <= (addr_2[2]) ? {mask_2, 4'd0} : {4'd0, mask_2};
-        end
-      4'd8:
-        if (WREADY)
-        begin
+          WSTRB <= (addr_1[2]) ? {mask_2, 4'd0} : {4'd0, mask_2};
+        end       
+      3'd5:
+      begin
+        awvalid_out <= awvalid_out && !AWREADY;
+        wvalid_out <= wvalid_out && !WREADY;
+        if (!awvalid_out && !wvalid_out)
           write_state <= write_state + 4'd1;
-          WVALID <= 1'b0;
-        end
+      end
 
-      4'd9:
+      3'd6:
         if (write_sent[3] || !pending_write[3])
-          write_state <= write_state + 4'd3;
+          write_state <= write_state + 3'd2;
         else
         begin
-          write_state <= write_state + 4'd1;
-          AWVALID <= 1'b1;
+          write_state <= write_state + 3'd1;
+          awvalid_out <= 1'b1;
           AWID <= 2'd3;
           AWADDR <= addr_3;
-        end       
-      4'd10:
-        if (AWREADY)
-        begin
-          write_state <= write_state + 4'd1;
-          AWVALID <= 1'b0;
-          WVALID <= 1'b1;
+          wvalid_out <= 1'b1;
           WID <= 2'd3;
           WDATA <= {dout_3, dout_3};
-          WSTRB <= (addr_3[2]) ? {mask_3, 4'd0} : {4'd0, mask_3};
-        end
-      4'd11:
-        if (WREADY)
-        begin
+          WSTRB <= (addr_1[3]) ? {mask_3, 4'd0} : {4'd0, mask_3};
+        end       
+      default:
+      begin
+        awvalid_out <= awvalid_out && !AWREADY;
+        wvalid_out <= wvalid_out && !WREADY;
+        if (!awvalid_out && !wvalid_out)
           write_state <= write_state + 4'd1;
-          WVALID <= 1'b0;
-        end
-                                        
-      default: write_state <= 4'd0;
+      end  
+          
       endcase
       
     end
@@ -370,7 +360,7 @@ module tawas_axi
   // Arbitrate read requests and send out AXI bus
   //
   
-  reg [3:0] read_state;
+  reg [2:0] read_state;
   reg [3:0] read_sent;
   
   assign ARLEN = 4'd0;
@@ -394,81 +384,80 @@ module tawas_axi
   always @ (posedge CLK or posedge RST)
     if (RST)
     begin
-      read_state <= 4'd0;
+      read_state <= 3'd0;
       ARVALID <= 1'b0;
     end
     else
     begin
-      case (read_state[3:0])
-      4'd0:
+      case (read_state[2:0])
+      3'd0:
         if (read_sent[0] || !pending_read[0])
-          read_state <= read_state + 4'd2;
+          read_state <= read_state + 3'd2;
         else
         begin
-          read_state <= read_state + 4'd1;
+          read_state <= read_state + 3'd1;
           ARVALID <= 1'b1;
           ARID <= 2'd0;
           ARADDR <= addr_0;
         end   
-      4'd1:
+      3'd1:
         if (ARREADY)
         begin
-          read_state <= read_state + 4'd1;
+          read_state <= read_state + 3'd1;
           ARVALID <= 1'b0;
         end
         
-      4'd2:
+      3'd2:
         if (read_sent[1] || !pending_read[1])
-          read_state <= read_state + 4'd2;
+          read_state <= read_state + 3'd2;
         else
         begin
-          read_state <= read_state + 4'd1;
+          read_state <= read_state + 3'd1;
           ARVALID <= 1'b1;
           ARID <= 2'd1;
           ARADDR <= addr_1;
         end   
-      4'd3:
+      3'd3:
         if (ARREADY)
         begin
-          read_state <= read_state + 4'd1;
+          read_state <= read_state + 3'd1;
           ARVALID <= 1'b0;
         end
 
-      4'd4:
+      3'd4:
         if (read_sent[2] || !pending_read[2])
-          read_state <= read_state + 4'd2;
+          read_state <= read_state + 3'd2;
         else
         begin
-          read_state <= read_state + 4'd1;
+          read_state <= read_state + 3'd1;
           ARVALID <= 1'b1;
           ARID <= 2'd2;
           ARADDR <= addr_2;
         end   
-      4'd5:
+      3'd5:
         if (ARREADY)
         begin
-          read_state <= read_state + 4'd1;
+          read_state <= read_state + 3'd1;
           ARVALID <= 1'b0;
         end
 
-      4'd6:
+      3'd6:
         if (read_sent[3] || !pending_read[3])
-          read_state <= read_state + 4'd2;
+          read_state <= read_state + 3'd2;
         else
         begin
-          read_state <= read_state + 4'd1;
+          read_state <= read_state + 3'd1;
           ARVALID <= 1'b1;
           ARID <= 2'd3;
           ARADDR <= addr_3;
         end   
-      4'd7:
+      default:
         if (ARREADY)
         begin
-          read_state <= read_state + 4'd1;
+          read_state <= read_state + 3'd1;
           ARVALID <= 1'b0;
         end
-                                                        
-      default: read_state <= 4'd0;
+                                     
       endcase
       
     end

@@ -22,10 +22,14 @@ T0_L1:
   nop(); nop();
   nop(); nop();
   nop(); nop();
-  nop(); clr(r0);
-  or(r0, 0xFFFFFFF8); clr(r1);
-  inc(r1, 1); nop();
-  st(w, r1, r0[0]); nop();
+  nop(); nop();
+  ldi(r0, 0xFFFFE0);
+  st(w, r3, r0[2]); ld(w, r2, r0[2]);
+  inc(r5, 1); st(w, r5, r0++1);
+  dec(r5, 1); ld(w, r4, r0--1);
+  
+  ldi(r1, 1);
+  st(w, r1, r0[6]); nop();
 T0_L2:
   br(T0_L2); inc(r0, 1);
   

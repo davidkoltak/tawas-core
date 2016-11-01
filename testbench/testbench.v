@@ -69,40 +69,6 @@ module testbench();
   wire [3:0] dram_mask;
   wire [31:0] dram_din;
   wire [31:0] dram_dout;
-  
-  always @ (posedge sim_clk)
-    if (dram_cs && dram_wr)
-    begin
-      case (dram_addr)
-      32'h7FFFFFF0:
-      begin
-        $display("### SIMULATION INFO - 0x%08X ###", dram_din);
-      end
-      32'h7FFFFFF4:
-      begin
-        $display("### SIMULATION WARN - 0x%08X ###", dram_din);
-      end
-      32'h7FFFFFF8:
-      begin
-        $display("### SIMULATION PASSED - 0x%08X ###", dram_din);
-        @(posedge sim_clk);
-        @(posedge sim_clk);
-        @(posedge sim_clk);
-        @(posedge sim_clk);
-        $finish();
-      end
-      32'h7FFFFFFC:
-      begin
-        $display("### SIMULATION FAILED - 0x%08X ###", dram_din);
-        @(posedge sim_clk);
-        @(posedge sim_clk);
-        @(posedge sim_clk);
-        @(posedge sim_clk);
-        $finish();
-      end
-      default: ;
-      endcase
-    end
     
   dram dram
   (
@@ -214,14 +180,22 @@ module testbench();
     .RREADY(RREADY)
   );
 
-  wire [65:0] SpMBUS;
-  wire SpMVLD;
-  wire SpMRDY;
+  wire [65:0] SpMBUS_A;
+  wire SpMVLD_A;
+  wire SpMRDY_A;
     
-  wire [65:0] SpSBUS;
-  wire SpSVLD;
-  wire SpSRDY;
+  wire [65:0] SpSBUS_A;
+  wire SpSVLD_A;
+  wire SpSRDY_A;
+  
+  wire [65:0] SpMBUS_B;
+  wire SpMVLD_B;
+  wire SpMRDY_B;
     
+  wire [65:0] SpSBUS_B;
+  wire SpSVLD_B;
+  wire SpSRDY_B;
+  
   axi2spartan #(.ID_WIDTH(2), .BWIDTH(64)) axi2spartan
   (
     .CLK(sim_clk),
@@ -268,13 +242,35 @@ module testbench();
     .RVALID(RVALID),
     .RREADY(RREADY),
 
-    .SpMBUS(SpMBUS),
-    .SpMVLD(SpMVLD),
-    .SpMRDY(SpMRDY),
+    .SpMBUS(SpMBUS_A),
+    .SpMVLD(SpMVLD_A),
+    .SpMRDY(SpMRDY_A),
 
-    .SpSBUS(SpSBUS),
-    .SpSVLD(SpSVLD),
-    .SpSRDY(SpSRDY)
+    .SpSBUS(SpSBUS_A),
+    .SpSVLD(SpSVLD_A),
+    .SpSRDY(SpSRDY_A)
+  );
+
+  spartan_sync2 spartan_sync2
+  (
+    .CLK(sim_clk),
+    .RST(sim_rst),
+
+    .SpMBUS_A(SpMBUS_A),
+    .SpMVLD_A(SpMVLD_A),
+    .SpMRDY_A(SpMRDY_A),
+
+    .SpSBUS_A(SpSBUS_A),
+    .SpSVLD_A(SpSVLD_A),
+    .SpSRDY_A(SpSRDY_A),
+
+    .SpMBUS_B(SpMBUS_B),
+    .SpMVLD_B(SpMVLD_B),
+    .SpMRDY_B(SpMRDY_B),
+
+    .SpSBUS_B(SpSBUS_B),
+    .SpSVLD_B(SpSVLD_B),
+    .SpSRDY_B(SpSRDY_B)
   );
 
   wire [31:0] axi_ram_addr;
@@ -289,13 +285,13 @@ module testbench();
     .CLK(sim_clk),
     .RST(sim_rst),
 
-    .SpMBUS(SpMBUS),
-    .SpMVLD(SpMVLD),
-    .SpMRDY(SpMRDY),
+    .SpMBUS(SpMBUS_B),
+    .SpMVLD(SpMVLD_B),
+    .SpMRDY(SpMRDY_B),
 
-    .SpSBUS(SpSBUS),
-    .SpSVLD(SpSVLD),
-    .SpSRDY(SpSRDY),
+    .SpSBUS(SpSBUS_B),
+    .SpSVLD(SpSVLD_B),
+    .SpSRDY(SpSRDY_B),
 
     .CS(axi_ram_cs),
     .WE(axi_ram_wr),
@@ -316,5 +312,39 @@ module testbench();
     .DIN(axi_ram_din),
     .DOUT(axi_ram_dout)
   );
-  
+
+  always @ (posedge sim_clk)
+    if (axi_ram_cs && axi_ram_wr)
+    begin
+      case (axi_ram_addr)
+      32'hFFFFFFF0:
+      begin
+        $display("### SIMULATION INFO - 0x%08X ###", axi_ram_din[31:0]);
+      end
+      32'hFFFFFFF4:
+      begin
+        $display("### SIMULATION WARN - 0x%08X ###", axi_ram_din[31:0]);
+      end
+      32'hFFFFFFF8:
+      begin
+        $display("### SIMULATION PASSED - 0x%08X ###", axi_ram_din[31:0]);
+        @(posedge sim_clk);
+        @(posedge sim_clk);
+        @(posedge sim_clk);
+        @(posedge sim_clk);
+        $finish();
+      end
+      32'hFFFFFFFC:
+      begin
+        $display("### SIMULATION FAILED - 0x%08X ###", axi_ram_din[31:0]);
+        @(posedge sim_clk);
+        @(posedge sim_clk);
+        @(posedge sim_clk);
+        @(posedge sim_clk);
+        $finish();
+      end
+      default: ;
+      endcase
+    end
+      
 endmodule

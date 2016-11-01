@@ -1,27 +1,25 @@
 [*]
 [*] GTKWave Analyzer v3.3.58 (w)1999-2014 BSI
-[*] Tue Mar  1 22:45:48 2016
+[*] Tue Nov  1 17:39:51 2016
 [*]
-[dumpfile] "/home/dkoltak/github/tawas-core/sim/results.vcd"
-[dumpfile_mtime] "Tue Mar  1 22:45:27 2016"
-[dumpfile_size] 130167
-[savefile] "/home/dkoltak/github/tawas-core/sim/regfile.gtkw"
+[dumpfile] "/home/dkoltak/git/tawas-core/sim/results.vcd"
+[dumpfile_mtime] "Tue Nov  1 17:38:12 2016"
+[dumpfile_size] 110060
+[savefile] "/home/dkoltak/git/tawas-core/sim/regfile.gtkw"
 [timestart] 0
 [size] 1325 744
 [pos] -1 -1
-*-9.522443 500 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-9.365952 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] testbench.
 [treeopen] testbench.tawas.
 [sst_width] 223
-[signals_width] 237
+[signals_width] 118
 [sst_expanded] 1
 [sst_vpaned_height] 211
 @28
 testbench.tawas.RST
 testbench.tawas.CLK
-@25
-testbench.cycle_count[31:0]
-@200
+@201
 -
 @22
 testbench.tawas.tawas_regfile.s0_r0[31:0]
@@ -45,13 +43,25 @@ testbench.tawas.tawas_regfile.s1_r6[31:0]
 testbench.tawas.tawas_regfile.s1_r7[31:0]
 @200
 -
-@28
-testbench.tawas.tawas_ls.DCS
-testbench.tawas.tawas_ls.DWR
 @22
-testbench.tawas.tawas_ls.DADDR[31:0]
-testbench.tawas.tawas_ls.DMASK[3:0]
-testbench.tawas.tawas_ls.DOUT[31:0]
-testbench.tawas.tawas_ls.DIN[31:0]
+testbench.tawas.tawas_regfile.s2_r0[31:0]
+testbench.tawas.tawas_regfile.s2_r1[31:0]
+testbench.tawas.tawas_regfile.s2_r2[31:0]
+testbench.tawas.tawas_regfile.s2_r3[31:0]
+testbench.tawas.tawas_regfile.s2_r4[31:0]
+testbench.tawas.tawas_regfile.s2_r5[31:0]
+testbench.tawas.tawas_regfile.s2_r6[31:0]
+testbench.tawas.tawas_regfile.s2_r7[31:0]
+@200
+-
+@22
+testbench.tawas.tawas_regfile.s3_r0[31:0]
+testbench.tawas.tawas_regfile.s3_r1[31:0]
+testbench.tawas.tawas_regfile.s3_r2[31:0]
+testbench.tawas.tawas_regfile.s3_r3[31:0]
+testbench.tawas.tawas_regfile.s3_r4[31:0]
+testbench.tawas.tawas_regfile.s3_r5[31:0]
+testbench.tawas.tawas_regfile.s3_r6[31:0]
+testbench.tawas.tawas_regfile.s3_r7[31:0]
 [pattern_trace] 1
 [pattern_trace] 0
