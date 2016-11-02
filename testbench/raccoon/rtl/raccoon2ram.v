@@ -62,10 +62,10 @@ module raccoon2ram
   reg [78:0] din_d1;
   reg [78:0] dout;
   
+  assign RaccOut = dout;
+  
   wire addr_match = din[78] && ((din[31:0] & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
   reg addr_match_d1;
-  
-  assign RaccOut = dout;
   
   always @ (posedge CLK or posedge RST)
     if (RST)

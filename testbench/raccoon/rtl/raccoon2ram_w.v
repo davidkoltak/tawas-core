@@ -1,5 +1,5 @@
 //
-// Raccoon bus interface to generic RAM style interface.
+// Raccoon bus interface to generic RAM style interface with wait feature.
 //
 // by
 //     David Koltak  11/01/2016
@@ -27,7 +27,7 @@
 // SOFTWARE.
 // 
 
-module raccoon2ram
+module raccoon2ram_w
 (
   CLK,
   RST,
@@ -65,6 +65,8 @@ module raccoon2ram
   reg [78:0] din_rsp;
   reg [78:0] dout;
   
+  assign RaccOut = dout;
+  
   wire rsp_pend = din_rsp[78] && (din[78] && !addr_match);
   wire req_pend = rsp_pend || (din_req[78] && WAIT);
   wire addr_match = din[78] && !req_pend && ((din[31:0] & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
@@ -81,8 +83,8 @@ module raccoon2ram
     begin
       din <= RaccIn;
       din_req <= (addr_match) ? din : (!WAIT) ? 79'd0 : din_req;
-      din_rsp <= (din_req[78] && !WAIT && !rsp_pend) ? {din_req[78:77], 1'b1, din_req[75:64], RD_DATA[32:0], din_req[31:0]} : (!dout[78]) ? 79'd0 : din_rsp;
-      dout <= (!din_rsp || (din[78] && !addr_match)) ? din : din_rsp;
+      din_rsp <= (din_req[78] && !WAIT && !rsp_pend) ? {din_req[78:77], 1'b1, din_req[75:64], RD_DATA[31:0], din_req[31:0]} : (!dout[78]) ? 79'd0 : din_rsp;
+      dout <= (addr_match) ? 78'd0 : (!din_rsp || din[78]) ? din : din_rsp;
     end
    
   assign CS = din_req[78] && !rsp_pend;

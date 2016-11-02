@@ -30,6 +30,12 @@ T0_L1:
   inc(r5, 1); st(w, r5, r0++1);
   dec(r5, 1); ld(w, r4, r0--1);
   
+  clr(r0);
+  or(r0, 0xE0010000);
+  st(w, r3, r0[2]); ld(w, r2, r0[2]);
+  inc(r5, 1); st(w, r5, r0++1);
+  dec(r5, 1); ld(w, r4, r0--1);
+  
   ldi(r0, 0xFFFFE0);
   st(w, r3, r0[2]); ld(w, r2, r0[2]);
   inc(r5, 1); st(w, r5, r0++1);

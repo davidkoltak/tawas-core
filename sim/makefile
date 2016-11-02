@@ -8,7 +8,8 @@ MAX_CLOCKS = 500
 TESTBENCH_VERILOG = ../testbench/irom.v ../testbench/dram.v ../testbench/axi_ram.v ../testbench/racc_ram.v
 TESTBENCH_VERILOG += ../testbench/spartan/rtl/axi2spartan.v ../testbench/spartan/rtl/spartan2ram.v 
 TESTBENCH_VERILOG += ../testbench/spartan/rtl/spartan_skid.v ../testbench/spartan/rtl/spartan_sync2.v
-TESTBENCH_VERILOG += ../testbench/raccoon/rtl/raccoon2ram.v ../testbench/raccoon/rtl/raccoon_delay.v ../testbench/testbench.v
+TESTBENCH_VERILOG += ../testbench/raccoon/rtl/raccoon2ram.v ../testbench/raccoon/rtl/raccoon2ram_w.v 
+TESTBENCH_VERILOG += ../testbench/raccoon/rtl/raccoon_delay.v ../testbench/racc_subsys.v ../testbench/testbench.v
 TESTBENCH_DATA = ./irom.hex ./dram.hex
 
 TOPLEVEL = testbench.v
