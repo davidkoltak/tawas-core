@@ -279,13 +279,29 @@ module tawas_raccoon
   //
   
   reg [31:0] store_pre;
+  reg [3:0] store_mask;
+  reg [2:0] store_rc;
   reg [31:0] store_final;
   
   always @ *
   begin
       store_pre = racc_in[63:32];
-      
-      case (racc_in[67:64])
+
+     case (racc_in[69:68])
+     2'd0: store_mask <= mask_0;
+     2'd1: store_mask <= mask_1;
+     2'd2: store_mask <= mask_2;
+     default: store_mask <= mask_3;
+     endcase 
+           
+     case (racc_in[69:68])
+     2'd0: store_rc <= rc_0;
+     2'd1: store_rc <= rc_1;
+     2'd2: store_rc <= rc_2;
+     default: store_rc <= rc_3;
+     endcase 
+    
+      case (store_mask[3:0])
       4'b0001: store_final = {24'd0, store_pre[7:0]};
       4'b0010: store_final = {24'd0, store_pre[15:8]};
       4'b0100: store_final = {24'd0, store_pre[23:16]};
@@ -306,13 +322,7 @@ module tawas_raccoon
   begin    
     RACCOON_LOAD_SLICE <= racc_in[69:68];
     RACCOON_LOAD <= store_final;
-    
-    case (racc_in[69:68])
-    2'd0: RACCOON_LOAD_SEL <= rc_0;
-    2'd1: RACCOON_LOAD_SEL <= rc_1;
-    2'd2: RACCOON_LOAD_SEL <= rc_2;
-    default: RACCOON_LOAD_SEL <= rc_3;
-    endcase   
+    RACCOON_LOAD_SEL <= store_rc;
   end
                
 endmodule

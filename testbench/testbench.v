@@ -85,47 +85,6 @@ module testbench();
   wire [78:0] RaccOut;
   wire [78:0] RaccIn;
   
-  wire [1:0] AWID;
-  wire [31:0] AWADDR;
-  wire [3:0] AWLEN;
-  wire [2:0] AWSIZE;
-  wire [1:0] AWBURST;
-  wire [1:0] AWLOCK;
-  wire [3:0] AWCACHE;
-  wire [2:0] AWPROT;
-  wire AWVALID;
-  wire AWREADY;
-
-  wire [1:0] WID;
-  wire [63:0] WDATA;
-  wire [7:0] WSTRB;
-  wire WLAST;
-  wire WVALID;
-  wire WREADY;
-
-  wire [1:0] BID;
-  wire [1:0] BRESP;
-  wire BVALID;
-  wire BREADY;
-
-  wire [1:0] ARID;
-  wire [31:0] ARADDR;
-  wire [3:0] ARLEN;
-  wire [2:0] ARSIZE;
-  wire [1:0] ARBURST;
-  wire [1:0] ARLOCK;
-  wire [3:0] ARCACHE;
-  wire [2:0] ARPROT;
-  wire ARVALID;
-  wire ARREADY;
-
-  wire [1:0] RID;
-  wire [63:0] RDATA;
-  wire [1:0] RRESP;
-  wire RLAST;
-  wire RVALID;
-  wire RREADY;
-  
   tawas tawas
   (
     .CLK(sim_clk),
@@ -142,8 +101,69 @@ module testbench();
     .DIN(dram_dout),
     
     .RaccOut(RaccOut),
-    .RaccIn(RaccIn),
+    .RaccIn(RaccIn)
+  );
+
+  wire [78:0] RaccOut_subsys;
   
+  racc_subsys racc_subsys
+  (
+    .CLK(sim_clk),
+    .RST(sim_rst),
+
+    .RaccIn(RaccOut),
+    .RaccOut(RaccOut_subsys)
+  );
+
+  wire [8:0] AWID;
+  wire [31:0] AWADDR;
+  wire [3:0] AWLEN;
+  wire [2:0] AWSIZE;
+  wire [1:0] AWBURST;
+  wire [1:0] AWLOCK;
+  wire [3:0] AWCACHE;
+  wire [2:0] AWPROT;
+  wire AWVALID;
+  wire AWREADY;
+
+  wire [8:0] WID;
+  wire [63:0] WDATA;
+  wire [7:0] WSTRB;
+  wire WLAST;
+  wire WVALID;
+  wire WREADY;
+
+  wire [8:0] BID;
+  wire [1:0] BRESP;
+  wire BVALID;
+  wire BREADY;
+
+  wire [8:0] ARID;
+  wire [31:0] ARADDR;
+  wire [3:0] ARLEN;
+  wire [2:0] ARSIZE;
+  wire [1:0] ARBURST;
+  wire [1:0] ARLOCK;
+  wire [3:0] ARCACHE;
+  wire [2:0] ARPROT;
+  wire ARVALID;
+  wire ARREADY;
+
+  wire [8:0] RID;
+  wire [63:0] RDATA;
+  wire [1:0] RRESP;
+  wire RLAST;
+  wire RVALID;
+  wire RREADY;
+
+  raccoon2axi64 #(.ADDR_MASK(32'hFFFF0000), .ADDR_BASE(32'hFFFF0000)) raccoon2axi64
+  (
+    .CLK(sim_clk),
+    .RST(sim_rst),
+
+    .RaccIn(RaccOut_subsys),
+    .RaccOut(RaccIn),
+
     .AWID(AWID),
     .AWADDR(AWADDR),
     .AWLEN(AWLEN),
@@ -185,16 +205,7 @@ module testbench();
     .RVALID(RVALID),
     .RREADY(RREADY)
   );
-
-  racc_subsys racc_subsys
-  (
-    .CLK(sim_clk),
-    .RST(sim_rst),
-
-    .RaccIn(RaccOut),
-    .RaccOut(RaccIn)
-  );
-
+    
   wire [65:0] SpMBUS_A;
   wire SpMVLD_A;
   wire SpMRDY_A;
@@ -211,7 +222,7 @@ module testbench();
   wire SpSVLD_B;
   wire SpSRDY_B;
   
-  axi2spartan #(.ID_WIDTH(2), .BWIDTH(64)) axi2spartan
+  axi2spartan #(.ID_WIDTH(9), .BWIDTH(64)) axi2spartan
   (
     .CLK(sim_clk),
     .RST(sim_rst),
