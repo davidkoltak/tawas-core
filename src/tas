@@ -40,41 +40,67 @@ $DC = 0;
 @FixUps = ();
 
 @FileList = @ARGV;
-$FilesParsed = '';
 
 while ($#FileList >= 0)
 {
   $input_filename = shift(@FileList);
   
-  open(_INPUT_FILE_, "<".$input_filename) || die "ERROR: Unable to open '$input_filename' for reading.\n";
+  system("cpp $input_filename .cpp.out") && die "ERROR: Unable to pre-process $input_filename\n";
   
-  $FilesParsed .= "$input_filename|";
+  open(_INPUT_FILE_, "<.cpp.out") || die "ERROR: Unable to open '$.cpp.out' for reading.\n";
+  
+  $input_filename = ".cpp.out";
   
   $linenum = 0;
   while (my $line = <_INPUT_FILE_>)
-  {
+  {  
     $linenum++;
     chomp ($line);
     $line =~ s/\/\/.*//;
     $line =~ s/^\s+//;
     
-    if ($line =~ /\.include\s*\(\s*(.*)\s*\)/)
+    if ($line =~ /^\s*#/)
+    { next; }
+    
+    if ($line =~ /\.expr\s*\(\s*(.*)\s*\)/)
     {
-      $include_file = $1;
-      if (!($FilesParsed =~ /$include_file/))
-      { push(@FileList, $include_file); }
+print "EVAL: '$line'\n";
+      my $exp = $1;
+      $exp =~ s/\$/\$sanatize_/g;
+      $exp =~ s/\@/\@sanatize_/g;
+      $exp =~ s/\%/\%sanatize_/g;      
+      my $rtn = eval($exp);    
+print " -> : '$line'\n";
       next;
     }
     
-    if ($line =~ /\.org\(\s*(.*)\s*\)/)
+    while ($line =~ /[^\\](\$\w+)/)
     {
-      $new_pc = parse_num($1);
-      if ($PC > $new_pc)
-      { die "ERROR: Cannot ORG backwards ($PC -> $new_pc) @ $input_filename:$linenum\n"; }
-      $PC = $new_pc;
-      next;
+      my $var_name = $1;
+      my $var_val = $var_name;
+      $var_val =~ s/\$/\$sanatize_/;
+      $var_val = eval("$var_val");
+      $line =~ s/$var_name/$var_val/g;
     }
     
+    if ($line =~ /\.alloc(32|16|8)\s*\(\s*(.*)\s*\)/)
+    {
+      die "ERROR: Data defs not yet implemented @ $input_filename:$linenum\n";
+      next;
+    }
+        
+    if ($line =~ /\.data(32|16|8)\s*\(\s*(.*)\s*\)/)
+    {
+      die "ERROR: Data defs not yet implemented @ $input_filename:$linenum\n";
+      next;
+    }
+
+    if ($line =~ /\.string\s*\(\s*"(.*)"\s*\)/)
+    {
+      die "ERROR: Data defs not yet implemented @ $input_filename:$linenum\n";
+      next;
+    }
+                  
     if ($line =~ /^(\w+):/)
     {
       my $label = $1;
@@ -85,21 +111,21 @@ while ($#FileList >= 0)
     if ($line eq '')
     { next; }
     
-    if ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
+    if ($line =~ /\s*(ld|st|push|pop|swap)\s*\((.+)\)\s*;\s*(ld|st|push|pop|swap)\s*\((.+)\)\s*;/)
     {
       # ld/st, ld/st
       $i_lower = &ldst($1, $2);
       $i_upper = &ldst($3, $4);
       $i_total = (1 << 30) | ($i_upper << 15) | ($i_lower);
     }
-    elsif ($line =~ /\s*(br|rtn|icall)\s*\((.*)\)\s*;\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
+    elsif ($line =~ /\s*(br|rtn|icall)\s*\((.*)\)\s*;\s*(ld|st|push|pop|swap)\s*\((.+)\)\s*;/)
     {
       # br, ld/st
       $i_lower = &ldst($3, $4);
       $i_upper = &brrtn($1, $2);
       $i_total = (13 << 28) | ($i_upper << 15) | ($i_lower);
     }
-    elsif ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;\s*(br|rtn|icall)\s*\((.*)\)\s*;/)
+    elsif ($line =~ /\s*(ld|st|push|pop|swap)\s*\((.+)\)\s*;\s*(br|rtn|icall)\s*\((.*)\)\s*;/)
     {
       # br, ld/st
       $i_lower = &ldst($1, $2);
@@ -112,14 +138,14 @@ while ($#FileList >= 0)
       $i_total = &calljmp($1, $2);
       $i_total |= (1 << 25);
     }
-    elsif ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;\s*([a-z]+)\s*\((.*)\)\s*;/)
+    elsif ($line =~ /\s*(ld|st|push|pop|swap)\s*\((.+)\)\s*;\s*([a-z]+)\s*\((.*)\)\s*;/)
     {
       # ls, au
       $i_lower = &au($3, $4);
       $i_upper = &ldst($1, $2);
       $i_total = (2 << 30) | ($i_upper << 15) | ($i_lower);
     }
-    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
+    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;\s*(ld|st|push|pop|swap)\s*\((.+)\)\s*;/)
     {
       # ls, au
       $i_lower = &au($1, $2);
@@ -174,7 +200,7 @@ while ($#FileList >= 0)
       # nop2
       $i_total = 0x00000000;
     }
-    elsif ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
+    elsif ($line =~ /\s*(ld|st|push|pop|swap)\s*\((.+)\)\s*;/)
     {
       # br, ls
       $i_lower = &ldst($1, $2);
@@ -375,7 +401,7 @@ sub ldst
       $ptr = 7;
       
       if ($cmd eq 'push')
-      { $offset = 0x3F; }
+      { $offset = 0x1F; }
       else
       { $offset = 1; }
     }
@@ -397,16 +423,8 @@ sub ldst
     if (($ptr < 0) || ($ptr > 7))
     { die "ERROR: Pointer ($ptr) must be r0-r7 @ $input_filename:$linenum\n"; }
     
-    if ($type eq 'w')
-    {
-      if (($offset < 0) || ($offset > 63))
-      { die "ERROR: Word Offset ($offset) must be 0-63 @ $input_filename:$linenum\n"; }
-    }
-    else
-    {
-      if (($offset < 0) || ($offset > 31))
-      { die "ERROR: Offset ($offset) must be 0-31 @ $input_filename:$linenum\n"; }
-    }
+    if (($offset < 0) || ($offset > 31))
+    { die "ERROR: Offset ($offset) must be 0-31 @ $input_filename:$linenum\n"; }
   }
   elsif ($args =~ /(b|h|w)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)(\+\+|\-\-)(\d\w*)/)
   {
@@ -425,20 +443,10 @@ sub ldst
     if (($ptr < 0) || ($ptr > 7))
     { die "ERROR: Pointer ($ptr) must be r0-r7 @ $input_filename:$linenum\n"; }
     
-    if ($type eq 'w')
-    {
-      if (($offset < -32) || ($offset > 31))
-      { die "ERROR: Word Offset ($offset) must be -32,31 @ $input_filename:$linenum\n"; }
-      
-      $offset &= 0x3F;
-    }
-    else
-    {
-      if (($offset < -16) || ($offset > 15))
-      { die "ERROR: Offset ($offset) must be -16,15 @ $input_filename:$linenum\n"; }
-    
-      $offset &= 0x1F;
-    }
+    if (($offset < -16) || ($offset > 15))
+    { die "ERROR: Offset ($offset) must be -16,15 @ $input_filename:$linenum\n"; }
+
+    $offset &= 0x1F;
     
     $rtn |= (1 << 13);
   }
@@ -447,6 +455,13 @@ sub ldst
   
   if (($cmd eq 'st') || ($cmd eq 'push'))
   { $rtn |= (1 << 14); }
+  
+  if ($cmd eq 'swap')
+  { 
+    if ($type ne 'w')
+    { die "ERROR: Swap syntax error @ $input_filename:$linenum\n"; }
+    $rtn |= (1 << 14) | (3 << 11);
+  }
   
   if ($type eq 'h')
   { $rtn |= (1 << 11); }

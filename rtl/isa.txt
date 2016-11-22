@@ -93,13 +93,17 @@ LS Opcodes: 15-bits
 01 tt iiiii ppp ddd                            (ld.t rx, p++/--i)
 
 10 tt iiiii ppp ddd  : Store (type) d -> p[i]  (st.t rx, p[i])
-11 tt iiiii ppp ddd                            (st.t rx p++/--i)
+11 tt iiiii ppp ddd                            (st.t rx, p++/--i)
+
+10 11 iiiii ppp ddd  : Swap (word) d <-> p[i]  (swap.w rx, p[i])
+11 11 iiiii ppp ddd  :                         (swap.w rx, p++/--i)
 
  TYPE
  -----------
  00 : 8-bit
  01 : 16-bit
- 1i : 32-bit (extended offset field)
+ 10 : 32-bit
+ 11 : 32-bit swap reg <-> target (if store... load are not modified)
 
 NOTE: Pre-decrement, Post-increment
 

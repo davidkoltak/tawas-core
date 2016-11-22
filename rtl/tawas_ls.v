@@ -38,6 +38,7 @@ module tawas_ls
   output reg [31:0] DADDR,
   output reg DCS,
   output reg RACCOON_CS,
+  output reg RACCOON_SWAP,
   output reg [2:0] WRITEBACK_REG,
   output reg DWR,
   output reg [3:0] DMASK,
@@ -70,6 +71,7 @@ module tawas_ls
   reg [7:0] ld_d2;
   reg [7:0] ld_d3;
   
+  wire cmd_swap;
   wire raccoon_space;
   wire [31:0] addr_offset;
   wire [31:0] addr_adj;
@@ -82,11 +84,13 @@ module tawas_ls
   assign LS_PTR_SEL = LS_OP[5:3];
   assign LS_STORE_SEL = LS_OP[2:0];
   
-  assign addr_offset = (LS_OP[12]) ? {{24{1'b0}}, LS_OP[11:6], 2'd0} :
+  assign cmd_swap = (LS_OP[12:11] == 2'b11);
+  
+  assign addr_offset = (LS_OP[12]) ? {{25{1'b0}}, LS_OP[10:6], 2'd0} :
                        (LS_OP[11]) ? {{26{1'b0}}, LS_OP[10:6], 1'd0} 
                                    : {{27{1'b0}}, LS_OP[10:6]};
                     
-  assign addr_adj = (LS_OP[12]) ? {{24{LS_OP[11]}}, LS_OP[11:6], 2'd0} :
+  assign addr_adj = (LS_OP[12]) ? {{25{LS_OP[11]}}, LS_OP[10:6], 2'd0} :
                     (LS_OP[11]) ? {{26{LS_OP[10]}}, LS_OP[10:6], 1'd0} 
                                 : {{27{LS_OP[10]}}, LS_OP[10:6]};
   
@@ -132,7 +136,7 @@ module tawas_ls
     if (RST)
       ld_d1 <= {8{1'b0}};
     else if (LS_OP_VLD)
-      ld_d1 <= {!LS_OP[14] && !raccoon_space, LS_OP[12:11], addr_out[1:0], LS_OP[2:0]};
+      ld_d1 <= {(!LS_OP[14] || cmd_swap) && !raccoon_space, LS_OP[12:11], addr_out[1:0], LS_OP[2:0]};
     else
       ld_d1 <= {8{1'b0}};
   
@@ -146,8 +150,9 @@ module tawas_ls
     if (LS_OP_VLD)
     begin
       DADDR <= {addr_out[31:2], 2'b00};
-      DCS <=  !raccoon_space;
-      RACCOON_CS <= raccoon_space;
+      DCS <=  LS_OP_VLD && !raccoon_space;
+      RACCOON_CS <= LS_OP_VLD && raccoon_space;
+      RACCOON_SWAP <= cmd_swap;
       WRITEBACK_REG <= LS_OP[2:0];
       DWR <= LS_OP[14];
       DMASK <= data_mask;
@@ -158,6 +163,7 @@ module tawas_ls
       DADDR <= 24'd0;
       DCS <= 1'b0;
       RACCOON_CS <= 1'b0;
+      RACCOON_SWAP <= 1'b0;
       WRITEBACK_REG <= 3'd0;
       DWR <= 1'b0;
       DMASK <= 4'b0000;

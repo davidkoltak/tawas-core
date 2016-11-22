@@ -6,9 +6,10 @@ start:
   jmp(T2_L1);
   jmp(T3_L1);
   
+  .expr ($my_test = 5; $ans = $my_test * 6);
   
 T0_L1:
-  ldi(r7, 0x600); 
+  ldi(r7, ); 
   ldi(r0, 1);
   mv(r1, r0); inc(r0, 1);
   mv(r2, r0); inc(r0, 1);

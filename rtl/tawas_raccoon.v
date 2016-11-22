@@ -40,6 +40,7 @@ module tawas_raccoon
   
   input [31:0] DADDR,
   input RACCOON_CS,
+  input RACOON_SWAP,
   input [2:0] WRITEBACK_REG,
   input DWR,
   input [3:0] DMASK,
@@ -127,6 +128,11 @@ module tawas_raccoon
   reg wr_2;
   reg wr_3;
   
+  reg swap_0;
+  reg swap_1;
+  reg swap_2;
+  reg swap_3;
+  
   reg [31:0] addr_0;
   reg [31:0] addr_1;
   reg [31:0] addr_2;
@@ -151,6 +157,7 @@ module tawas_raccoon
     if (bus_req[0])
     begin
       wr_0 <= DWR;
+      swap_0 <= RACCOON_SWAP;
       addr_0 <= DADDR;
       mask_0 <= DMASK;
       dout_0 <= DOUT;
@@ -161,6 +168,7 @@ module tawas_raccoon
     if (bus_req[1])
     begin
       wr_1 <= DWR;
+      swap_1 <= RACCOON_SWAP;
       addr_1 <= DADDR;
       mask_1 <= DMASK;
       dout_1 <= DOUT;
@@ -171,6 +179,7 @@ module tawas_raccoon
     if (bus_req[2])
     begin
       wr_2 <= DWR;
+      swap_2 <= RACCOON_SWAP;
       addr_2 <= DADDR;
       mask_2 <= DMASK;
       dout_2 <= DOUT;
@@ -181,6 +190,7 @@ module tawas_raccoon
     if (bus_req[3])
     begin
       wr_3 <= DWR;
+      swap_3 <= RACCOON_SWAP;
       addr_3 <= DADDR;
       mask_3 <= DMASK;
       dout_3 <= DOUT;
@@ -278,6 +288,7 @@ module tawas_raccoon
   // Format and send read response data to regfile
   //
   
+  reg store_vld;
   reg [31:0] store_pre;
   reg [3:0] store_mask;
   reg [2:0] store_rc;
@@ -288,17 +299,24 @@ module tawas_raccoon
       store_pre = racc_in[63:32];
 
      case (racc_in[69:68])
-     2'd0: store_mask <= mask_0;
-     2'd1: store_mask <= mask_1;
-     2'd2: store_mask <= mask_2;
-     default: store_mask <= mask_3;
+     2'd0: store_vld = swap_0 || !wr_0;
+     2'd1: store_vld = swap_1 || !wr_1;
+     2'd2: store_vld = swap_2 || !wr_2;
+     default: store_vld = swap_3 || !wr_3;
      endcase 
            
      case (racc_in[69:68])
-     2'd0: store_rc <= rc_0;
-     2'd1: store_rc <= rc_1;
-     2'd2: store_rc <= rc_2;
-     default: store_rc <= rc_3;
+     2'd0: store_mask = mask_0;
+     2'd1: store_mask = mask_1;
+     2'd2: store_mask = mask_2;
+     default: store_mask = mask_3;
+     endcase 
+           
+     case (racc_in[69:68])
+     2'd0: store_rc = rc_0;
+     2'd1: store_rc = rc_1;
+     2'd2: store_rc = rc_2;
+     default: store_rc = rc_3;
      endcase 
     
       case (store_mask[3:0])
@@ -316,7 +334,7 @@ module tawas_raccoon
     if (RST)
       RACCOON_LOAD_VLD <= 1'b0;
     else
-      RACCOON_LOAD_VLD <= (|bus_ack[3:0]) && !racc_in[77];
+      RACCOON_LOAD_VLD <= (|bus_ack[3:0]) && store_vld;
   
   always @ (posedge CLK)
   begin    
