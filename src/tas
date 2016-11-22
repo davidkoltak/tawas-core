@@ -62,50 +62,62 @@ while ($#FileList >= 0)
     if ($line =~ /^\s*#/)
     { next; }
     
-    if ($line =~ /\.expr\s*\(\s*(.*)\s*\)/)
+    while ($line =~ /\{([^\}]*)\}/)
     {
-print "EVAL: '$line'\n";
-      my $exp = $1;
-      $exp =~ s/\$/\$sanatize_/g;
-      $exp =~ s/\@/\@sanatize_/g;
-      $exp =~ s/\%/\%sanatize_/g;      
-      my $rtn = eval($exp);    
-print " -> : '$line'\n";
-      next;
+      my $expr = $1;
+      $expr =~ s/\$/\$sanatize_/g;
+      $expr =~ s/\@//g;
+      $expr =~ s/\%//g;
+      my $rtn = eval($expr);
+      $line =~ s/\{([^\}]*)\}/$rtn/;
     }
-    
-    while ($line =~ /[^\\](\$\w+)/)
+
+    if ($line =~ /\.eval\s*\(\s*(.*)\s*\)/)
     {
-      my $var_name = $1;
-      my $var_val = $var_name;
-      $var_val =~ s/\$/\$sanatize_/;
-      $var_val = eval("$var_val");
-      $line =~ s/$var_name/$var_val/g;
-    }
-    
-    if ($line =~ /\.alloc(32|16|8)\s*\(\s*(.*)\s*\)/)
-    {
-      die "ERROR: Data defs not yet implemented @ $input_filename:$linenum\n";
+      my $expr = $1;
+      $expr =~ s/\$/\$sanatize_/g;
+      $expr =~ s/\@//g;
+      $expr =~ s/\%//g;
+      my $rtn = eval($expr);
       next;
     }
         
-    if ($line =~ /\.data(32|16|8)\s*\(\s*(.*)\s*\)/)
+    if ($line =~ /\.alloc(\d+)\s*\(\s*(.*)\s*,\s*(.*)\s*,\s*(.*)\s*\)/)
     {
-      die "ERROR: Data defs not yet implemented @ $input_filename:$linenum\n";
+      &alloc_heap($1, $2, $3, $4);
+      next;
+    }
+    
+    if ($line =~ /\.alloc(\d+)\s*\(\s*(.*)\s*,\s*(.*)\s*\)/)
+    {
+      &alloc_heap($1, $2, $3, 0);
+      next;
+    }
+            
+    if ($line =~ /\.data(\d+)\s*\(\s*([^,]*)\s*,\s*(.*)\s*\)/)
+    {
+      &data_heap($1, $2, $3);
       next;
     }
 
-    if ($line =~ /\.string\s*\(\s*"(.*)"\s*\)/)
+    if ($line =~ /\.string\s*\(\s*(.*)\s*,\s*"(.*)"\s*\)/)
     {
-      die "ERROR: Data defs not yet implemented @ $input_filename:$linenum\n";
+      &string_heap($1, $2);
       next;
     }
-                  
+    
+    if ($line =~ /^\s*\./)
+    { die "ERROR: Invalid pragma @ $input_filename:$linenum\n"; }
+         
     if ($line =~ /^(\w+):/)
     {
       my $label = $1;
       $line =~ s/^.*:\s*//;
-      $Labels{$label} = "$PC,$DC";
+      
+      if (exists $Labels{"PC:$label"})
+      { die "ERROR: Symbol '$label' already defined @ $input_filename:$linenum\n"; }
+      
+      $Labels{"PC:$label"} = $PC;
     }
     
     if ($line eq '')
@@ -223,11 +235,11 @@ print " -> : '$line'\n";
   }
 }
 
-$Labels{".text.start"} = "0,0";
-$Labels{".text.end"} = ($#Iwords + 1).",0";
+$Labels{"PC:.text.start"} = 0;
+$Labels{"PC:.text.end"} = $PC;
 
-$Labels{".data.start"} = "0,0";
-$Labels{".data.end"} = "0,".($#Dwords + 1);
+$Labels{"DC:.data.start"} = 0;
+$Labels{"DC:.data.end"} = $DC;
       
 foreach $FixUp (@FixUps)
 {
@@ -240,7 +252,6 @@ foreach $FixUp (@FixUps)
   
   if ($spec[0] eq 'br.short')
   {
-    $label_addr =~ s/,.*//;
     $val = $label_addr - $spec[1];
     
     if (($val < -128) || ($val > 127))
@@ -250,7 +261,6 @@ foreach $FixUp (@FixUps)
   }
   elsif ($spec[0] eq 'br.long')
   {
-    $label_addr =~ s/,.*//;
     $val = $label_addr - $spec[1];
     
     if (($val < -2048) || ($val > 2047))
@@ -260,21 +270,18 @@ foreach $FixUp (@FixUps)
   }
   elsif (($spec[0] eq 'jmp') || ($spec[0] eq 'call'))
   {
-    $label_addr =~ s/,.*//;
     $val = $label_addr;
     
     $Iwords[$spec[1] + 0] |= ($val & 0x00FFFFFF);
   }
   elsif ($spec[0] eq 'imm24')
   {
-    $label_addr =~ s/,.*//;
     $val = $label_addr;
     
     $Iwords[$spec[1] + 0] |= ($val & 0x00FFFFFF);
   }
   elsif ($spec[0] eq 'imm32')
   {
-    $label_addr =~ s/,.*//;
     $val = $label_addr;
     
     if (($Iwords[$spec[1] + 0] & 0xF0000000) == 0xE0000000)
@@ -300,6 +307,12 @@ foreach $FixUp (@FixUps)
     }
     else
     { die "ERROR: Immediate fixup format error for label '".$spec[2]."' @ ".$spec[3]."\n"; }
+  }
+  elsif ($spec[0] eq 'data32')
+  {
+    $val = $label_addr;
+    
+    $Dwords[$spec[1] / 4] |= $label_addr;
   }
   else
   { die "ERROR: Bad FixUp specification '$FixUp'... how did that happen???\n"; }
@@ -489,14 +502,14 @@ sub brrtn
   {
     if ($args =~ /(\!?\w+)\s*,\s*(\w+)/)
     {
-      push(@FixUps, "br.short|$PC|".$2."|$input_filename:$linenum");
+      push(@FixUps, "br.short|$PC|PC:".$2."|$input_filename:$linenum");
       my $cond = &cond_code($1);
       
       $rtn = (1 << 12) | ($cond << 8);
     }
     elsif ($args =~ /(\w+)/)
     {
-      push(@FixUps, "br.long|$PC|".$1."|$input_filename:$linenum");
+      push(@FixUps, "br.long|$PC|PC:".$1."|$input_filename:$linenum");
       
       $rtn = 0;
     }
@@ -683,7 +696,12 @@ sub au
   {
     my $rega = $2;
     my $regc = $1;
-    push(@FixUps, "imm32|$PC|".$3."|$input_filename:$linenum");
+    my $target = $3;
+    
+    if ($target =~ /^PC:/)
+    { push(@FixUps, "imm32|$PC|".$target."|$input_filename:$linenum"); }
+    else
+    { push(@FixUps, "imm32|$PC|DC:".$target."|$input_filename:$linenum"); }
     
     if (($rega < 0) || ($rega > 7))
     { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
@@ -723,7 +741,12 @@ sub au
   elsif ($args =~ /[rR](\d+)\s*,\s*(\w*)/)
   {
     my $rega = $1;
-    push(@FixUps, "imm32|$PC|".$2."|$input_filename:$linenum");
+    my $target = $2;
+    
+    if ($target =~ /^PC:/)
+    { push(@FixUps, "imm32|$PC|".$target."|$input_filename:$linenum"); }
+    else
+    { push(@FixUps, "imm32|$PC|DC:".$target."|$input_filename:$linenum"); }
     
     if (($rega < 0) || ($rega > 7))
     { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
@@ -768,7 +791,7 @@ sub calljmp
   {
     if ($args =~ /(\w+)/)
     {
-      push(@FixUps, "call|$PC|".$1."|$input_filename:$linenum");
+      push(@FixUps, "call|$PC|PC:".$1."|$input_filename:$linenum");
            
       $rtn = 0xFD000000;
     }
@@ -779,7 +802,7 @@ sub calljmp
   {
     if ($args =~ /(\w+)/)
     {
-      push(@FixUps, "jmp|$PC|".$1."|$input_filename:$linenum");
+      push(@FixUps, "jmp|$PC|PC:".$1."|$input_filename:$linenum");
            
       $rtn = 0xFC000000;
     }
@@ -812,10 +835,15 @@ sub ldi
     
       $rtn = 0xF0000000 | ($rega << 24) | ($imm & 0x00FFFFFF);
     }
-    elsif ($args =~ /[rR](\d+)\s*,(\w+)/)
+    elsif ($args =~ /[rR](\d+)\s*,\s*(\w+)/)
     {
       my $rega = $1;
-      push(@FixUps, "imm24|$PC|".$2."|$input_filename:$linenum");
+      my $target = $2;
+      
+      if ($target =~ /^PC:/)
+      { push(@FixUps, "imm24|$PC|".$target."|$input_filename:$linenum"); }
+      else
+      { push(@FixUps, "imm24|$PC|DC:".$target."|$input_filename:$linenum"); }
            
       if (($rega < 0) || ($rega > 7))
       { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; } 
@@ -829,4 +857,218 @@ sub ldi
   { die "ERROR: LDI syntax error @ $input_filename:$linenum\n"; }
   
   return $rtn;
+}
+
+sub push_d32
+{
+  my $data = shift(@_);
+  my $idx = ($DC >> 2);
+  my $off = ($DC & 3);
+  my $rtn;
+  
+  if ($off != 0)
+  { 
+    $DC += (4 - $off);
+    $idx += 1;
+  }
+  
+  $rtn = $DC;
+  $DC += 4;
+  
+  $Dwords[$idx] = $data;
+  
+  return $rtn;
+}
+
+sub push_d16
+{
+  my $data = shift(@_);
+  my $idx = ($DC >> 2);
+  my $off = ($DC & 3);
+  my $rtn;
+  
+  if ($off == 1)
+  { 
+    $DC += 1;
+    $off += 1;
+  }
+  elsif ($off == 3)
+  {
+    $DC += 1;
+    $off = 0;
+    $idx += 1;
+  }
+  
+  $rtn = $DC;
+  $DC += 2;
+  
+  $data &= 0xFFFF;
+  if ($off == 2)
+  { $Dwords[$idx] = ($data << 16) | ($Dwords[$idx] & 0xFFFF); }
+  else
+  { $Dwords[$idx] = $data; }
+  
+  return $rtn;
+}
+
+sub push_d8
+{
+  my $data = shift(@_);
+  my $idx = ($DC >> 2);
+  my $off = ($DC & 3);
+  my $rtn;
+  
+  $rtn = $DC;
+  $DC += 1;
+  
+  $data &= 0xFF;
+  if ($off == 1)
+  { $Dwords[$idx] = ($data << 8) | ($Dwords[$idx] & 0xFF); }
+  elsif ($off == 2)
+  { $Dwords[$idx] = ($data << 16) | ($Dwords[$idx] & 0xFFFF); }
+  elsif ($off == 3)
+  { $Dwords[$idx] = ($data << 24) | ($Dwords[$idx] & 0xFFFFFF); }
+  else
+  { $Dwords[$idx] = $data; }
+  
+  return $rtn;
+}
+
+sub alloc_heap
+{
+  my $size = shift(@_);
+  my $name = shift(@_);
+  my $count = shift(@_);
+  my $fill = &parse_num(shift(@_));
+
+  $name =~ s/\s//g;
+  
+  if ($size == 32)
+  { 
+    $Labels{"DC:$name"} = &push_d32($fill);
+
+    for (my $x = 1; $x < $count; $x += 1)
+    { &push_d32($fill); }
+  }
+  elsif ($size == 16)
+  { 
+    $Labels{"DC:$name"} = &push_d16($fill);
+
+    for (my $x = 1; $x < $count; $x += 1)
+    { &push_d16($fill); }
+  }
+  elsif ($size == 8)
+  { 
+    $Labels{"DC:$name"} = &push_d8($fill);
+
+    for (my $x = 1; $x < $count; $x += 1)
+    { &push_d8($fill); }
+  }
+  else
+  { die "ERROR: Invalid size '$size' @ $input_filename:$linenum\n"; }
+
+  return 0;
+}
+
+sub data_heap
+{
+  my $size = shift(@_);
+  my $name = shift(@_);
+  my @values = split(/,/, shift(@_));
+  my $count = $#values + 1;
+  
+  $name =~ s/\s//g;
+    
+  if ($size == 32)
+  { 
+    my $val = shift(@values);
+    $val =~ s/\s//g;
+    
+    if ($val =~ /^[0-9]/)
+    { 
+      $Labels{"DC:$name"} = &push_d32(&parse_num($val));
+    }
+    elsif ($val =~ /^PC:/)
+    { 
+      my $addr = &push_d32(0);
+      $Labels{"DC:$name"} = $addr;
+      push(@FixUps, "data32|$addr|".$val."|$input_filename:$linenum");
+    }
+    else
+    {  
+      my $addr = &push_d32(0);
+      $Labels{"DC:$name"} = $addr;
+      push(@FixUps, "data32|$addr|DC:".$val."|$input_filename:$linenum");
+    }
+  
+    for (my $x = 1; $x < $count; $x += 1)
+    {
+      my $val = shift(@values);
+      $val =~ s/\s//g;
+    
+      if ($val =~ /^[0-9]/)
+      { 
+        &push_d32(&parse_num($val));
+      }
+      elsif ($val =~ /^PC:/)
+      {  
+        my $addr = &push_d32(0);
+        push(@FixUps, "data32|$addr|".$val."|$input_filename:$linenum");
+      }
+      else
+      {  
+        my $addr = &push_d32(0);
+        push(@FixUps, "data32|$addr|DC:".$val."|$input_filename:$linenum");
+      }
+    }
+  }
+  elsif ($size == 16)
+  { 
+    $Labels{"DC:$name"} = &push_d16(&parse_num(shift(@values)));
+
+    for (my $x = 1; $x < $count; $x += 1)
+    { &push_d16(&parse_num(shift(@values))); }
+  }
+  elsif ($size == 8)
+  { 
+    $Labels{"DC:$name"} = &push_d8(&parse_num(shift(@values)));
+
+    for (my $x = 1; $x < $count; $x += 1)
+    { &push_d8(&parse_num(shift(@values))); }
+  }
+  else
+  { die "ERROR: Invalid size '$size' @ $input_filename:$linenum\n"; }
+
+  return 0;
+}
+
+sub string_heap
+{
+  my $name = shift(@_);
+  my $values = shift(@_);
+  my $count = length $values;
+  
+  $name =~ s/\s//g;
+  
+  $values =~ s/\\t/\t/g;
+  $values =~ s/\\s/ /g;
+  $values =~ s/\\r/\r/g;
+  $values =~ s/\\n/\n/g;
+  
+  if ($values ne "")
+  {
+    $Labels{"DC:$name"} = &push_d8(ord(substr($values,0,1)));
+  }
+  else
+  {
+    $Labels{"DC:$name"} = &push_d8(0);
+    return 0;
+  }
+  
+  for (my $x = 1; $x < $count; $x += 1)
+  { &push_d8(ord(substr($values,$x,1)));}
+ 
+  &push_d8(0);
+  
+  return 0;
 }

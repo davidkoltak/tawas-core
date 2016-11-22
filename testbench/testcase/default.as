@@ -5,11 +5,23 @@ start:
   jmp(T1_L1);
   jmp(T2_L1);
   jmp(T3_L1);
+
+.eval( $num = 4 );
+
+  .alloc32 ( my_buf, {($num * 2) + 1}, {5 * 6});
+  .alloc16 (other, 3, 7);
+  .alloc8 (another, 7, 9);
+  .alloc32(ali, 2, 0xAA);
+  .string(name, " This is a test\n");
   
-  .expr ($my_test = 5; $ans = $my_test * 6);
+  .data16(uptown, 9,8,7,6, 5 ,4 ,3 , 2, 1);
+  .data8(downtown , 0xA, 0xB, 0xC);
+  .data32(-, uptown, downtown, my_buf, PC:T0_L1);
+  .alloc32(stack_bot, 32);
+  .alloc32(stack_top, 1);
   
 T0_L1:
-  ldi(r7, ); 
+  ldi(r7, other); 
   ldi(r0, 1);
   mv(r1, r0); inc(r0, 1);
   mv(r2, r0); inc(r0, 1);
