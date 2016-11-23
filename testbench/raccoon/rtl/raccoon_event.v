@@ -1,8 +1,12 @@
 //
-// Raccoon bus interface to generic RAM style interface.
+// Raccoon bus module to handle event flag processing.
 //
 // by
-//     David Koltak  11/01/2016
+//     David Koltak  11/22/2016
+//
+// This module provides four registers with 32 single bit flags per register.
+// Writing a value of (0-31) to a register sets it's flag. Reading a register
+// returns flag bit values and clears them.
 //
 // The MIT License (MIT)
 // 
@@ -27,36 +31,22 @@
 // SOFTWARE.
 // 
 
-module raccoon2ram
+module raccoon_event
 (
   CLK,
   RST,
 
   RaccIn,
-  RaccOut,
-
-  CS,
-  WE,
-  ADDR,
-  MASK,
-  WR_DATA,
-  RD_DATA
+  RaccOut
 );
-  parameter ADDR_MASK = 32'hFFFF0000;
-  parameter ADDR_BASE = 32'h00010000;
+  parameter ADDR_MASK = 32'hFFFFFFF0;
+  parameter ADDR_BASE = 32'hFFFFFFE0;
   
   input CLK;
   input RST;
 
   input [79:0] RaccIn;
   output [79:0] RaccOut;
-
-  output CS;
-  output WE;
-  output [31:0] ADDR;
-  output [3:0] MASK;
-  output [31:0] WR_DATA;
-  input [31:0] RD_DATA;
 
   reg [79:0] din;
   reg [79:0] din_d1;
@@ -80,13 +70,58 @@ module raccoon2ram
       din <= RaccIn;
       addr_match_d1 <= addr_match;
       din_d1 <= din;
-      dout <= (addr_match_d1) ? {din_d1[79:78], 2'b10, din_d1[75:64], RD_DATA[31:0], din_d1[31:0]} : din_d1[79:0];
+      dout <= (addr_match_d1) ? {din_d1[79:78], 2'b10, din_d1[75:64], event_out[31:0], din_d1[31:0]} : din_d1[79:0];
     end
-   
-  assign CS = addr_match;
-  assign WE = din[78];
-  assign ADDR = din[31:0];
-  assign MASK = din[67:64];
-  assign WR_DATA = din[63:32];
   
+  reg [31:0] event_0;
+  reg [31:0] event_1;
+  reg [31:0] event_2;
+  reg [31:0] event_3;
+  reg [31:0] event_out;
+  reg [31:0] bit_mask;
+  
+  always @ *
+    if (|din[63:37])
+      bit_mask = 0;
+    else
+      bit_mask = (1 << din[36:32]);
+    
+  always @ (posedge CLK or posedge RST)
+    if (RST)
+    begin
+      event_0 <= 32'd0;
+      event_1 <= 32'd0;
+      event_2 <= 32'd0;
+      event_3 <= 32'd0;
+      event_out <= 32'd0;
+    end
+    else if (addr_match && &din[67:64])
+    begin 
+      case (din[3:2])
+      2'd0: event_out <= event_0;
+      2'd1: event_out <= event_1;
+      2'd2: event_out <= event_2;
+      default: event_out <= event_3;
+      endcase
+        
+      if (din[78])
+      begin
+        case (din[3:2])
+        2'd0: event_0 <= event_0 | bit_mask;
+        2'd1: event_1 <= event_1 | bit_mask;
+        2'd2: event_2 <= event_2 | bit_mask;
+        default: event_3 <= event_3 | bit_mask;
+        endcase
+      end
+      else
+      begin
+        case (din[3:2])
+        2'd0: event_0 <= 32'd0;
+        2'd1: event_1 <= 32'd0;
+        2'd2: event_2 <= 32'd0;
+        default: event_3 <= 32'd0;
+        endcase
+      end
+    end
+      
 endmodule

@@ -82,8 +82,8 @@ module raccoon2axi32
   input CLK;
   input RST;
 
-  input [78:0] RaccIn;
-  output [78:0] RaccOut;
+  input [79:0] RaccIn;
+  output [79:0] RaccOut;
 
   output [7:0] AWID;
   output [31:0] AWADDR;
@@ -126,8 +126,8 @@ module raccoon2axi32
   input RVALID;
   output RREADY;
 
-  reg [78:0] din;
-  reg [78:0] dout;
+  reg [79:0] din;
+  reg [79:0] dout;
   
   assign RaccOut = dout;
   
@@ -142,19 +142,21 @@ module raccoon2axi32
   reg [31:0] pending_w_data;
   reg [3:0] pending_w_mask;
    
-  wire addr_match = din[78] && ((din[31:0] & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
+  wire addr_match = din[79] && (din[77:76] == 2'b00) && ((din[31:0] & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
   
-  wire send_read_req = addr_match && !din[77] && (!pending_ar || ARREADY);
-  wire send_write_req = addr_match && din[77] && (!pending_aw || AWREADY) && (!pending_w || WREADY);
+  wire send_read_req = addr_match && !din[78] && (!pending_ar || ARREADY);
+  wire send_write_req = addr_match && din[78] && (!pending_aw || AWREADY) && (!pending_w || WREADY);
 
-  wire send_read_rsp = (!din[78] || send_read_req || send_write_req) && RVALID;
-  wire send_write_rsp = (!din[78] || send_read_req || send_write_req) && BVALID;
+  wire send_read_rsp = (!din[79] || send_read_req || send_write_req) && RVALID;
+  wire send_read_rsp_err = |RRESP[1:0];
+  wire send_write_rsp = (!din[79] || send_read_req || send_write_req) && BVALID;
+  wire send_write_rsp_err = |BRESP[1:0];
   
   always @ (posedge CLK or posedge RST)
     if (RST)  
     begin
-      din <= 79'd0;
-      dout <= 79'd0;
+      din <= 80'd0;
+      dout <= 80'd0;
       
       pending_ar <= 1'b0;
       pending_aw <= 1'b0;
@@ -163,9 +165,9 @@ module raccoon2axi32
     else
     begin
       din <= RaccIn;
-      dout <= (send_read_req || send_write_req) ? 79'd0 : 
-              (send_read_rsp) ? {3'b101, RID, 4'd0, RDATA, 32'd0} :
-              (send_write_rsp) ? {3'b111, BID, 4'd0, 64'd0} : din;
+      dout <= (send_read_req || send_write_req) ? 80'd0 : 
+              (send_read_rsp) ? {3'b101, send_read_rsp_err, RID, 4'd0, RDATA, 32'd0} :
+              (send_write_rsp) ? {3'b111, send_write_rsp_err, BID, 4'd0, 64'd0} : din;
       
       pending_ar <= (pending_ar || send_read_req) && !ARREADY;
       pending_aw <= (pending_aw || send_write_req) && !AWREADY;
@@ -214,7 +216,7 @@ module raccoon2axi32
   assign WLAST = 1'b1;
   assign WVALID = pending_w;
   
-  assign RREADY = (!din[78] || send_read_req || send_write_req);
-  assign BREADY = (!din[78] || send_read_req || send_write_req) && !RVALID;
+  assign RREADY = (!din[79] || send_read_req || send_write_req);
+  assign BREADY = (!din[79] || send_read_req || send_write_req) && !RVALID;
   
 endmodule

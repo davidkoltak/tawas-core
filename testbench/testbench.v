@@ -83,8 +83,8 @@ module testbench();
     .DOUT(dram_dout)
   );
 
-  wire [78:0] RaccOut;
-  wire [78:0] RaccIn;
+  wire [79:0] RaccOut;
+  wire [79:0] RaccIn;
   
   tawas tawas
   (
@@ -106,7 +106,7 @@ module testbench();
     .RaccIn(RaccIn)
   );
 
-  wire [78:0] RaccOut_subsys;
+  wire [79:0] RaccOut_subsys;
   
   racc_subsys racc_subsys
   (
@@ -340,39 +340,5 @@ module testbench();
     .DIN(axi_ram_din),
     .DOUT(axi_ram_dout)
   );
-
-  always @ (posedge sim_clk)
-    if (axi_ram_cs && axi_ram_wr)
-    begin
-      case (axi_ram_addr)
-      32'hFFFFFFF0:
-      begin
-        $display("### SIMULATION INFO - 0x%08X ###", axi_ram_din[31:0]);
-      end
-      32'hFFFFFFF4:
-      begin
-        $display("### SIMULATION WARN - 0x%08X ###", axi_ram_din[31:0]);
-      end
-      32'hFFFFFFF8:
-      begin
-        $display("### SIMULATION PASSED - 0x%08X ###", axi_ram_din[31:0]);
-        @(posedge sim_clk);
-        @(posedge sim_clk);
-        @(posedge sim_clk);
-        @(posedge sim_clk);
-        $finish();
-      end
-      32'hFFFFFFFC:
-      begin
-        $display("### SIMULATION FAILED - 0x%08X ###", axi_ram_din[31:0]);
-        @(posedge sim_clk);
-        @(posedge sim_clk);
-        @(posedge sim_clk);
-        @(posedge sim_clk);
-        $finish();
-      end
-      default: ;
-      endcase
-    end
-      
+  
 endmodule

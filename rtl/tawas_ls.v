@@ -97,14 +97,14 @@ module tawas_ls
   assign addr_next = LS_PTR + ((LS_OP[13]) ? addr_adj : addr_offset);
   assign addr_out = (LS_OP[13] && !addr_adj[31]) ? LS_PTR : addr_next;
   
-  assign raccoon_space = addr_out[31];
+  assign raccoon_space = |addr_out[31:24];
   
   assign wr_data = (LS_OP[12]) ? LS_STORE[31:0] :
                    (LS_OP[11]) ? {LS_STORE[15:0], LS_STORE[15:0]}
                                : {LS_STORE[7:0], LS_STORE[7:0], LS_STORE[7:0], LS_STORE[7:0]};
   
   assign data_mask = (LS_OP[12]) ? 4'b1111 :
-                     (LS_OP[11]) ? (addr_out[0]) ? 4'b1100 : 4'b0011
+                     (LS_OP[11]) ? (addr_out[1]) ? 4'b1100 : 4'b0011
                                  : (addr_out[1] && addr_out[0]) ? 4'b1000 :
                                    (addr_out[1]               ) ? 4'b0100 :
                                    (               addr_out[0]) ? 4'b0010

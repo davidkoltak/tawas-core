@@ -40,10 +40,10 @@ module raccoon_delay
   input CLK;
   input RST;
   
-  input [78:0] RaccIn;
-  output [78:0] RaccOut;
+  input [79:0] RaccIn;
+  output [79:0] RaccOut;
   
-  reg [78:0] bus_delay[(DELAY_CYCLES-1):0];
+  reg [79:0] bus_delay[(DELAY_CYCLES-1):0];
   
   integer x;
   
@@ -51,7 +51,7 @@ module raccoon_delay
     if (RST)
     begin
       for (x = 0; x < DELAY_CYCLES; x = x + 1)
-        bus_delay[x] <= 78'd0;
+        bus_delay[x] <= 80'd0;
     end
     else
     begin

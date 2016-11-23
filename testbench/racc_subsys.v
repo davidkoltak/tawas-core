@@ -4,32 +4,43 @@ module racc_subsys
   input CLK,
   input RST,
   
-  input [78:0] RaccIn,
-  output [78:0] RaccOut
+  input [79:0] RaccIn,
+  output [79:0] RaccOut
 );
 
-  wire [78:0] racc_in_ram;
-  wire [78:0] racc_out_ram;
-  wire [78:0] racc_out_ram_w;
-  
-  raccoon_delay #(.DELAY_CYCLES(3)) raccoon_delay_out
-  (
-    .CLK(CLK),
-    .RST(RST),
+  wire [79:0] racc_in_event;
+  wire [79:0] racc_out_event;
+  wire [79:0] racc_out_ram;
+  wire [79:0] racc_out_ram_w;
+  wire [79:0] racc_out_reg;
 
-    .RaccIn(racc_out_ram_w),
-    .RaccOut(RaccOut)
-  );
-
-  raccoon_delay #(.DELAY_CYCLES(2)) raccoon_delay_in
+  raccoon_delay #(.DELAY_CYCLES(1)) raccoon_delay_in
   (
     .CLK(CLK),
     .RST(RST),
 
     .RaccIn(RaccIn),
-    .RaccOut(racc_in_ram)
+    .RaccOut(racc_in_event)
+  );
+
+  raccoon_delay #(.DELAY_CYCLES(1)) raccoon_delay_out
+  (
+    .CLK(CLK),
+    .RST(RST),
+
+    .RaccIn(racc_out_reg),
+    .RaccOut(RaccOut)
   );
   
+  raccoon_event #(.ADDR_MASK(32'hFFFFFFF0), .ADDR_BASE(32'hFFFFFFE0)) raccoon_event
+  (
+    .CLK(CLK),
+    .RST(RST),
+
+    .RaccIn(racc_in_event),
+    .RaccOut(racc_out_event)
+  );
+
   wire racc_ram_cs;
   wire racc_ram_we;
   wire [31:0] racc_ram_addr;
@@ -42,7 +53,7 @@ module racc_subsys
     .CLK(CLK),
     .RST(RST),
 
-    .RaccIn(racc_in_ram),
+    .RaccIn(racc_out_event),
     .RaccOut(racc_out_ram),
 
     .CS(racc_ram_cs),
@@ -107,5 +118,62 @@ module racc_subsys
     .DIN(racc_ram_w_wdata),
     .DOUT(racc_ram_w_rdata)
   );
+
+  wire racc_reg_cs;
+  wire racc_reg_we;
+  wire [31:0] racc_reg_addr;
+  wire [3:0] racc_reg_mask;
+  wire [31:0] racc_reg_wdata;
+  wire [31:0] racc_reg_rdata = 32'd0;
+  
+  raccoon2ram #(.ADDR_MASK(32'hFFFFFFF0), .ADDR_BASE(32'hFFFFFFF0)) raccoon2reg
+  (
+    .CLK(CLK),
+    .RST(RST),
+
+    .RaccIn(racc_out_ram_w),
+    .RaccOut(racc_out_reg),
+
+    .CS(racc_reg_cs),
+    .WE(racc_reg_we),
+    .ADDR(racc_reg_addr),
+    .MASK(racc_reg_mask),
+    .WR_DATA(racc_reg_wdata),
+    .RD_DATA(racc_reg_rdata)
+  );
+
+  always @ (posedge CLK)
+    if (racc_reg_cs && racc_reg_we)
+    begin
+      case (racc_reg_addr[3:0])
+      4'h0:
+      begin
+        $display("### SIMULATION INFO - 0x%08X ###", racc_reg_wdata[31:0]);
+      end
+      4'h4:
+      begin
+        $display("### SIMULATION WARN - 0x%08X ###", racc_reg_wdata[31:0]);
+      end
+      4'h8:
+      begin
+        $display("### SIMULATION PASSED - 0x%08X ###", racc_reg_wdata[31:0]);
+        @(posedge CLK);
+        @(posedge CLK);
+        @(posedge CLK);
+        @(posedge CLK);
+        $finish();
+      end
+      4'hC:
+      begin
+        $display("### SIMULATION FAILED - 0x%08X ###", racc_reg_wdata[31:0]);
+        @(posedge CLK);
+        @(posedge CLK);
+        @(posedge CLK);
+        @(posedge CLK);
+        $finish();
+      end
+      default: ;
+      endcase
+    end
         
 endmodule
