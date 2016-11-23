@@ -138,8 +138,9 @@ module tawas
   
   wire [31:0] daddr_out;
   wire raccoon_cs;
-  wire raccoon_swap;
+  wire raccoon_nzl;
   wire [2:0] writeback_reg;
+  wire dxchg;
   wire dwr_out;
   wire [3:0] dmask_out;
   wire [31:0] dout_out;
@@ -171,8 +172,9 @@ module tawas
     .DADDR(daddr_out),
     .DCS(DCS),
     .RACCOON_CS(raccoon_cs),
-    .RACCOON_SWAP(raccoon_swap),
+    .RACCOON_NZL(raccoon_nzl),
     .WRITEBACK_REG(writeback_reg),
+    .DXCHG(dxchg),
     .DWR(dwr_out),
     .DMASK(dmask_out),
     .DOUT(dout_out),
@@ -211,8 +213,9 @@ module tawas
 
     .DADDR(daddr_out),
     .RACCOON_CS(raccoon_cs),
-    .RACCOON_SWAP(raccoon_swap),
+    .RACCOON_NZL(raccoon_nzl),
     .WRITEBACK_REG(writeback_reg),
+    .DXCHG(dxchg),
     .DWR(dwr_out),
     .DMASK(dmask_out),
     .DOUT(dout_out),

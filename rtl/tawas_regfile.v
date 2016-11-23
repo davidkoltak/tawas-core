@@ -37,7 +37,7 @@ module tawas_regfile
   input RST,
 
   input [1:0] SLICE,
-    
+  
   input PC_STORE,
   input [23:0] PC,
   output [23:0] PC_RTN,

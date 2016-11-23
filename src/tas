@@ -123,21 +123,21 @@ while ($#FileList >= 0)
     if ($line eq '')
     { next; }
     
-    if ($line =~ /\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;/)
+    if ($line =~ /\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
     {
       # ld/st, ld/st
       $i_lower = &ldst($1, $2);
       $i_upper = &ldst($3, $4);
       $i_total = (1 << 30) | ($i_upper << 15) | ($i_lower);
     }
-    elsif ($line =~ /\s*(br|rtn|icall)\s*\((.*)\)\s*;\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;/)
+    elsif ($line =~ /\s*(br|rtn|icall)\s*\((.*)\)\s*;\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
     {
       # br, ld/st
       $i_lower = &ldst($3, $4);
       $i_upper = &brrtn($1, $2);
       $i_total = (13 << 28) | ($i_upper << 15) | ($i_lower);
     }
-    elsif ($line =~ /\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;\s*(br|rtn|icall)\s*\((.*)\)\s*;/)
+    elsif ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;\s*(br|rtn|icall)\s*\((.*)\)\s*;/)
     {
       # br, ld/st
       $i_lower = &ldst($1, $2);
@@ -150,14 +150,14 @@ while ($#FileList >= 0)
       $i_total = &calljmp($1, $2);
       $i_total |= (1 << 25);
     }
-    elsif ($line =~ /\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;\s*([a-z]+)\s*\((.*)\)\s*;/)
+    elsif ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;\s*([a-z]+)\s*\((.*)\)\s*;/)
     {
       # ls, au
       $i_lower = &au($3, $4);
       $i_upper = &ldst($1, $2);
       $i_total = (2 << 30) | ($i_upper << 15) | ($i_lower);
     }
-    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;/)
+    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
     {
       # ls, au
       $i_lower = &au($1, $2);
@@ -212,7 +212,7 @@ while ($#FileList >= 0)
       # nop2
       $i_total = 0x00000000;
     }
-    elsif ($line =~ /\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;/)
+    elsif ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
     {
       # br, ls
       $i_lower = &ldst($1, $2);
@@ -423,7 +423,7 @@ sub ldst
     
     $rtn |= (1 << 13);
   }
-  elsif ($args =~ /(b|h|w)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)\[(\d\w*)\]/)
+  elsif ($args =~ /(b|h|w|x|z)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)\[(\d\w*)\]/)
   {
     $type = $1;
     $reg = $2;
@@ -439,7 +439,7 @@ sub ldst
     if (($offset < 0) || ($offset > 31))
     { die "ERROR: Offset ($offset) must be 0-31 @ $input_filename:$linenum\n"; }
   }
-  elsif ($args =~ /(b|h|w)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)(\+\+|\-\-)(\d\w*)/)
+  elsif ($args =~ /(b|h|w|x|z)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)(\+\+|\-\-)(\d\w*)/)
   {
     $type = $1;
     $reg = $2;
@@ -469,17 +469,22 @@ sub ldst
   if (($cmd eq 'st') || ($cmd eq 'push'))
   { $rtn |= (1 << 14); }
   
-  if ($cmd eq 'xchg')
-  { 
-    if ($type ne 'w')
-    { die "ERROR: xchg syntax error @ $input_filename:$linenum\n"; }
-    $rtn |= (1 << 14) | (3 << 11);
-  }
-  
   if ($type eq 'h')
   { $rtn |= (1 << 11); }
   elsif ($type eq 'w')
   { $rtn |= (2 << 11); }
+  elsif ($type eq 'x')
+  { 
+    if ($cmd ne 'st')
+    { die "ERROR: Xchg type can only be used with 'st' command @ $input_filename:$linenum\n"; }
+    $rtn |= (3 << 11);
+  }
+  elsif ($type eq 'z')
+  { 
+    if ($cmd ne 'ld')
+    { die "ERROR: NZL wait type can only be used with 'ld' command @ $input_filename:$linenum\n"; }
+    $rtn |= (3 << 11);
+  }
   elsif ($type ne 'b')
   { die "ERROR: Invaid Ld/St type '$type' @ $input_filename:$linenum\n"; }
   
@@ -562,6 +567,28 @@ sub au
     return $rtn;
   }
 
+  if ($cmd eq 'mvi')
+  {
+    if ($args =~ /[rR](\d+)\s*,\s*(\-?\d\w*)/)
+    {
+      my $regc = $1;
+      my $imm = parse_num($2);
+           
+      if (($regc < 0) || ($regc > 7))
+      { die "ERROR: Register C ($regac) must be r0-r7 @ $input_filename:$linenum\n"; } 
+    
+      if (($imm < -256) || ($imm > 255))
+      { die "ERROR: Immediate value out of (-256, 255) range @ $input_filename:$linenum\n"; } 
+      
+      $rtn = (0x18 << 9) | (($imm & 0x1FF) << 3) | $regc;
+      printf "MVI: %08X = $cmd($args); %08X, %08X\n", $rtn, $imm, $regc;
+    }
+    else
+    { die "ERROR: Invalid 'mvi' command format @ $input_filename:$linenum\n"; }
+    
+    return $rtn;
+  }
+  
   if ($cmd eq 'clr')
   {
     if ($args =~ /[rR](\d+)/)
@@ -582,24 +609,7 @@ sub au
   if (($cmd eq 'inc') || ($cmd eq 'dec') || ($cmd eq 'lsl') || ($cmd eq 'lsr') || ($cmd eq 'asr') || ($cmd eq 'sx') ||
       ($cmd eq 'bset') || ($cmd eq 'bclr'))
   {
-    if ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)/)
-    {
-      my $rega = $2;
-      my $regb = $3;
-      my $regc = $1;
-      
-      if (($rega < 0) || ($rega > 7))
-      { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
-      
-      if (($regb < 0) || ($regb > 7))
-      { die "ERROR: Register B ($regb) must be r0-r7 @ $input_filename:$linenum\n"; }
-      
-      if (($regc < 0) || ($regc > 7))
-      { die "ERROR: Register C ($regc) must be r0-r7 @ $input_filename:$linenum\n"; }
-      
-      $rtn |= (0x40 << 9) | ($rega << 6) | ($regb << 3) | ($regc);  
-    }
-    elsif ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)\s*,\s*(\d\w*)/)
+    if ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)\s*,\s*(\d\w*)/)
     {
       my $rega = $2;
       my $regc = $1;
@@ -615,19 +625,6 @@ sub au
       { die "ERROR: Imm ($imm) must be 0-7 @ $input_filename:$linenum\n"; }
       
       $rtn |= ($rega << 6) | ($imm << 3) | ($regc);  
-    }
-    elsif ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)/)
-    {
-      my $regb = $2;
-      my $regc = $1;
-      
-      if (($regb < 0) || ($regb > 7))
-      { die "ERROR: Register B ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
-      
-      if (($regc < 0) || ($regc > 7))
-      { die "ERROR: Register C ($regc) must be r0-r7 @ $input_filename:$linenum\n"; }
-      
-      $rtn |= (0x40 << 9) | ($regc << 6) | ($regb << 3) | ($regc);  
     }
     elsif ($args =~ /[rR](\d+)\s*,\s*(\d\w*)/)
     {
@@ -833,6 +830,9 @@ sub ldi
       if (($rega < 0) || ($rega > 7))
       { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; } 
     
+      if ($imm & 0xFF000000)
+      { die "ERROR: Immediate value out of range @ $input_filename:$linenum\n"; } 
+      
       $rtn = 0xF0000000 | ($rega << 24) | ($imm & 0x00FFFFFF);
     }
     elsif ($args =~ /[rR](\d+)\s*,\s*(\w+)/)

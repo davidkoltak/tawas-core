@@ -40,8 +40,9 @@ module tawas_raccoon
   
   input [31:0] DADDR,
   input RACCOON_CS,
-  input RACCOON_SWAP,
+  input RACCOON_NZL,
   input [2:0] WRITEBACK_REG,
+  input DXCHG,
   input DWR,
   input [3:0] DMASK,
   input [31:0] DOUT,
@@ -83,13 +84,20 @@ module tawas_raccoon
   reg [3:0] bus_pending;
   reg [3:0] bus_error_hang;
   
+  reg nzl_retry;
+  reg nzl_0;
+  reg nzl_1;
+  reg nzl_2;
+  reg nzl_3;
+  
   always @ *
   begin
     bus_req = 4'd0;
     bus_ack = 4'd0;
     bus_error = 4'd0;
     bus_retry = 4'd0;
-      
+    nzl_retry = 0;
+    
     if (RACCOON_CS)
       case (SLICE[1:0])
       2'd0: bus_req = 4'b0100;
@@ -106,13 +114,21 @@ module tawas_raccoon
     default: thread_mask = 4'd0;
     endcase
     
-    if (racc_in[79] && racc_in[77])
+    if (racc_in[63:32] == 32'd0)
+      case (racc_in[69:68])
+      2'b00: nzl_retry = nzl_0;
+      2'b01: nzl_retry = nzl_1;
+      2'b10: nzl_retry = nzl_2;
+      default: nzl_retry = nzl_3;
+      endcase
+    
+    if (racc_in[79] && racc_in[77] && !nzl_retry)
       bus_ack = thread_mask;
       
     if (racc_in[79] && racc_in[76])
       bus_error = thread_mask;
       
-    if (racc_in[79] && !racc_in[77] && !racc_in[76])
+    if (((racc_in[79] && !racc_in[77]) || nzl_retry) && !racc_in[76])
       bus_retry = thread_mask;
       
   end
@@ -140,10 +156,10 @@ module tawas_raccoon
   reg wr_2;
   reg wr_3;
   
-  reg swap_0;
-  reg swap_1;
-  reg swap_2;
-  reg swap_3;
+  reg xchg_0;
+  reg xchg_1;
+  reg xchg_2;
+  reg xchg_3;
   
   reg [31:0] addr_0;
   reg [31:0] addr_1;
@@ -169,7 +185,8 @@ module tawas_raccoon
     if (bus_req[0])
     begin
       wr_0 <= DWR;
-      swap_0 <= RACCOON_SWAP;
+      xchg_0 <= DXCHG;
+      nzl_0 <= RACCOON_NZL;
       addr_0 <= DADDR;
       mask_0 <= DMASK;
       dout_0 <= DOUT;
@@ -180,7 +197,8 @@ module tawas_raccoon
     if (bus_req[1])
     begin
       wr_1 <= DWR;
-      swap_1 <= RACCOON_SWAP;
+      xchg_1 <= DXCHG;
+      nzl_1 <= RACCOON_NZL;
       addr_1 <= DADDR;
       mask_1 <= DMASK;
       dout_1 <= DOUT;
@@ -191,7 +209,8 @@ module tawas_raccoon
     if (bus_req[2])
     begin
       wr_2 <= DWR;
-      swap_2 <= RACCOON_SWAP;
+      xchg_2 <= DXCHG;
+      nzl_2 <= RACCOON_NZL;
       addr_2 <= DADDR;
       mask_2 <= DMASK;
       dout_2 <= DOUT;
@@ -202,7 +221,8 @@ module tawas_raccoon
     if (bus_req[3])
     begin
       wr_3 <= DWR;
-      swap_3 <= RACCOON_SWAP;
+      xchg_3 <= DXCHG;
+      nzl_3 <= RACCOON_NZL;
       addr_3 <= DADDR;
       mask_3 <= DMASK;
       dout_3 <= DOUT;
@@ -311,10 +331,10 @@ module tawas_raccoon
       store_pre = racc_in[63:32];
 
      case (racc_in[69:68])
-     2'd0: store_vld = swap_0 || !wr_0;
-     2'd1: store_vld = swap_1 || !wr_1;
-     2'd2: store_vld = swap_2 || !wr_2;
-     default: store_vld = swap_3 || !wr_3;
+     2'd0: store_vld = xchg_0 || !wr_0;
+     2'd1: store_vld = xchg_1 || !wr_1;
+     2'd2: store_vld = xchg_2 || !wr_2;
+     default: store_vld = xchg_3 || !wr_3;
      endcase 
            
      case (racc_in[69:68])

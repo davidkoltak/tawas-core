@@ -118,6 +118,7 @@ module tawas_au
   reg [31:0] reg_b;
   reg [4:0] op_mux_d1;
   reg [4:0] op_mux_d2;
+  reg [2:0] reg_a_as_imm;
   reg [2:0] reg_b_as_imm;
   reg [2:0] reg_c_sel_d1;
   reg [2:0] reg_c_sel_d2;
@@ -130,7 +131,8 @@ module tawas_au
     begin
       reg_a <= AU_RA;
       reg_b <= (imm_vld) ? imm : AU_RB;
-      reg_b_as_imm <= (op_mux[3]) ? AU_RB[2:0] : AU_OP[5:3];
+      reg_a_as_imm <= AU_OP[8:6];
+      reg_b_as_imm <= AU_OP[5:3];
     end
   
   always @ (posedge CLK or posedge RST)
@@ -173,31 +175,43 @@ module tawas_au
   
   always @ (posedge CLK)
   begin
-    case (op_mux_d1)
-    5'h00: au_result <= reg_a | reg_b;
-    5'h01: au_result <= reg_a ^ reg_b;
-    5'h02: au_result <= add_result[31:0]; // a - b : compare (squash write-back)
-    5'h03: au_result <= add_result[31:0]; // a + b
-    5'h04: au_result <= add_result[31:0]; // a - b
-    5'h05: au_result <= reg_a & reg_b;
-    
-    5'h10, 5'h18: au_result <= reg_a | bit_mask;
-    5'h11, 5'h19: au_result <= reg_a & ~bit_mask;
-    5'h12, 5'h1A: au_result <= add_result[31:0]; // a - imm_b
-    5'h13, 5'h1B: au_result <= add_result[31:0]; // a + imm_b
-    
-    5'h14, 5'h1C: au_result <= (reg_a << reg_b_as_imm);
-    5'h15, 5'h1D: au_result <= (reg_a >> reg_b_as_imm);
-    5'h16, 5'h1E: au_result <= (reg_a >>> reg_b_as_imm);
-    
-    5'h17, 5'h1F: au_result <= (reg_b_as_imm[1:0] == 2'b00) ? {32{reg_a[0]}}:
-                              (reg_b_as_imm[1:0] == 2'b01) ? {{24{reg_a[7]}}, reg_a[7:0]} :
-                              (reg_b_as_imm[1:0] == 2'b10) ? {{16{reg_a[15]}}, reg_a[15:0]} :
-                              (reg_b_as_imm[1:0] == 2'b11) ? {{8{reg_a[23]}}, reg_a[23:0]} : reg_a;
-    
-    
-    default: au_result <= 32'd0;
-    endcase
+    if (op_mux_d1[4:3] == 2'b11)
+      au_result <= {{23{op_mux_d1[2]}}, op_mux_d1[2:0], reg_a_as_imm[2:0], reg_b_as_imm[2:0]};
+    else
+      case (op_mux_d1)
+      5'h00: au_result <= reg_a | reg_b;
+      5'h01: au_result <= reg_a ^ reg_b;
+      5'h02: au_result <= add_result[31:0]; // a - b : compare (squash write-back)
+      5'h03: au_result <= add_result[31:0]; // a + b
+      5'h04: au_result <= add_result[31:0]; // a - b
+      5'h05: au_result <= reg_a & reg_b;
+      5'h07: au_result <= 32'hFFFFFBAD;
+      5'h08: au_result <= 32'hFFFFFBAD;
+      
+      5'h09: au_result <= 32'hFFFFFBAD;
+      5'h0A: au_result <= 32'hFFFFFBAD;
+      5'h0B: au_result <= 32'hFFFFFBAD;
+      5'h0C: au_result <= 32'hFFFFFBAD;
+      5'h0D: au_result <= 32'hFFFFFBAD;
+      5'h0E: au_result <= 32'hFFFFFBAD;
+      5'h0F: au_result <= 32'hFFFFFBAD;
+      
+      5'h10: au_result <= reg_a | bit_mask;
+      5'h11: au_result <= reg_a & ~bit_mask;
+      5'h12: au_result <= add_result[31:0]; // a - imm_b
+      5'h13: au_result <= add_result[31:0]; // a + imm_b
+
+      5'h14: au_result <= (reg_a << reg_b_as_imm);
+      5'h15: au_result <= (reg_a >> reg_b_as_imm);
+      5'h16: au_result <= (reg_a >>> reg_b_as_imm);
+
+      5'h17: au_result <= (reg_b_as_imm[1:0] == 2'b00) ? {32{reg_a[0]}}:
+                          (reg_b_as_imm[1:0] == 2'b01) ? {{24{reg_a[7]}}, reg_a[7:0]} :
+                          (reg_b_as_imm[1:0] == 2'b10) ? {{16{reg_a[15]}}, reg_a[15:0]} :
+                          (reg_b_as_imm[1:0] == 2'b11) ? {{8{reg_a[23]}}, reg_a[23:0]} : reg_a;
+
+      default: au_result <= 32'd0;
+      endcase
   end
   
   assign AU_RC_VLD = au_result_vld_d1 && (op_mux_d2 != 5'h02);
