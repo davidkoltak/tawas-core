@@ -90,7 +90,7 @@ module tawas_ls
                        (LS_OP[11]) ? {{26{1'b0}}, LS_OP[10:6], 1'd0} 
                                    : {{27{1'b0}}, LS_OP[10:6]};
                     
-  assign addr_adj = (LS_OP[12]) ? {{25{LS_OP[11]}}, LS_OP[10:6], 2'd0} :
+  assign addr_adj = (LS_OP[12]) ? {{25{LS_OP[10]}}, LS_OP[10:6], 2'd0} :
                     (LS_OP[11]) ? {{26{LS_OP[10]}}, LS_OP[10:6], 1'd0} 
                                 : {{27{LS_OP[10]}}, LS_OP[10:6]};
   
@@ -107,7 +107,7 @@ module tawas_ls
                      (LS_OP[11]) ? (addr_out[0]) ? 4'b1100 : 4'b0011
                                  : (addr_out[1] && addr_out[0]) ? 4'b1000 :
                                    (addr_out[1]               ) ? 4'b0100 :
-                                   (               addr_out[0]) ? 4'b0100
+                                   (               addr_out[0]) ? 4'b0010
                                                                    : 4'b0001;
   
   //

@@ -50,7 +50,8 @@ module testbench();
         $finish();
       end
     end
-    
+  
+  wire irom_cs;
   wire [23:0] irom_addr;
   wire [31:0] irom_data;
   
@@ -59,7 +60,7 @@ module testbench();
     .CLK(sim_clk),
 
     .ADDR(irom_addr),
-    .CS(1'b1),
+    .CS(irom_cs),
     .DOUT(irom_data)
   );
 
@@ -90,6 +91,7 @@ module testbench();
     .CLK(sim_clk),
     .RST(sim_rst),
 
+    .ICS(irom_cs),
     .IADDR(irom_addr),
     .IDATA(irom_data),
 

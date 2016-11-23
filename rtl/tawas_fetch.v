@@ -33,7 +33,7 @@
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEICSALINGS IN THE
 // SOFTWARE.
 // 
 module tawas_fetch
@@ -41,6 +41,7 @@ module tawas_fetch
   input CLK,
   input RST,
 
+  output ICS,
   output [23:0] IADDR,
   input [31:0] IDATA,
 
@@ -81,12 +82,18 @@ module tawas_fetch
   
   reg instr_vld;
   reg [1:0] pc_sel;
+  reg fetch_stall;
+  reg fetch_stall_d1;
   
   reg [23:0] pc;
   reg [23:0] pc_0;
   reg [23:0] pc_1;
   reg [23:0] pc_2;
   reg [23:0] pc_3;
+  reg pc_0_nop_loop;
+  reg pc_1_nop_loop;
+  reg pc_2_nop_loop;
+  reg pc_3_nop_loop;
   reg series_cmd_0;
   reg series_cmd_1;
   reg series_cmd_2;
@@ -98,6 +105,9 @@ module tawas_fetch
   assign PC = pc_inc;
   
   assign IADDR = pc;
+  assign ICS = !fetch_stall;
+  
+  assign cmd_is_nop_loop = instr_vld && (IDATA[31:0] == 32'hC0000000);
   
   always @ *
   begin
@@ -124,10 +134,10 @@ module tawas_fetch
     endcase
     
     case (pc_sel[1:0])
-    2'd0: pc_stall = RACCOON_STALL[3];
-    2'd1: pc_stall = RACCOON_STALL[0];
-    2'd2: pc_stall = RACCOON_STALL[1];
-    default: pc_stall = RACCOON_STALL[2];
+    2'd0: pc_stall = RACCOON_STALL[1] || pc_1_nop_loop;
+    2'd1: pc_stall = RACCOON_STALL[2] || pc_2_nop_loop;
+    2'd2: pc_stall = RACCOON_STALL[3] || pc_3_nop_loop;
+    default: pc_stall = RACCOON_STALL[0] || pc_0_nop_loop;
     endcase
     
     pc_inc = pc_next + 24'd1;
@@ -163,11 +173,15 @@ module tawas_fetch
     begin
       pc_sel <= 2'd0;
       instr_vld <= 1'b0;
+      fetch_stall <= 1'b0;
+      fetch_stall_d1 <= 1'b0;
     end
     else
     begin
       pc_sel <= pc_sel + 2'd1;
       instr_vld <= 1'b1;
+      fetch_stall <= pc_stall;
+      fetch_stall_d1 <= fetch_stall;
     end
       
   always @ (posedge CLK or posedge RST)
@@ -178,6 +192,10 @@ module tawas_fetch
       pc_1 <= 24'd1;
       pc_2 <= 24'd2;
       pc_3 <= 24'd3;
+      pc_0_nop_loop <= 1'b0;
+      pc_1_nop_loop <= 1'b0;
+      pc_2_nop_loop <= 1'b0;
+      pc_3_nop_loop <= 1'b0;
       series_cmd_0 <= 1'b0;
       series_cmd_1 <= 1'b0;
       series_cmd_2 <= 1'b0;
@@ -191,9 +209,11 @@ module tawas_fetch
       2'd0:
       begin
         pc <= pc_1;
-          
-        if (pc_stall)
+        
+        if (fetch_stall_d1)
           pc_3 <= pc_3;
+        else if (cmd_is_nop_loop)
+          pc_3_nop_loop <= 1'b1;
         else if (!IDATA[31] && !series_cmd_3)
           series_cmd_3 <= 1'b1;
         else
@@ -208,8 +228,10 @@ module tawas_fetch
       begin
         pc <= pc_2;
           
-        if (pc_stall)
+        if (fetch_stall_d1)
           pc_0 <= pc_0;
+        else if (cmd_is_nop_loop)
+          pc_0_nop_loop <= 1'b1;
         else if (!IDATA[31] && !series_cmd_0)
           series_cmd_0 <= 1'b1;
         else
@@ -224,8 +246,10 @@ module tawas_fetch
       begin
         pc <= pc_3;
           
-        if (pc_stall)
+        if (fetch_stall_d1)
           pc_1 <= pc_1;
+        else if (cmd_is_nop_loop)
+          pc_1_nop_loop <= 1'b1;
         else if (!IDATA[31] && !series_cmd_1)
           series_cmd_1 <= 1'b1;
         else
@@ -240,8 +264,10 @@ module tawas_fetch
       begin
         pc <= pc_0;
           
-        if (pc_stall)
+        if (fetch_stall_d1)
           pc_2 <= pc_2;
+        else if (cmd_is_nop_loop)
+          pc_2_nop_loop <= 1'b1;
         else if (!IDATA[31] && !series_cmd_2)
           series_cmd_2 <= 1'b1;
         else
@@ -272,17 +298,17 @@ module tawas_fetch
   
   assign ls_upper = au_upper || (IDATA[31:30] == 2'b10);
   
-  assign AU_OP_VLD = !pc_stall && ((IDATA[31:30] == 2'b00) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1100));
+  assign AU_OP_VLD = !fetch_stall_d1 && ((IDATA[31:30] == 2'b00) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1100));
   assign AU_OP = (au_upper) ? IDATA[30:15] : IDATA[14:0];
   
-  assign AU_IMM_VLD = !pc_stall && (IDATA[31:28] == 4'hE);
+  assign AU_IMM_VLD = !fetch_stall_d1 && (IDATA[31:28] == 4'hE);
   assign AU_IMM = IDATA[27:0];
   
-  assign RF_IMM_VLD = !pc_stall && (IDATA[31:27] == 5'h1E);
+  assign RF_IMM_VLD = !fetch_stall_d1 && (IDATA[31:27] == 5'h1E);
   assign RF_IMM_SEL = IDATA[26:24];
   assign RF_IMM = {{8{IDATA[23]}}, IDATA[23:0]};
   
-  assign LS_OP_VLD = !pc_stall && (r6_push_en || (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101));
+  assign LS_OP_VLD = !fetch_stall_d1 && (r6_push_en || (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101));
   assign LS_OP = (r6_push_en) ? {3'h7, 6'h3F, 3'd7, 3'd6} : (ls_upper) ? IDATA[30:15] : IDATA[14:0];
         
 endmodule

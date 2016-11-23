@@ -40,7 +40,7 @@ module tawas_raccoon
   
   input [31:0] DADDR,
   input RACCOON_CS,
-  input RACOON_SWAP,
+  input RACCOON_SWAP,
   input [2:0] WRITEBACK_REG,
   input DWR,
   input [3:0] DMASK,

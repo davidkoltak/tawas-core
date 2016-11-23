@@ -123,21 +123,21 @@ while ($#FileList >= 0)
     if ($line eq '')
     { next; }
     
-    if ($line =~ /\s*(ld|st|push|pop|swap)\s*\((.+)\)\s*;\s*(ld|st|push|pop|swap)\s*\((.+)\)\s*;/)
+    if ($line =~ /\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;/)
     {
       # ld/st, ld/st
       $i_lower = &ldst($1, $2);
       $i_upper = &ldst($3, $4);
       $i_total = (1 << 30) | ($i_upper << 15) | ($i_lower);
     }
-    elsif ($line =~ /\s*(br|rtn|icall)\s*\((.*)\)\s*;\s*(ld|st|push|pop|swap)\s*\((.+)\)\s*;/)
+    elsif ($line =~ /\s*(br|rtn|icall)\s*\((.*)\)\s*;\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;/)
     {
       # br, ld/st
       $i_lower = &ldst($3, $4);
       $i_upper = &brrtn($1, $2);
       $i_total = (13 << 28) | ($i_upper << 15) | ($i_lower);
     }
-    elsif ($line =~ /\s*(ld|st|push|pop|swap)\s*\((.+)\)\s*;\s*(br|rtn|icall)\s*\((.*)\)\s*;/)
+    elsif ($line =~ /\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;\s*(br|rtn|icall)\s*\((.*)\)\s*;/)
     {
       # br, ld/st
       $i_lower = &ldst($1, $2);
@@ -150,14 +150,14 @@ while ($#FileList >= 0)
       $i_total = &calljmp($1, $2);
       $i_total |= (1 << 25);
     }
-    elsif ($line =~ /\s*(ld|st|push|pop|swap)\s*\((.+)\)\s*;\s*([a-z]+)\s*\((.*)\)\s*;/)
+    elsif ($line =~ /\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;\s*([a-z]+)\s*\((.*)\)\s*;/)
     {
       # ls, au
       $i_lower = &au($3, $4);
       $i_upper = &ldst($1, $2);
       $i_total = (2 << 30) | ($i_upper << 15) | ($i_lower);
     }
-    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;\s*(ld|st|push|pop|swap)\s*\((.+)\)\s*;/)
+    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;/)
     {
       # ls, au
       $i_lower = &au($1, $2);
@@ -212,7 +212,7 @@ while ($#FileList >= 0)
       # nop2
       $i_total = 0x00000000;
     }
-    elsif ($line =~ /\s*(ld|st|push|pop|swap)\s*\((.+)\)\s*;/)
+    elsif ($line =~ /\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;/)
     {
       # br, ls
       $i_lower = &ldst($1, $2);
@@ -350,7 +350,7 @@ sub cond_code
     $code =~ s/\!//;
   }
   
-  if ($code eq 'zero')
+  if (($code eq 'zero') || ($code eq 'equal'))
   { $rtn |= 0x0; }
   elsif ($code eq 'negative')
   { $rtn |= 0x1; }
@@ -469,10 +469,10 @@ sub ldst
   if (($cmd eq 'st') || ($cmd eq 'push'))
   { $rtn |= (1 << 14); }
   
-  if ($cmd eq 'swap')
+  if ($cmd eq 'xchg')
   { 
     if ($type ne 'w')
-    { die "ERROR: Swap syntax error @ $input_filename:$linenum\n"; }
+    { die "ERROR: xchg syntax error @ $input_filename:$linenum\n"; }
     $rtn |= (1 << 14) | (3 << 11);
   }
   

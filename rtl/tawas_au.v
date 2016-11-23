@@ -119,8 +119,8 @@ module tawas_au
   reg [4:0] op_mux_d1;
   reg [4:0] op_mux_d2;
   reg [2:0] reg_b_as_imm;
-  reg [3:0] reg_c_sel_d1;
-  reg [3:0] reg_c_sel_d2;
+  reg [2:0] reg_c_sel_d1;
+  reg [2:0] reg_c_sel_d2;
   
   reg au_result_vld;
   reg au_result_vld_d1;
@@ -131,10 +131,6 @@ module tawas_au
       reg_a <= AU_RA;
       reg_b <= (imm_vld) ? imm : AU_RB;
       reg_b_as_imm <= (op_mux[3]) ? AU_RB[2:0] : AU_OP[5:3];
-      op_mux_d1 <= op_mux;
-      op_mux_d2 <= op_mux_d1;
-      reg_c_sel_d1 <= reg_c_sel;
-      reg_c_sel_d2 <= reg_c_sel_d1;
     end
   
   always @ (posedge CLK or posedge RST)
@@ -142,11 +138,19 @@ module tawas_au
     begin
       au_result_vld <= 1'b0;
       au_result_vld_d1 <= 1'b0;
+      op_mux_d1 <= 5'd0;
+      op_mux_d2 <= 5'd0;
+      reg_c_sel_d1 <= 3'd0;
+      reg_c_sel_d2 <= 3'd0;
     end
     else
     begin
       au_result_vld <= AU_OP_VLD;
       au_result_vld_d1 <= au_result_vld;
+      op_mux_d1 <= op_mux;
+      op_mux_d2 <= op_mux_d1;
+      reg_c_sel_d1 <= reg_c_sel;
+      reg_c_sel_d2 <= reg_c_sel_d1;
     end
   
   //

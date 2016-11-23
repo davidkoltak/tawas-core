@@ -33,6 +33,7 @@ module tawas
   input CLK,
   input RST,
   
+  output ICS,
   output [23:0] IADDR,
   input [31:0] IDATA,
   
@@ -74,6 +75,7 @@ module tawas
     .CLK(CLK),
     .RST(RST),
     
+    .ICS(ICS),
     .IADDR(IADDR),
     .IDATA(IDATA),
     
