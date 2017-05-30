@@ -1,0 +1,139 @@
+#!/usr/bin/perl
+
+use Cwd 'abs_path';
+use File::Basename;
+
+if ($#ARGV != 0)
+{ die "USAGE: $0 {testname}\n"; }
+
+my $script_dir = dirname(abs_path($0))."/";
+my $testname = $ARGV[0];
+
+#
+# Search these paths in order, looking for rtl.lst for each package
+#
+
+my @paths = ("../../../ip/", "../../../projects/");
+
+my @packages = ("tawas", "raccoon", "max10_devkit");
+
+#
+# Further setup
+#
+
+my @defines = ("-DMAX_CLOCKS=500");
+
+my $toplevel = "testbench";
+
+my $tas_path = $script_path."../../../ip/tawas/tools/tas";
+
+#
+# Generate rtl file list
+#
+
+my $rtl_files = "";
+
+push(@packages, $script_dir);
+
+foreach my $package (@packages)
+{
+  my $list = '';
+  my $package_dir;
+  
+  if ($package =~ /\/\s+$/)
+  { $package_dir = $package; }
+  else
+  { $package_dir = $package."/"; }
+  
+  if ($package_dir =~ /^\//)
+  {
+    if (-e $package_dir."rtl.lst")
+    {
+      $list = $package_dir."rtl.lst";
+      print " - Package '$list'\n";
+    }
+  }
+  else
+  {
+    foreach $path (@paths)
+    {
+      my $abs_path = '';
+      
+      if ($path =~ /^\//)
+      { $abs_path = $path; }
+      else
+      { $abs_path = $script_dir.$path; }
+      
+      if (-e $abs_path.$package_dir."rtl.lst")
+      {
+        $list = $abs_path.$package_dir."rtl.lst";
+        print " - Package '$list'\n";
+        last;
+      }
+    }
+  }
+  
+  if ($list eq '')
+  { die "ERROR: Unable to locate package '$package'\n"; }
+  
+  open(_FILE_LST_, "<$list") || die "ERROR: Unable to open '$list'\n";
+  
+  my $list_dir = dirname($list)."/";
+  
+  while (my $line = <_FILE_LST_>)
+  {
+    chomp $line;
+    $line =~ s/^\s+//;
+    if ($line eq '')
+    { continue; }
+    if ($line =~ /^#/)
+    { continue; }
+
+    my $filename = $list_dir."rtl/".$line;
+    
+    if (-e $filename)
+    { 
+      print "   + $filename\n"; 
+      $rtl_files .= $filename."\n";
+    }
+    else
+    { die "ERROR: Unable to find '$filename'\n"; }
+  }
+  
+  close(_FILE_LST_);
+}
+
+#
+# Generate iverilog command file
+#
+
+open(_CMD_FILE_, ">sim.cmd") || die "ERROR: Unable to create 'sim.cmd'\n";
+
+print _CMD_FILE_ "\n";
+if ($toplevel ne '')
+{  print _CMD_FILE_ "-s$toplevel\n"; }
+
+print _CMD_FILE_ "\n";
+foreach $def (@defines)
+{ print _CMD_FILE_ "$def\n"; }
+
+print _CMD_FILE_ "\n";
+print _CMD_FILE_ $rtl_files;
+
+close(_CMD_FILE_);
+
+#
+# Run sim
+#
+
+$cmd = "iverilog -fsim.cmd -o sim.vvp";
+print "RUNNING: $cmd\n";
+#if (`$cmd`)
+#{ die "ERROR: Command failed\n"; }
+
+$cmd = "vvp sim.vvp";
+print "RUNNING: $cmd\n";
+#if (`$cmd`)
+#{ die "ERROR: Command failed\n"; }
+
+exit 0;
