@@ -29,7 +29,7 @@
 # 
 
 if ($#ARGV < 0)
-{ die "Usage: sas input {input ...}\n  - Files assembled in left to right order\n  - Output is placed in ./irom.hex and ./dram.hex\n"; }
+{ die "Usage: tas input {input ...}\n  - Files assembled in left to right order\n  - Output is placed in ./irom.hex and ./dram.hex\n"; }
 
 $PC = 0;
 $DC = 0;
@@ -581,7 +581,6 @@ sub au
       { die "ERROR: Immediate value out of (-256, 255) range @ $input_filename:$linenum\n"; } 
       
       $rtn = (0x18 << 9) | (($imm & 0x1FF) << 3) | $regc;
-      printf "MVI: %08X = $cmd($args); %08X, %08X\n", $rtn, $imm, $regc;
     }
     else
     { die "ERROR: Invalid 'mvi' command format @ $input_filename:$linenum\n"; }

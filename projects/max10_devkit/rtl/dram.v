@@ -1,5 +1,5 @@
 //
-// Intel PSG Max 10 DevKit Reference Design
+// Data RAM for Tawas Core
 //
 // by
 //   David M. Koltak  05/30/2017
@@ -27,84 +27,39 @@
 // SOFTWARE.
 // 
 
-module max10_devkit_top 
+module dram
 (
-  input clk_50,
-  input fpga_reset_n,
-
-  output qspi_clk,
-  inout [3:0] qspi_io,
-  output qspi_csn,
+  input CLK,
   
-  input uart_rx,
-  output uart_tx,
-  
-  output [4:0] user_led,
-  input [3:0] user_pb
+  input [31:0] ADDR,
+  input CS,
+  input WR,
+  input [3:0] MASK,
+  input [31:0] DIN,
+  output [31:0] DOUT
 );
 
-  wire irom_cs;
-  wire [23:0] irom_addr;
-  wire [31:0] irom_data;
+  parameter DRAM_DATA_FILE = "./dram.hex";
   
-  irom irom
-  (
-    .CLK(clk_50),
-
-    .ADDR(irom_addr),
-    .CS(irom_cs),
-    .DOUT(irom_data)
-  );
-
-  wire [31:0] dram_addr;
-  wire dram_cs;
-  wire dram_wr;
-  wire [3:0] dram_mask;
-  wire [31:0] dram_din;
-  wire [31:0] dram_dout;
-    
-  dram dram
-  (
-    .CLK(clk_50),
-
-    .ADDR(dram_addr),
-    .CS(dram_cs),
-    .WR(dram_wr),
-    .MASK(dram_mask),
-    .DIN(dram_din),
-    .DOUT(dram_dout)
-  );
-
-  wire [79:0] RaccOut;
-  wire [79:0] RaccIn;
+  reg [31:0] data_array[(1024 * 16)-1:0];
+  reg [31:0] data_out;
+  wire [31:0] bitmask;
   
-  tawas tawas
-  (
-    .CLK(clk_50),
-    .RST(!fpga_reset_n),
+  initial
+  begin
+    $readmemh(DRAM_DATA_FILE, data_array);
+  end
 
-    .ICS(irom_cs),
-    .IADDR(irom_addr),
-    .IDATA(irom_data),
-
-    .DADDR(dram_addr),
-    .DCS(dram_cs),
-    .DWR(dram_wr),
-    .DMASK(dram_mask),
-    .DOUT(dram_din),
-    .DIN(dram_dout),
+  assign bitmask = {{8{MASK[3]}}, {8{MASK[2]}}, {8{MASK[1]}}, {8{MASK[0]}}};
+  
+  always @ (posedge CLK)
+    if (CS && WR)
+      data_array[ADDR[15:2]] <= (data_array[ADDR[15:2]] & ~bitmask) | (DIN & bitmask);
     
-    .RaccOut(RaccOut),
-    .RaccIn(RaccIn)
-  );
-
-  sram #(.ADDR_MASK(32'hFFFF0000), .ADDR_BASE(32'h00010000)) sram
-  (
-    .CLK(clk_50),
-    .RST(!fpga_reset_n),
-
-    .RaccIn(RaccOut),
-    .RaccOut(RaccIn)
-  );
+  always @ (posedge CLK)
+    if (CS)
+      data_out <= data_array[ADDR[15:2]];
+  
+  assign DOUT = data_out;
   
 endmodule

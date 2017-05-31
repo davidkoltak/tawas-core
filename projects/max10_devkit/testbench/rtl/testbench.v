@@ -1,3 +1,31 @@
+//
+// Testbench
+//
+// by
+//   David M. Koltak  05/30/2017
+//
+// The MIT License (MIT)
+// 
+// Copyright (c) 2017 David M. Koltak
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+// 
 
 module testbench();
 
@@ -36,6 +64,7 @@ module testbench();
     sim_clk <= sim_clk_gen;
   
   integer CLOCK_LIMIT;
+  wire [3:0] user_leds;
   
   always @ (posedge sim_clk or posedge sim_rst)
     if (sim_rst)
@@ -49,296 +78,28 @@ module testbench();
         $display(" ****** MAX CLOCKS - ENDING SIMULATION *****");
         $finish();
       end
+      if (user_leds === 4'hA)
+      begin
+        #20;
+        $display(" ****** LED SIGNAL - ENDING SIMULATION *****");
+        $finish();
+      end
     end
   
-  wire irom_cs;
-  wire [23:0] irom_addr;
-  wire [31:0] irom_data;
-  
-  irom irom
+  max10_devkit_top max10_devkit_top
   (
-    .CLK(sim_clk),
+    .clk_50(sim_clk),
+    .fpga_reset_n(!sim_rst),
 
-    .ADDR(irom_addr),
-    .CS(irom_cs),
-    .DOUT(irom_data)
-  );
+    .qspi_clk(),
+    .qspi_io(),
+    .qspi_csn(),
 
-  wire [31:0] dram_addr;
-  wire dram_cs;
-  wire dram_wr;
-  wire [3:0] dram_mask;
-  wire [31:0] dram_din;
-  wire [31:0] dram_dout;
-    
-  dram dram
-  (
-    .CLK(sim_clk),
+    .uart_rx(1'b1),
+    .uart_tx(),
 
-    .ADDR(dram_addr),
-    .CS(dram_cs),
-    .WR(dram_wr),
-    .MASK(dram_mask),
-    .DIN(dram_din),
-    .DOUT(dram_dout)
-  );
-
-  wire [79:0] RaccOut;
-  wire [79:0] RaccIn;
-  
-  tawas tawas
-  (
-    .CLK(sim_clk),
-    .RST(sim_rst),
-
-    .ICS(irom_cs),
-    .IADDR(irom_addr),
-    .IDATA(irom_data),
-
-    .DADDR(dram_addr),
-    .DCS(dram_cs),
-    .DWR(dram_wr),
-    .DMASK(dram_mask),
-    .DOUT(dram_din),
-    .DIN(dram_dout),
-    
-    .RaccOut(RaccOut),
-    .RaccIn(RaccIn)
-  );
-
-  wire [79:0] RaccOut_subsys;
-  
-  racc_subsys racc_subsys
-  (
-    .CLK(sim_clk),
-    .RST(sim_rst),
-
-    .RaccIn(RaccOut),
-    .RaccOut(RaccOut_subsys)
-  );
-
-  wire [8:0] AWID;
-  wire [31:0] AWADDR;
-  wire [3:0] AWLEN;
-  wire [2:0] AWSIZE;
-  wire [1:0] AWBURST;
-  wire [1:0] AWLOCK;
-  wire [3:0] AWCACHE;
-  wire [2:0] AWPROT;
-  wire AWVALID;
-  wire AWREADY;
-
-  wire [8:0] WID;
-  wire [63:0] WDATA;
-  wire [7:0] WSTRB;
-  wire WLAST;
-  wire WVALID;
-  wire WREADY;
-
-  wire [8:0] BID;
-  wire [1:0] BRESP;
-  wire BVALID;
-  wire BREADY;
-
-  wire [8:0] ARID;
-  wire [31:0] ARADDR;
-  wire [3:0] ARLEN;
-  wire [2:0] ARSIZE;
-  wire [1:0] ARBURST;
-  wire [1:0] ARLOCK;
-  wire [3:0] ARCACHE;
-  wire [2:0] ARPROT;
-  wire ARVALID;
-  wire ARREADY;
-
-  wire [8:0] RID;
-  wire [63:0] RDATA;
-  wire [1:0] RRESP;
-  wire RLAST;
-  wire RVALID;
-  wire RREADY;
-
-  raccoon2axi64 #(.ADDR_MASK(32'hFFFF0000), .ADDR_BASE(32'hFFFF0000)) raccoon2axi64
-  (
-    .CLK(sim_clk),
-    .RST(sim_rst),
-
-    .RaccIn(RaccOut_subsys),
-    .RaccOut(RaccIn),
-
-    .AWID(AWID),
-    .AWADDR(AWADDR),
-    .AWLEN(AWLEN),
-    .AWSIZE(AWSIZE),
-    .AWBURST(AWBURST),
-    .AWLOCK(AWLOCK),
-    .AWCACHE(AWCACHE),
-    .AWPROT(AWPROT),
-    .AWVALID(AWVALID),
-    .AWREADY(AWREADY),
-
-    .WID(WID),
-    .WDATA(WDATA),
-    .WSTRB(WSTRB),
-    .WLAST(WLAST),
-    .WVALID(WVALID),
-    .WREADY(WREADY),
-
-    .BID(BID),
-    .BRESP(BRESP),
-    .BVALID(BVALID),
-    .BREADY(BREADY),
-
-    .ARID(ARID),
-    .ARADDR(ARADDR),
-    .ARLEN(ARLEN),
-    .ARSIZE(ARSIZE),
-    .ARBURST(ARBURST),
-    .ARLOCK(ARLOCK),
-    .ARCACHE(ARCACHE),
-    .ARPROT(ARPROT),
-    .ARVALID(ARVALID),
-    .ARREADY(ARREADY),
-
-    .RID(RID),
-    .RDATA(RDATA),
-    .RRESP(RRESP),
-    .RLAST(RLAST),
-    .RVALID(RVALID),
-    .RREADY(RREADY)
-  );
-    
-  wire [65:0] SpMBUS_A;
-  wire SpMVLD_A;
-  wire SpMRDY_A;
-    
-  wire [65:0] SpSBUS_A;
-  wire SpSVLD_A;
-  wire SpSRDY_A;
-  
-  wire [65:0] SpMBUS_B;
-  wire SpMVLD_B;
-  wire SpMRDY_B;
-    
-  wire [65:0] SpSBUS_B;
-  wire SpSVLD_B;
-  wire SpSRDY_B;
-  
-  axi2spartan #(.ID_WIDTH(9), .BWIDTH(64)) axi2spartan
-  (
-    .CLK(sim_clk),
-    .RST(sim_rst),
-
-    .AWID(AWID),
-    .AWADDR(AWADDR),
-    .AWLEN(AWLEN),
-    .AWSIZE(AWSIZE),
-    .AWBURST(AWBURST),
-    .AWLOCK(AWLOCK),
-    .AWCACHE(AWCACHE),
-    .AWPROT(AWPROT),
-    .AWVALID(AWVALID),
-    .AWREADY(AWREADY),
-
-    .WID(WID),
-    .WDATA(WDATA),
-    .WSTRB(WSTRB),
-    .WLAST(WLAST),
-    .WVALID(WVALID),
-    .WREADY(WREADY),
-
-    .BID(BID),
-    .BRESP(BRESP),
-    .BVALID(BVALID),
-    .BREADY(BREADY),
-
-    .ARID(ARID),
-    .ARADDR(ARADDR),
-    .ARLEN(ARLEN),
-    .ARSIZE(ARSIZE),
-    .ARBURST(ARBURST),
-    .ARLOCK(ARLOCK),
-    .ARCACHE(ARCACHE),
-    .ARPROT(ARPROT),
-    .ARVALID(ARVALID),
-    .ARREADY(ARREADY),
-
-    .RID(RID),
-    .RDATA(RDATA),
-    .RRESP(RRESP),
-    .RLAST(RLAST),
-    .RVALID(RVALID),
-    .RREADY(RREADY),
-
-    .SpMBUS(SpMBUS_A),
-    .SpMVLD(SpMVLD_A),
-    .SpMRDY(SpMRDY_A),
-
-    .SpSBUS(SpSBUS_A),
-    .SpSVLD(SpSVLD_A),
-    .SpSRDY(SpSRDY_A)
-  );
-
-  spartan_sync2 spartan_sync2
-  (
-    .CLK(sim_clk),
-    .RST(sim_rst),
-
-    .SpMBUS_A(SpMBUS_A),
-    .SpMVLD_A(SpMVLD_A),
-    .SpMRDY_A(SpMRDY_A),
-
-    .SpSBUS_A(SpSBUS_A),
-    .SpSVLD_A(SpSVLD_A),
-    .SpSRDY_A(SpSRDY_A),
-
-    .SpMBUS_B(SpMBUS_B),
-    .SpMVLD_B(SpMVLD_B),
-    .SpMRDY_B(SpMRDY_B),
-
-    .SpSBUS_B(SpSBUS_B),
-    .SpSVLD_B(SpSVLD_B),
-    .SpSRDY_B(SpSRDY_B)
-  );
-
-  wire [31:0] axi_ram_addr;
-  wire axi_ram_cs;
-  wire axi_ram_wr;
-  wire [63:0] axi_ram_mask;
-  wire [63:0] axi_ram_din;
-  wire [63:0] axi_ram_dout;
-    
-  spartan2ram #(.BWIDTH(64)) spartan2ram
-  (
-    .CLK(sim_clk),
-    .RST(sim_rst),
-
-    .SpMBUS(SpMBUS_B),
-    .SpMVLD(SpMVLD_B),
-    .SpMRDY(SpMRDY_B),
-
-    .SpSBUS(SpSBUS_B),
-    .SpSVLD(SpSVLD_B),
-    .SpSRDY(SpSRDY_B),
-
-    .CS(axi_ram_cs),
-    .WE(axi_ram_wr),
-    .ADDR(axi_ram_addr),
-    .MASK(axi_ram_mask),
-    .WR_DATA(axi_ram_din),
-    .RD_DATA(axi_ram_dout)
-  );
-
-  axi_ram axi_ram
-  (
-    .CLK(sim_clk),
-
-    .ADDR(axi_ram_addr),
-    .CS(axi_ram_cs),
-    .WR(axi_ram_wr),
-    .MASK(axi_ram_mask),
-    .DIN(axi_ram_din),
-    .DOUT(axi_ram_dout)
+    .user_led(user_leds),
+    .user_pb(4'b1111)
   );
   
 endmodule
