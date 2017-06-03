@@ -332,12 +332,11 @@ def decode_reg(reg):
     return -1
   return r
 
-def decode_hw_op(pc, hw_op):
+def decode_hw_op(pc, hw_op, upper):
   global pfixup
   rtn = 0
   parts = hw_op.split('@')
   opcode = parts[0].split()
-  print(opcode)
   
   if opcode[0] == 'br':
     if len(opcode) == 3:
@@ -374,6 +373,29 @@ def decode_hw_op(pc, hw_op):
 
   elif opcode[0] == 'ld':
     rtn = 0x700F
+  
+  elif opcode[0] in ls_cmds:
+    rtn = 0x7F0F
+  
+  elif opcode[0] == 'mvi':
+    if len(opcode) != 3:
+      print("ERROR: Bad opcode: %s" %(hw_op))
+      exit(-1)
+    reg = decode_reg(opcode[1])
+    if reg < 0:
+      print("ERROR: Bad register name: %s" %(hw_op))
+      exit(-1)
+    rtn = 0x7000 | reg
+    try:
+      value = int(opcode[2], 0)
+      rtn |= ((value & 0x000001FF) << 3)
+    except ValueError:
+      if upper:
+        pfixup.append("%d:imm9.h:%s" % (pc, opcode[2]))
+      else:
+        pfixup.append("%d:imm9.l:%s" % (pc, opcode[2]))
+    return(rtn)
+    
   elif opcode[0] in au_cmds:
     rtn = 0x7FFF
   else:
@@ -387,7 +409,6 @@ def decode_fw_op(pc, fw_op):
   rtn = 0
   parts = fw_op.split('@')
   opcode = parts[0].split()
-  print(opcode)
  
   if opcode[0] == 'ldi':
     if len(opcode) != 3:
@@ -490,8 +511,8 @@ for p in prog:
       print("ERROR: Internal error decoding half word instruction types/format")
       exit(-1)
     
-    low_op = decode_hw_op(pc, low_op)
-    high_op = decode_hw_op(pc, high_op)
+    low_op = decode_hw_op(pc, low_op, 0)
+    high_op = decode_hw_op(pc, high_op, 1)
     prog_hex.append((ifmt << 28) | (high_op << 15) | (low_op))
   else:
     prog_hex.append(decode_fw_op(pc, p[0]))
