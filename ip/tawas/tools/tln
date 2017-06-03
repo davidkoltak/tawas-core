@@ -98,7 +98,7 @@ if dram_out == '':
 
 plabels = {}
 pc = 4
-prog = [0xf8000000, 0xf8000000, 0xf8000000, 0xf8000000]
+prog = [0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000]
 pfixup = ['0:jump:_t0_reset:builtin:0', '1:jump:_t1_reset:builtin:0', 
           '2:jump:_t2_reset:builtin:0', '3:jump:_t3_reset:builtin:0']
 
@@ -128,7 +128,9 @@ for filename in infiles:
     line = line.strip()
     if line == '':
       continue
-    elif line[0] == '#':
+    if line[0] == '#':
+      continue
+    if line[0:2] == '//':
       continue
     
     if line == '<program>':
@@ -199,71 +201,55 @@ for filename in infiles:
 for fixup in pfixup:
   f = fixup.split(':')
   addr = int(f[0])
-  type = f[1]
+  ftype = f[1]
   label = f[2]
   
   if label in plabels:
     label = plabels[label]
+    ltype = 'p'
   elif label in dlabels:
     label = dlabels[label]
+    ltype = 'd'
   else:
     print("ERROR: Unable to resolve label '%s' @ %s:%s" % (label, f[3], f[4]))
     exit(-1)
   
-  if type == 'call':
-    prog[addr] = (prog[addr] & 0xFF000000) | (label & 0x00FFFFFF)
-    
-  elif type == 'jump':
+  if (ftype == 'call') or (type == 'jump'):
+    if ltype == 'd':
+      print("ERROR: Cannot use data label '%s' for jmp/call @ %s:%s" % (label, f[3], f[4]))
+      exit(-1)
     prog[addr] = (prog[addr] & 0xFF000000) | (label & 0x00FFFFFF)
   
-  elif type == 'br12.h':
+  elif ftype == 'br12':
+    if ltype == 'd':
+      print("ERROR: Cannot use data label '%s' for br @ %s:%s" % (label, f[3], f[4]))
+      exit(-1)
     offset = label - addr
     if ((offset & 0xFFFFF000) != 0) and ((offset & 0xFFFFF000) != 0xFFFFF000):
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
-    prog[addr] == (prog[addr] & 0xFE007FFF) | ((offset << 15) & 0x01FF8000)
+    prog[addr] == (prog[addr] & 0xF8007FFF) | ((offset << 15) & 0x07FF8000)
     
-  elif type == 'br12.l':
-    offset = label - addr
-    if ((offset & 0xFFFFF000) != 0) and ((offset & 0xFFFFF000) != 0xFFFFF000):
-      print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
+  elif ftype == 'br8':
+    if ltype == 'd':
+      print("ERROR: Cannot use data label '%s' for br @ %s:%s" % (label, f[3], f[4]))
       exit(-1)
-    prog[addr] == (prog[addr] & 0xFFFFF000) | ((offset << 0) & 0x00000FFF)
-    
-  elif type == 'br8.h':
     offset = label - addr
     if ((offset & 0xFFFFFF00) != 0) and ((offset & 0xFFFFFF00) != 0xFFFFFF00):
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
-    prog[addr] == (prog[addr] & 0xFFE07FFF) | ((offset << 15) & 0x001F8000)
-  
-  elif type == 'br8.l':
-    offset = label - addr
-    if ((offset & 0xFFFFFF00) != 0) and ((offset & 0xFFFFFF00) != 0xFFFFFF00):
-      print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
-      exit(-1)
-    prog[addr] == (prog[addr] & 0xFFFFFF00) | ((offset << 0) & 0x000000FF)
+    prog[addr] == (prog[addr] & 0xFF807FFF) | ((offset << 15) & 0x007F8000)
     
-  elif type == 'imm32.h':
-    prog[addr-1] = (prog[addr-1] & 0xF000000) | ((label >> 4) & 0x0FFFFFFF)
-    prog[addr] = (prog[addr] & 0xFFE3FFFF) | ((label << 18) & 0x001C0000)
-    prog[addr] = (prog[addr] & 0xEFFFFFFF) | ((label << 28) & 0x10000000)
-    
-  elif type == 'imm32.l':
-    prog[addr-1] = (prog[addr-1] & 0xF000000) | ((label >> 4) & 0x0FFFFFFF)
-    prog[addr] = (prog[addr] & 0xFFFFFFC7) | ((label << 3) & 0x00000038)
-    prog[addr] = (prog[addr] & 0xEFFFDFFF) | ((label << 13) & 0x00002000)
-    
-  elif type == 'imm24':
+  elif ftype == 'imm24':
     prog[addr] = (prog[addr] & 0xFF000000) | (label & 0x00FFFFFF)
     
-  elif type == 'imm9.h':
+  elif ftype == 'imm9.h':
     if (label & 0xFFFFFE00) != 0:
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
     prog[addr] = (prog[addr] & 0xF803FFFF) | ((label << 18) & 0x07FC0000)
     
-  elif type == 'imm9.l':
+  elif ftype == 'imm9.l':
     if (label & 0xFFFFFE00) != 0:
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
@@ -314,7 +300,7 @@ for fixup in dfixup:
 try:
   fout = open(irom_out, "w")
 except IOError:
-    print("ERROR: Unable to create file '%s'" % filename)
+    print("ERROR: Unable to create file '%s'" % (irom_out))
     exit(-1)
 
 for p in prog:
@@ -325,7 +311,7 @@ fout.close()
 try:
   fout = open(dram_out, "w")
 except IOError:
-    print("ERROR: Unable to create file '%s'" % filename)
+    print("ERROR: Unable to create file '%s'" % (dram_out))
     exit(-1)
 
 for d in data:

@@ -29,6 +29,7 @@
 # 
 
 import sys
+import time
 
 def print_help():
   print("\nUSAGE: %s [-Ooutput] {input} ..." % (sys.argv[0]))
@@ -56,6 +57,7 @@ for arg in sys.argv[1:]:
     obj_out = arg[2:]
   elif arg == '-v':
     verbose = 1
+    print("WARNING: Verbose output is currently unimplemented")
   elif arg == '-V':
     print("VERSION: 0.1 (ALPHA)")
     exit(-1)
@@ -92,6 +94,18 @@ dc = 0
 data = []
 dfixup = []
 
+glabels = []
+
+#
+# Make psuedo random id to used for localizing symbols
+#
+
+t = str(time.clock())
+for x in sys.argv:
+  t += x
+
+ouid = '_' + str(hash(t) & 0xFFFFFF)
+
 #
 # Open each file and build database
 #
@@ -112,9 +126,15 @@ for filename in infiles:
       continue
     if line[0] == '#':
       continue
+    if line[0:2] == '//':
+      continue
     
     if line[-1] == ':':
-      plabels[line[:-1]] = pc
+      label = line[:-1]
+      if (label in plabels) or (label in dlabels):
+        print("ERROR: Redefined label '%s' @ %s:%d" % (label, filename, linenum))
+        exit(-1)
+      plabels[label] = pc
       continue
       
     if line[0] == '.':
@@ -130,14 +150,18 @@ for filename in infiles:
           print("ERROR: Alloc count field is not a number '%s' @ %s:%d" % (line, filename, linenum))
           exit(-1)
           
-        if dctv[2] == 'word':
+        if (dctv[1] in plabels) or (dctv[1] in dlabels):
+          print("ERROR: Redefined label '%s' @ %s:%d" % (dctv[1], filename, linenum))
+          exit(-1)
+            
+        if dctv[2] == 'w':
           if dc & 3:
             dc = (dc & 0xFFFFFFFC) + 4
           dlabels[dctv[1]] = dc
           for x in range(cnt):
             data.append(0)
             dc += 4
-        elif dctv[2] == 'half':
+        elif dctv[2] == 'h':
           if dc & 1:
             dc = (dc & 0xFFFFFFFE) + 2
           dlabels[dctv[1]] = dc
@@ -147,7 +171,7 @@ for filename in infiles:
             else:
               data[dc >> 2] = (data[dc >> 2] & 0x0000FFFF)
             dc += 2
-        elif dctv[2] == 'byte':
+        elif dctv[2] == 'b':
           dlabels[dctv[1]] = dc
           for x in range(cnt):
             if (dc & 3) == 0:
@@ -168,7 +192,11 @@ for filename in infiles:
           print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
           exit(-1)
         
-        if dctv[2] == 'word':
+        if (dctv[1] in plabels) or (dctv[1] in dlabels):
+          print("ERROR: Redefined label '%s' @ %s:%d" % (dctv[1], filename, linenum))
+          exit(-1)
+          
+        if dctv[2] == 'w':
           if dc & 3:
             dc = (dc & 0xFFFFFFFC) + 4
           dlabels[dctv[1]] = dc
@@ -180,7 +208,7 @@ for filename in infiles:
               data.append(0)
               dfixup.append("%d:ptr32:%s" % (dc, x))
             dc += 4
-        elif dctv[2] == 'half':
+        elif dctv[2] == 'h':
           if dc & 1:
             dc = (dc & 0xFFFFFFFE) + 2
           dlabels[dctv[1]] = dc
@@ -199,7 +227,7 @@ for filename in infiles:
                 data[dc >> 2] = (data[dc >> 2] & 0x0000FFFF)
                 dfixup.append("%d:ptr16.h:%s" % (dc, x))
             dc += 2
-        elif dctv[2] == 'byte':
+        elif dctv[2] == 'b':
           dlabels[dctv[1]] = dc
           for x in dctv[3:]:
             try:
@@ -225,6 +253,10 @@ for filename in infiles:
           print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
           exit(-1)
       
+        if (dctv[1] in plabels) or (dctv[1] in dlabels):
+          print("ERROR: Redefined label '%s' @ %s:%d" % (dctv[1], filename, linenum))
+          exit(-1)
+          
         s = line.replace('.string', '', 1)
         s = s.replace(dctv[1], '', 1)
         s = s.strip()
@@ -255,49 +287,296 @@ for filename in infiles:
         else:
           data[dc >> 2] = (data[dc >> 2] & 0x00FFFFFF)
         dc += 1  
-          
+      
+      elif dctv[0] == '.global':
+        if len(dctv) != 2:
+          print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
+          exit(-1)
+        glabels.append(dctv[1])
+         
       else:
         print("ERROR: Invalid directive '%s' @ %s:%d" % (line, filename, linenum))
         exit(-1)
       continue
       
     if line[0] == '\\':
-      prog[-1].append(line[1:].strip())
+      prog[-1].append("%s @ %s:%d" %(line[1:].strip(), filename, linenum))
     else:
-      prog.append([line])
+      prog.append(["%s @ %s:%d" %(line, filename, linenum)])
       pc += 1
     
   fin.close()
 
 #
-# Verbose output
+# Convert opcode strings to 32-bit instruction data
+# - NOTE: This is the heavy lift
+
+fw_cmds = ['call', 'calls', 'jmp', 'ldi']
+br_cmds = ['br', 'rtn', 'jmpi', 'calli']
+ls_cmds = ['ld', 'st', 'push', 'pop', 'xchg']
+au_cmds = ['or', 'xor', 'cmp', 'add', 'sub', 'and', 'clr', 'tstz',
+           'bset', 'bclr', 'inc', 'dec',
+           'lsl', 'lsr', 'asr', 'sx',
+           'mv', 'mvi', 'nop']
+
+def decode_reg(reg):
+  if len(reg) != 2:
+    return -1
+  if reg[0] != 'r':
+    return -1
+  try:
+    r = int(reg[1])
+  except ValueError:
+    return -1
+  if (r < 0) or (r > 7):
+    return -1
+  return r
+
+def decode_hw_op(pc, hw_op):
+  global pfixup
+  rtn = 0
+  parts = hw_op.split('@')
+  opcode = parts[0].split()
+  print(opcode)
+  
+  if opcode[0] == 'br':
+    if len(opcode) == 3:
+      if (opcode[1] == 'z') or (opcode[1] == 'eq'):
+        rtn = 0x1000
+      elif (opcode[1] == 'nz') or (opcode[1] == 'ne'):
+        rtn = 0x1800
+      elif opcode[1] == 'neg':
+        rtn = 0x1100
+      elif opcode[1] == 'sovfl':
+        rtn = 0x1200
+      elif opcode[1] == 'ovfl':
+        rtn = 0x1300
+      else:
+        print("ERROR: Bad condition code: %s" %(hw_op))
+        exit(-1)
+      try:
+        value = int(opcode[2], 0)
+        rtn |= (value & 0x000000FF)
+      except ValueError:
+        pfixup.append("%d:br8:%s" % (pc, opcode[2])) 
+    elif len(opcode) == 2:
+      try:
+        value = int(opcode[1], 0)
+        rtn |= (value & 0x00000FFF)
+      except ValueError:
+        pfixup.append("%d:br12:%s" % (pc, opcode[1])) 
+    else:
+      print("ERROR: Bad opcode: %s" %(hw_op))
+      exit(-1)
+  
+  elif (opcode[0] == 'rtn') | (opcode[0] == 'jmpi') | (opcode[0] == 'calli'):
+    rtn = 0x1001
+
+  elif opcode[0] == 'ld':
+    rtn = 0x700F
+  elif opcode[0] in au_cmds:
+    rtn = 0x7FFF
+  else:
+      print("ERROR: Unknown opcode: %s" %(hw_op))
+      exit(-1)
+
+  return(rtn)
+
+def decode_fw_op(pc, fw_op):
+  global pfixup
+  rtn = 0
+  parts = fw_op.split('@')
+  opcode = parts[0].split()
+  print(opcode)
+ 
+  if opcode[0] == 'ldi':
+    if len(opcode) != 3:
+      print("ERROR: Bad opcode: %s" %(fw_op))
+      exit(-1)
+    reg = decode_reg(opcode[1])
+    if reg < 0:
+      print("ERROR: Bad register name: %s" %(fw_op))
+      exit(-1)
+    rtn = 0xE0000000 | (reg << 24)
+    try:
+      value = int(opcode[2], 0)
+      rtn |= (value & 0x00FFFFFF)
+    except ValueError:
+      pfixup.append("%d:imm24:%s" % (pc, opcode[2]))
+    return(rtn)
+    
+  if len(opcode) != 2:
+    print("ERROR: Bad opcode: %s" %(fw_op))
+    exit(-1)
+      
+  if opcode[0] == 'jmp':
+    rtn = 0xFC000000
+    try:
+      value = int(opcode[1], 0)
+      rtn |= (value & 0x00FFFFFF)
+    except ValueError:
+      pfixup.append("%d:jump:%s" % (pc, opcode[1]))   
+  elif opcode[0] == 'call':
+    rtn = 0xFD000000
+    try:
+      value = int(opcode[1], 0)
+      rtn |= (value & 0x00FFFFFF)
+    except ValueError:
+      pfixup.append("%d:call:%s" % (pc, opcode[1]))  
+  elif opcode[0] == 'calls':
+    rtn = 0xFF000000
+    try:
+      value = int(opcode[1], 0)
+      rtn |= (value & 0x00FFFFFF)
+    except ValueError:
+      pfixup.append("%d:call:%s" % (pc, opcode[1]))
+
+  return(rtn)
+  
+prog_hex = []
+pc = 0
+for p in prog:
+  if len(p) == 1:
+    cmd0 = p[0].split()[0]
+    if (cmd0 not in fw_cmds):
+      p.append('nop @ n:0')
+    
+  if len(p) == 2:
+    cmd0 = p[0].split()[0]
+    cmd1 = p[1].split()[0]
+    
+    if (cmd0 in fw_cmds) or (cmd1 in fw_cmds):
+      print("ERROR: Full word command collision with another command: %s" % (p[0]))
+      exit(-1)
+      
+    if (cmd0 in br_cmds) and (cmd1 in br_cmds):
+      print("ERROR: Branch family collision with another branch family command: %s" % (p[0]))
+      exit(-1)
+  
+    if (cmd0 in au_cmds) and (cmd1 in au_cmds):
+      low_op = p[0]
+      high_op = p[1]
+      ifmt = 0x0
+    elif (cmd0 in ls_cmds) and (cmd1 in ls_cmds):
+      low_op = p[0]
+      high_op = p[1]
+      ifmt = 0x4
+    elif (cmd0 in ls_cmds) and (cmd1 in au_cmds):
+      low_op = p[1]
+      high_op = p[0]
+      ifmt = 0x8
+    elif (cmd0 in au_cmds) and (cmd1 in ls_cmds):
+      low_op = p[0]
+      high_op = p[1]
+      ifmt = 0x8
+    elif cmd0 in br_cmds:
+      low_op = p[1]
+      high_op = p[0]
+      if cmd1 in au_cmds:
+        ifmt = 0xC
+      else:
+        ifmt = 0xD
+    elif cmd1 in br_cmds:
+      low_op = p[0]
+      high_op = p[1]
+      if cmd0 in au_cmds:
+        ifmt = 0xC
+      else:
+        ifmt = 0xD
+    else:
+      low_op = p[0]
+      high_op = p[1]
+      print("HALF WORD OPS: ???: %-40s %s" % (high_op, low_op))
+      print("ERROR: Internal error decoding half word instruction types/format")
+      exit(-1)
+    
+    low_op = decode_hw_op(pc, low_op)
+    high_op = decode_hw_op(pc, high_op)
+    prog_hex.append((ifmt << 28) | (high_op << 15) | (low_op))
+  else:
+    prog_hex.append(decode_fw_op(pc, p[0]))
+  
+  pc += 1  
+     
+prog = prog_hex
+
+#
+# Annotate program with fixups after converting to strings
 #
 
-if verbose != 0:
-  print("\nProgram Labels:")
-  for label in plabels:
-    print("  %20s = %08x" % (label, plabels[label]))
-    
-  print("\nProgram Fixups:")
-  for fixup in pfixup:
-    print("  %s" % (fixup))
+for x in range(len(prog)):
+  prog[x] = "%08X" % (prog[x])
 
-  print("\nData Labels:")
-  for label in dlabels:
-    print("  %20s = %08x" % (label, dlabels[label]))
+for fixup in pfixup:
+  f = fixup.split(':')
+  if f[2] in glabels:
+    label = f[2]
+  elif (f[2] in plabels) or (f[2] in dlabels):
+    label = f[2] + ouid
+  else:
+    label = f[2]
+  if prog[int(f[0])].find(':') < 0:
+    prog[int(f[0])] += ":%s:%s" % (f[1], label)
+  else:
+    prog[int(f[0])] += "\n        :%s:%s" % (f[1], label)
 
-  print("\nData Fixups:")
-  for fixup in dfixup:
-    print("  %s" % (fixup))
+#
+# Annotate data with fixups after converting to strings
+#
+
+for x in range(len(data)):
+  data[x] = "%08X" % (data[x])
+
+for fixup in dfixup:
+  f = fixup.split(':')
+  if f[2] in glabels:
+    label = f[2]
+  elif (f[2] in plabels) or (f[2] in dlabels):
+    label = f[2] + ouid
+  else:
+    label = f[2]
+  if data[int(f[0]) >> 2].find(':') < 0:
+    data[int(f[0]) >> 2] += ":%s:%s" % (f[1], label)
+  else:
+    data[int(f[0]) >> 2] += "\n        :%s:%s" % (f[1], label)
+
+#
+# Dump instruction/data segments to output files
+#
+
+try:
+  fout = open(obj_out, "w")
+except IOError:
+    print("ERROR: Unable to create file '%s'" % (obj_out))
+    exit(-1)
+
+fout.write("\n<program>\n\n")
+
+for label in plabels:
+  if label in glabels:
+    label_o = label
+  else:
+    label_o = label + ouid
+  fout.write("%s = %d\n" % (label_o, plabels[label]))
+fout.write("\n")
+
+for p in prog:
+  fout.write("%s\n" % (p))
+fout.write("\n")
+
+fout.write("\n<data>\n\n")
+
+for label in dlabels:
+  if label in glabels:
+    label_o = label
+  else:
+    label_o = label + ouid
+  fout.write("%s = %d\n" % (label_o, dlabels[label]))
+fout.write("\n")
+
+for d in data:
+  fout.write("%s\n" % (d))
   
-  print("\nProgram:")
-  for p in prog:
-    print("  %s" % (p))
-    
-  print("\nData:")
-  for d in data:
-    print("  %08X" % (d))
-    
-  print("")
+fout.close()
 
 exit(0)

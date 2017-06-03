@@ -55,16 +55,18 @@ ___________________________________________
 10    [LS_OP]    [AU_OP]    - Parallel LS/AU Ops
 1100  [BR_OP]    [AU_OP]    - Parallel BR/AU Ops
 1101  [BR_OP]    [LS_OP]    - Parallel BR/LS Ops
-1110       [IMM_HOLD]       - Set Immediate Hold MSB 28'bits
-11110      [IMM_LD]         - Load 24-bit signed extended immediate to register
-111110     [CALL_OP]        - Call/Jmp
+11100      [IMM_LD]         - Load 24-bit signed extended immediate to register
+11101   - RSVD 27 BIT -
+111100  - RSVD 26 BIT -
+111101  - RSVD 26 BIT -
+111110  - RSVD 26 BIT -
+111111     [CALL_OP]        - Call/Jmp
 
 
 AU Opcodes: 15-bits (triadic)
 ------------------------------------------
 
-0 iiiii aaa bbb ccc : i.op c, a, b      (c = a *i* b)
-1 biiii aaa bbb ccc : i.op c, a, imm    (c = a *i* imm(b))
+iiiiii aaa bbb ccc : i.op c, a, b      (c = a *i* b)
 
 00 : Or       (a | b) -> c  (aka nop) (aka mv c, a)
 01 : Xor      (a ^ b) -> c  (aka clr c)
@@ -88,20 +90,22 @@ AU Opcodes: 15-bits (triadic)
 16 : asr      (a >> #b) -> c
 17 : sx       sign-extend(a, byte(b)) -> c
 
-18 :
+20 :
+ ...
+2F :
+
+38 :
 ---  mvi      {#i[2:0],#a,#b} -> c (imm -256,255 into c)
-1F : 
+3F : 
 
 LS Opcodes: 15-bits
 ------------------------------------------
 
 00 tt iiiii ppp ddd  : Load  (type) p[i] -> d  (ld.t rx, p[i])
-01 tt iiiii ppp ddd                            (ld.t rx, p++/--
+01 tt iiiii ppp ddd                            (ld.t rx, p++/--i)
 
-00 11 iiiii ppp ddd  : NZL Wait (word) p[i]    (ld.z rx, p[i])
-01 11 iiiii ppp ddd  :                         (ld.z rx, p++/--i)i)
-                      (NOTE: Non-Zero Load wait only works on Raccoon bus
-                             NZL's from Data bus does not stall/poll )
+00 11 iiiii ppp ddd  : Extended (word) p[i]    (ld.z rx, p[i+32])
+01 11 iiiii ppp ddd  :                         (ld.z rx, p++/--(i+32))
 
 10 tt iiiii ppp ddd  : Store (type) d -> p[i]  (st.t rx, p[i])
 11 tt iiiii ppp ddd                            (st.t rx, p++/--i)
@@ -114,7 +118,7 @@ LS Opcodes: 15-bits
  00 : 8-bit
  01 : 16-bit
  10 : 32-bit
- 11 : 32-bit ld: non-zero load stall, st: exchange register
+ 11 : 32-bit ld: extended index load, st: exchange register
 
 NOTE: Pre-decrement, Post-increment
 
@@ -150,7 +154,7 @@ Call Opcodes: 26-bits
 
 00 eeeeeeee eeeeeeee eeeeeeee : jmp a (e->pc)
 01 eeeeeeee eeeeeeee eeeeeeee : call a (pc->r6, e->pc)
-11 eeeeeeee eeeeeeee eeeeeeee : call a (push(r6), pc->r6, e->pc)
+11 eeeeeeee eeeeeeee eeeeeeee : calls a (push(r6), pc->r6, e->pc)
   
 
 
