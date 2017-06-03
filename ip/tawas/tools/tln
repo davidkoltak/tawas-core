@@ -1,21 +1,108 @@
 #!/usr/bin/python
 
+#
+# Tawas Linker: A very basic link for the 'tawas' processor core
+#
+# by David M. Koltak  06/02/2017
+#
+# The MIT License (MIT)
+# 
+# Copyright (c) 2017 David M. Koltak
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+# 
+
 import sys
 
-if len(sys.argv) < 2:
-  print("USAGE: sys.argv[0] {file.to} ...")
+def print_help():
+  print("\nUSAGE: %s [-Ioutput] [-Doutput] {input} ..." % (sys.argv[0]))
+  print("  -I   output 32-bit hex file for instruction segment")
+  print("  -D   output 32-bit hex file for data segment\n")
+  print("  -v   verbose output")
+  print("  -V   version output")
+  print("  -h   this message")
   exit(-1)
 
+
+if len(sys.argv) < 2:
+  print_help()
+  
+#
+# Parse argv
+#
+
+verbose = 0
+infiles = []
+irom_out = ''
+dram_out = ''
+
+for arg in sys.argv[1:]:
+  if arg[0:2] == '-I':
+    irom_out = arg[2:]
+  elif arg[0:2] == '-D':
+    dram_out = arg[2:]
+  elif arg == '-v':
+    verbose = 1
+  elif arg == '-V':
+    print("VERSION: 0.1 (ALPHA)")
+    exit(-1)
+  elif arg[0:2] == '-h':
+    print_help()
+  else:
+    infiles.append(arg)
+    
+if len(infiles) == 0:
+  print("ERROR: No input files specified")
+  exit(-1)
+
+if irom_out == '':
+  if infiles[0].endswith('.to'):
+    irom_out = infiles[0]
+    irom_out = obj_out[:-2] + 'is'
+  elif infiles[0].endswith('.o'):
+    irom_out = infiles[0]
+    irom_out = obj_out[:-1] + 'is'
+  else:
+    irom_out = 'irom.hex'
+
+if dram_out == '':
+  if infiles[0].endswith('.to'):
+    dram_out = infiles[0]
+    dram_out = obj_out[:-2] + 'ds'
+  elif infiles[0].endswith('.o'):
+    dram_out = infiles[0]
+    dram_out = obj_out[:-1] + 'ds'
+  else:
+    dram_out = 'dram.hex'
+        
 #
 # Initialize database scructures
+#   NOTE: Program segment is initialized with 4 x jumps to entry points
 #
 
 plabels = {}
-pc = 0
-prog = []
-pfixup = []
+pc = 4
+prog = [0xf8000000, 0xf8000000, 0xf8000000, 0xf8000000]
+pfixup = ['0:jump:_t0_reset:builtin:0', '1:jump:_t1_reset:builtin:0', 
+          '2:jump:_t2_reset:builtin:0', '3:jump:_t3_reset:builtin:0']
 
-dlabels= {}
+dlabels = {}
 dc = 0
 data = []
 dfixup = []
@@ -24,7 +111,7 @@ dfixup = []
 # Open each file and build database
 #
 
-for filename in sys.argv[1:]:
+for filename in infiles:
   try:
     fin = open(filename, "r")
   except IOError:
@@ -62,7 +149,7 @@ for filename in sys.argv[1:]:
         exit(-1)
         
       try:
-        offset = int(l[1])
+        offset = int(l[1], 0)
       except ValueError:
         print("ERROR: Invalid label offset '%s' @ %s:%d" % (l[1], filename, linenum))
         exit(-1)
@@ -120,7 +207,7 @@ for fixup in pfixup:
   elif label in dlabels:
     label = dlabels[label]
   else:
-    print("ERROR: Unable to resolve fixup label @ %s:%s" % (f[3], f[4]))
+    print("ERROR: Unable to resolve label '%s' @ %s:%s" % (label, f[3], f[4]))
     exit(-1)
   
   if type == 'call':
@@ -201,7 +288,7 @@ for fixup in dfixup:
   elif label in dlabels:
     label = dlabels[label]
   else:
-    print("ERROR: Unable to resolve fixup label @ %s:%s" % (f[3], f[4]))
+    print("ERROR: Unable to resolve label '%s' @ %s:%s" % (label, f[3], f[4]))
     exit(-1)
   
   if type == 'ptr32':
@@ -221,31 +308,54 @@ for fixup in dfixup:
     exit(-1)
         
 #
-# Dump information
+# Dump instruction/data segments to output files
 #
 
-print("Program Labels:")
-for label in plabels:
-  print("  %s = %d" % (label, plabels[label]))
-  
-print("Program Fixups:")
-for fixup in pfixup:
-  print("  %s" % (fixup))
-  
-print("Program:")
-for p in prog:
-  print("  %08x" % p);
+try:
+  fout = open(irom_out, "w")
+except IOError:
+    print("ERROR: Unable to create file '%s'" % filename)
+    exit(-1)
 
-print("Data Labels:")
-for label in dlabels:
-  print("  %s = %d" % (label, dlabels[label]))
- 
-print("Data Fixups:")
-for fixup in dfixup:
-  print("  %s" % (fixup))
-  
-print("Data:")
+for p in prog:
+  fout.write("%08X\n" % (p))
+
+fout.close()
+
+try:
+  fout = open(dram_out, "w")
+except IOError:
+    print("ERROR: Unable to create file '%s'" % filename)
+    exit(-1)
+
 for d in data:
-  print("  %08x" % d);
+  fout.write("%08X\n" % (d))
+
+fout.close()
+
+#
+# Verbose output
+#
+
+if verbose != 0:
+  print("\nProgram Labels:")
+  for label in plabels:
+    print("  %20s = %08x" % (label, plabels[label]))
+
+  print("\nProgram Fixups:")
+  for fixup in pfixup:
+    print("  %s" % (fixup))
+
+  print("\nData Labels:")
+  for label in dlabels:
+    print("  %20s = %08x" % (label, dlabels[label]))
+
+  print("\nData Fixups:")
+  for fixup in dfixup:
+    print("  %s" % (fixup))
+  
+  print("\nWrote %d words of instructions to '%s'" % (len(prog), irom_out))
+  print("\nWrote %d bytes of data to '%s'" % (len(data) * 4, dram_out))
+  print("")
   
 exit(0)

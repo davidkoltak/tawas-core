@@ -1,13 +1,13 @@
-#!/usr/bin/perl
+#!/usr/bin/python
 
 #
 # Tawas Assembler: A very basic assembler for the 'tawas' processor core
 #
-# by David M. Koltak  02/11/2016
+# by David M. Koltak  06/02/2017
 #
 # The MIT License (MIT)
 # 
-# Copyright (c) 2016 David M. Koltak
+# Copyright (c) 2017 David M. Koltak
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,1046 +28,276 @@
 # SOFTWARE.
 # 
 
-if ($#ARGV < 0)
-{ die "Usage: tas input {input ...}\n  - Files assembled in left to right order\n  - Output is placed in ./irom.hex and ./dram.hex\n"; }
+import sys
 
-$PC = 0;
-$DC = 0;
-@Iwords = ();
-@Dwords = ();
+def print_help():
+  print("\nUSAGE: %s [-Ooutput] {input} ..." % (sys.argv[0]))
+  print("  -O   output object file")
+  print("  -v   verbose output")
+  print("  -V   version output")
+  print("  -h   this message")
+  exit(-1)
 
-%Labels = ();
-@FixUps = ();
 
-@FileList = @ARGV;
-
-while ($#FileList >= 0)
-{
-  $input_filename = shift(@FileList);
+if len(sys.argv) < 2:
+  print_help()
   
-  system("cpp $input_filename .cpp.out") && die "ERROR: Unable to pre-process $input_filename\n";
-  
-  open(_INPUT_FILE_, "<.cpp.out") || die "ERROR: Unable to open '$.cpp.out' for reading.\n";
-  
-  $input_filename = ".cpp.out";
-  
-  $linenum = 0;
-  while (my $line = <_INPUT_FILE_>)
-  {  
-    $linenum++;
-    chomp ($line);
-    $line =~ s/\/\/.*//;
-    $line =~ s/^\s+//;
-    
-    if ($line =~ /^\s*#/)
-    { next; }
-    
-    while ($line =~ /\{([^\}]*)\}/)
-    {
-      my $expr = $1;
-      $expr =~ s/\$/\$sanatize_/g;
-      $expr =~ s/\@//g;
-      $expr =~ s/\%//g;
-      my $rtn = eval($expr);
-      $line =~ s/\{([^\}]*)\}/$rtn/;
-    }
-
-    if ($line =~ /\.eval\s*\(\s*(.*)\s*\)/)
-    {
-      my $expr = $1;
-      $expr =~ s/\$/\$sanatize_/g;
-      $expr =~ s/\@//g;
-      $expr =~ s/\%//g;
-      my $rtn = eval($expr);
-      next;
-    }
-        
-    if ($line =~ /\.alloc(\d+)\s*\(\s*(.*)\s*,\s*(.*)\s*,\s*(.*)\s*\)/)
-    {
-      &alloc_heap($1, $2, $3, $4);
-      next;
-    }
-    
-    if ($line =~ /\.alloc(\d+)\s*\(\s*(.*)\s*,\s*(.*)\s*\)/)
-    {
-      &alloc_heap($1, $2, $3, 0);
-      next;
-    }
-            
-    if ($line =~ /\.data(\d+)\s*\(\s*([^,]*)\s*,\s*(.*)\s*\)/)
-    {
-      &data_heap($1, $2, $3);
-      next;
-    }
-
-    if ($line =~ /\.string\s*\(\s*(.*)\s*,\s*"(.*)"\s*\)/)
-    {
-      &string_heap($1, $2);
-      next;
-    }
-    
-    if ($line =~ /^\s*\./)
-    { die "ERROR: Invalid pragma @ $input_filename:$linenum\n"; }
-         
-    if ($line =~ /^(\w+):/)
-    {
-      my $label = $1;
-      $line =~ s/^.*:\s*//;
-      
-      if (exists $Labels{"PC:$label"})
-      { die "ERROR: Symbol '$label' already defined @ $input_filename:$linenum\n"; }
-      
-      $Labels{"PC:$label"} = $PC;
-    }
-    
-    if ($line eq '')
-    { next; }
-    
-    if ($line =~ /\s*(ld|st|push|pop|xchg)\s*\((.+)\)\s*;\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
-    {
-      # ld/st, ld/st
-      $i_lower = &ldst($1, $2);
-      $i_upper = &ldst($3, $4);
-      $i_total = (1 << 30) | ($i_upper << 15) | ($i_lower);
-    }
-    elsif ($line =~ /\s*(br|rtn|icall)\s*\((.*)\)\s*;\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
-    {
-      # br, ld/st
-      $i_lower = &ldst($3, $4);
-      $i_upper = &brrtn($1, $2);
-      $i_total = (13 << 28) | ($i_upper << 15) | ($i_lower);
-    }
-    elsif ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;\s*(br|rtn|icall)\s*\((.*)\)\s*;/)
-    {
-      # br, ld/st
-      $i_lower = &ldst($1, $2);
-      $i_upper = &brrtn($3, $4);
-      $i_total = (13 << 28) | ($i_upper << 15) | ($i_lower);
-    }
-    elsif ($line =~ /\s*(call|jmp)\s*\((.+)\)\s*;\s*push\s*\(\s*[rR]6\s*\)\s*;/)
-    {
-      # call/jmp
-      $i_total = &calljmp($1, $2);
-      $i_total |= (1 << 25);
-    }
-    elsif ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;\s*([a-z]+)\s*\((.*)\)\s*;/)
-    {
-      # ls, au
-      $i_lower = &au($3, $4);
-      $i_upper = &ldst($1, $2);
-      $i_total = (2 << 30) | ($i_upper << 15) | ($i_lower);
-    }
-    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
-    {
-      # ls, au
-      $i_lower = &au($1, $2);
-      $i_upper = &ldst($3, $4);
-      $i_total = (2 << 30) | ($i_upper << 15) | ($i_lower);
-    }
-    elsif ($line =~ /\s*(br|rtn|icall)\s*\((.*)\)\s*;\s*([a-z]+)\s*\((.*)\)\s*;/)
-    {
-      # br, au
-      $i_lower = &au($3, $4);
-      $i_upper = &brrtn($1, $2);
-      $i_total = (12 << 28) | ($i_upper << 15) | ($i_lower);
-    }
-    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;\s*(br|rtn|icall)\s*\((.*)\)\s*;/)
-    {
-      # br, au
-      $i_lower = &au($1, $2);
-      $i_upper = &brrtn($3, $4);
-      $i_total = (12 << 28) | ($i_upper << 15) | ($i_lower);
-    }
-    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;\s*([a-z]+)\s*\((.*)\)\s*;/)
-    {
-      # au, au
-      $i_lower = &au($1, $2);
-      $i_upper = &au($3, $4);
-      $i_total = ($i_upper << 15) | ($i_lower);
-    }
-    elsif ($line =~ /\s*(call|jmp)\s*\((.+)\)\s*;/)
-    {
-      # call/jmp
-      $i_total = &calljmp($1, $2);
-    }
-    elsif ($line =~ /\s*(br|rtn|icall)\s*\((.*)\)\s*;/)
-    {
-      # br, nop
-      $i_lower = 0;
-      $i_upper = &brrtn($1, $2);
-      $i_total = (12 << 28) | ($i_upper << 15) | ($i_lower);
-    }
-    elsif ($line =~ /\s*(ldi)\s*\((.+)\)\s*;/)
-    {
-      # ldi
-      $i_total = &ldi($1, $2);
-    }
-    elsif ($line =~ /\s*(nop)\s*\((.*)\)\s*;/)
-    {
-      # nop
-      $i_total = 0xC0008000;
-    }
-    elsif ($line =~ /\s*(nop2)\s*\((.*)\)\s*;/)
-    {
-      # nop2
-      $i_total = 0x00000000;
-    }
-    elsif ($line =~ /\s*(ld|st|push|pop)\s*\((.+)\)\s*;/)
-    {
-      # br, ls
-      $i_lower = &ldst($1, $2);
-      $i_upper = 1;
-      $i_total = (13 << 28) | ($i_upper << 15) | ($i_lower);
-    }
-    elsif ($line =~ /\s*([a-z]+)\s*\((.*)\)\s*;/)
-    {
-      # br, au
-      $i_lower = &au($1, $2);
-      $i_upper = 1;
-      $i_total = (12 << 28) | ($i_upper << 15) | ($i_lower);
-    }
-    else
-    { die "ERROR: Invalid instruction format @ $input_filename:$linenum\n"; }
-    
-    #printf("---> 0x%06X : %08X\n", $PC, $i_total);
-    $Iwords[$PC] = $i_total;
-    $PC++;
-  }
-}
-
-$Labels{"PC:.text.start"} = 0;
-$Labels{"PC:.text.end"} = $PC;
-
-$Labels{"DC:.data.start"} = 0;
-$Labels{"DC:.data.end"} = $DC;
-      
-foreach $FixUp (@FixUps)
-{
-  my @spec = split(/\|/, $FixUp);
-  
-  if (exists $Labels{$spec[2]})
-  { $label_addr = $Labels{$spec[2]}; }
-  else
-  { die "ERROR: Unresolved label '".$spec[2]."' @ ".$spec[3]."\n"; }
-  
-  if ($spec[0] eq 'br.short')
-  {
-    $val = $label_addr - $spec[1];
-    
-    if (($val < -128) || ($val > 127))
-    { die "ERROR: Relative address for *conditional* branch exceeds limit (-128,127) for label '".$spec[2]."' @ ".$spec[3]."\n"; }
-    
-    $Iwords[$spec[1] + 0] |= (($val & 0xFF) << 15);
-  }
-  elsif ($spec[0] eq 'br.long')
-  {
-    $val = $label_addr - $spec[1];
-    
-    if (($val < -2048) || ($val > 2047))
-    { die "ERROR: Relative address for branch exceeds limit (-2048,2047) for label '".$spec[2]."' @ ".$spec[3]."\n"; }
-    
-    $Iwords[$spec[1] + 0] |= (($val & 0xFFF) << 15);
-  }
-  elsif (($spec[0] eq 'jmp') || ($spec[0] eq 'call'))
-  {
-    $val = $label_addr;
-    
-    $Iwords[$spec[1] + 0] |= ($val & 0x00FFFFFF);
-  }
-  elsif ($spec[0] eq 'imm24')
-  {
-    $val = $label_addr;
-    
-    $Iwords[$spec[1] + 0] |= ($val & 0x00FFFFFF);
-  }
-  elsif ($spec[0] eq 'imm32')
-  {
-    $val = $label_addr;
-    
-    if (($Iwords[$spec[1] + 0] & 0xF0000000) == 0xE0000000)
-    { $Iwords[$spec[1] + 0] |= (($val >> 4) & 0x0FFFFFFF); }
-    else
-    { die "ERROR: Immediate fixup prefix error for label '".$spec[2]."' @ ".$spec[3]."\n"; }
-    
-    if (($Iwords[$spec[1] + 1] & 0xC0000000) == 0x00000000)
-    {
-      if (($Iwords[$spec[1] + 1] & (1 << 14)) && ($Iwords[$spec[1] + 1] & (1 << 29)))
-      { die "ERROR: Immediate fixup series instruction error for label '".$spec[2]."' @ ".$spec[3]."\n"; }
-    }
-    
-    if ($Iwords[$spec[1] + 1] & (1 << 14))
-    { 
-      $Iwords[$spec[1] + 0] |= (($val & 7) << 3);
-      $Iwords[$spec[1] + 0] |= ((($val >> 3) & 1) << 13);
-    }
-    elsif (($Iwords[$spec[1] + 1] & (1 << 29)) && (($Iwords[$spec[1] + 1] & 0xC0000000) == 0x00000000))
-    {
-      $Iwords[$spec[1] + 0] |= (($val & 7) << 18);
-      $Iwords[$spec[1] + 0] |= ((($val >> 3) & 1) << 28);
-    }
-    else
-    { die "ERROR: Immediate fixup format error for label '".$spec[2]."' @ ".$spec[3]."\n"; }
-  }
-  elsif ($spec[0] eq 'data32')
-  {
-    $val = $label_addr;
-    
-    $Dwords[$spec[1] / 4] |= $label_addr;
-  }
-  else
-  { die "ERROR: Bad FixUp specification '$FixUp'... how did that happen???\n"; }
-}
-
-open(_IROM_FILE_, ">irom.hex") || die "ERROR: Unable to open 'irom.hex' for writing.\n";
-open(_DRAM_FILE_, ">dram.hex") || die "ERROR: Unable to open 'dram.hex' for writing.\n";
-
-foreach $line (@Iwords)
-{
-  printf _IROM_FILE_ "%08X\n", $line;
-}
-
-foreach $line (@Dwords)
-{
-  printf _DRAM_FILE_ "%08X\n", $line;
-}
-
-close(_IROM_FILE_);
-close(_DRAM_FILE_);
-exit;
-
 #
-# Command functions
+# Parse argv
 #
 
-sub cond_code
-{
-  my $code = shift(@_);
-  my $rtn = 0;
-  
-  if ($code =~ /^\!/)
-  { 
-    $rtn |= 0x8;
-    $code =~ s/\!//;
-  }
-  
-  if (($code eq 'zero') || ($code eq 'equal'))
-  { $rtn |= 0x0; }
-  elsif ($code eq 'negative')
-  { $rtn |= 0x1; }
-  elsif ($code eq 'signed_overflow')
-  { $rtn |= 0x2; }
-  elsif ($code eq 'unsigned_overflow')
-  { $rtn |= 0x3; }
-  else
-  { die "ERROR: Invalid condition code '$code' @ $input_filename:$linenum\n"; }
-  
-  return $rtn;
-}
+verbose = 0
+infiles = []
+obj_out = ''
+dram_out = 'dram.hex'
 
-sub parse_num
-{
-  my $num = shift(@_);
-  my $rtn = 0;
-  my $neg = 0;
-  
-  if ($num =~ /^\s*\-/)
-  {
-    $neg = 1;
-    $num =~ s/^\s*\-//;
-  }
-  
-  if ($num =~ /^\s*0[Xx][0-9a-fA-F]+\s*/)
-  { $rtn = oct($num); }
-  elsif ($num =~ /^\s*0[0-7]+\s*/)
-  { $rtn = oct($num); }
-  elsif ($num =~ /^\s*[1-9][0-9]*\s*/)
-  { $rtn = int($num); }
-  elsif ($num eq "0")
-  { $rtn = 0; }
-  else
-  { die "ERROR: Invalid number '$num' @ $input_filename:$linenum\n"; }
-  
-  if ($neg)
-  { $rtn = -($rtn); }
-  
-  return $rtn;
-}
+for arg in sys.argv[1:]:
+  if arg[0:2] == '-O':
+    obj_out = arg[2:]
+  elif arg == '-v':
+    verbose = 1
+  elif arg == '-V':
+    print("VERSION: 0.1 (ALPHA)")
+    exit(-1)
+  elif arg[0:2] == '-h':
+    print_help()
+  else:
+    infiles.append(arg)
 
-sub ldst
-{
-  my $cmd = shift(@_);
-  my $args = shift(@_);
-  my $rtn = 0;
-  my $type;
-  my $reg;
-  my $ptr;
-  my $offset;
+if len(infiles) == 0:
+  print("ERROR: No input files specified")
+  exit(-1)
   
-  #print "ldst: $cmd ($args)\n";
-  
-  if (($cmd eq 'push') || ($cmd eq 'pop'))
-  {
-    if ($args =~ /[rR](\d+)/)
-    {
-      $type = 'w';
-      $reg = $1;
-      $ptr = 7;
-      
-      if ($cmd eq 'push')
-      { $offset = 0x1F; }
-      else
-      { $offset = 1; }
-    }
-    else
-    { die "ERROR: Push/Pop syntax error @ $input_filename:$linenum\n"; }
-    
-    $rtn |= (1 << 13);
-  }
-  elsif ($args =~ /(b|h|w|x|z)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)\[(\d\w*)\]/)
-  {
-    $type = $1;
-    $reg = $2;
-    $ptr = $3;
-    $offset = parse_num($4);
-    
-    if (($reg < 0) || ($reg > 7))
-    { die "ERROR: Register ($reg) must be r0-r7 @ $input_filename:$linenum\n"; }
-    
-    if (($ptr < 0) || ($ptr > 7))
-    { die "ERROR: Pointer ($ptr) must be r0-r7 @ $input_filename:$linenum\n"; }
-    
-    if (($offset < 0) || ($offset > 31))
-    { die "ERROR: Offset ($offset) must be 0-31 @ $input_filename:$linenum\n"; }
-  }
-  elsif ($args =~ /(b|h|w|x|z)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)(\+\+|\-\-)(\d\w*)/)
-  {
-    $type = $1;
-    $reg = $2;
-    $ptr = $3;
-    $inc_dec = $4;
-    $offset = $5;
-    
-    if ($inc_dec eq '--')
-    { $offset = -($offset); }
-    
-    if (($reg < 0) || ($reg > 7))
-    { die "ERROR: Register ($reg) must be r0-r7 @ $input_filename:$linenum\n"; }
-    
-    if (($ptr < 0) || ($ptr > 7))
-    { die "ERROR: Pointer ($ptr) must be r0-r7 @ $input_filename:$linenum\n"; }
-    
-    if (($offset < -16) || ($offset > 15))
-    { die "ERROR: Offset ($offset) must be -16,15 @ $input_filename:$linenum\n"; }
-
-    $offset &= 0x1F;
-    
-    $rtn |= (1 << 13);
-  }
-  else
-  { die "ERROR: Ld/St syntax error @ $input_filename:$linenum\n"; }
-  
-  if (($cmd eq 'st') || ($cmd eq 'push'))
-  { $rtn |= (1 << 14); }
-  
-  if ($type eq 'h')
-  { $rtn |= (1 << 11); }
-  elsif ($type eq 'w')
-  { $rtn |= (2 << 11); }
-  elsif ($type eq 'x')
-  { 
-    if ($cmd ne 'st')
-    { die "ERROR: Xchg type can only be used with 'st' command @ $input_filename:$linenum\n"; }
-    $rtn |= (3 << 11);
-  }
-  elsif ($type eq 'z')
-  { 
-    if ($cmd ne 'ld')
-    { die "ERROR: NZL wait type can only be used with 'ld' command @ $input_filename:$linenum\n"; }
-    $rtn |= (3 << 11);
-  }
-  elsif ($type ne 'b')
-  { die "ERROR: Invaid Ld/St type '$type' @ $input_filename:$linenum\n"; }
-  
-  $rtn |= ($offset << 6);
-  $rtn |= ($ptr << 3);
-  $rtn |= ($reg << 0);
-  
-  return $rtn;
-}
-
-sub brrtn
-{
-  my $cmd = shift(@_);
-  my $args = shift(@_);
-  my $rtn = 0;
-  
-  #print "br: $cmd ($args)\n";
-  
-  if ($cmd eq 'br')
-  {
-    if ($args =~ /(\!?\w+)\s*,\s*(\w+)/)
-    {
-      push(@FixUps, "br.short|$PC|PC:".$2."|$input_filename:$linenum");
-      my $cond = &cond_code($1);
-      
-      $rtn = (1 << 12) | ($cond << 8);
-    }
-    elsif ($args =~ /(\w+)/)
-    {
-      push(@FixUps, "br.long|$PC|PC:".$1."|$input_filename:$linenum");
-      
-      $rtn = 0;
-    }
-    else
-    { die "ERROR: BR syntax error @ $input_filename:$linenum\n"; }    
-  }
-  elsif (($cmd eq 'rtn') && ($args eq ''))
-  {
-    $rtn = (1 << 12) | (1 << 0);
-  }
-  elsif (($cmd eq 'icall') && ($args =~ /[rR]6/))
-  {
-    $rtn = (1 << 12) | 1;
-  }
-  else
-  { die "ERROR: BR syntax error @ $input_filename:$linenum\n"; }
-  
-  return $rtn;
-}
-
-sub au
-{
-  my $cmd = shift(@_);
-  my $args = shift(@_);
-  my $rtn = 0;
-  
-  #print "au: $cmd ($args)\n";
-  
-  if (($cmd eq 'nop') && ($args eq ''))
-  { return $rtn; }
-  
-  if ($cmd eq 'mv')
-  {
-    if ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)/)
-    {
-      my $rega = $1;
-      my $regb = $2;
-
-      if (($rega < 0) || ($rega > 7))
-      { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; } 
-
-      if (($regb < 0) || ($regb > 7))
-      { die "ERROR: Register B ($regb) must be r0-r7 @ $input_filename:$linenum\n"; } 
-
-      $rtn = ($regb << 6) | ($regb << 3) | ($rega);  
-    }  
-    else
-    { die "ERROR: Invalid 'mv' command format @ $input_filename:$linenum\n"; }
-    
-    return $rtn;
-  }
-
-  if ($cmd eq 'mvi')
-  {
-    if ($args =~ /[rR](\d+)\s*,\s*(\-?\d\w*)/)
-    {
-      my $regc = $1;
-      my $imm = parse_num($2);
-           
-      if (($regc < 0) || ($regc > 7))
-      { die "ERROR: Register C ($regac) must be r0-r7 @ $input_filename:$linenum\n"; } 
-    
-      if (($imm < -256) || ($imm > 255))
-      { die "ERROR: Immediate value out of (-256, 255) range @ $input_filename:$linenum\n"; } 
-      
-      $rtn = (0x18 << 9) | (($imm & 0x1FF) << 3) | $regc;
-    }
-    else
-    { die "ERROR: Invalid 'mvi' command format @ $input_filename:$linenum\n"; }
-    
-    return $rtn;
-  }
-  
-  if ($cmd eq 'clr')
-  {
-    if ($args =~ /[rR](\d+)/)
-    {
-      my $rega = $1;
-
-      if (($rega < 0) || ($rega > 7))
-      { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; } 
-
-      $rtn = (0x01 << 9) | ($rega << 6) | ($rega << 3) | ($rega);  
-    }  
-    else
-    { die "ERROR: Invalid 'clr' command format @ $input_filename:$linenum\n"; }
-    
-    return $rtn;
-  }
-    
-  if (($cmd eq 'inc') || ($cmd eq 'dec') || ($cmd eq 'lsl') || ($cmd eq 'lsr') || ($cmd eq 'asr') || ($cmd eq 'sx') ||
-      ($cmd eq 'bset') || ($cmd eq 'bclr'))
-  {
-    if ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)\s*,\s*(\d\w*)/)
-    {
-      my $rega = $2;
-      my $regc = $1;
-      my $imm = parse_num($3);
-      
-      if (($rega < 0) || ($rega > 7))
-      { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
-      
-      if (($regc < 0) || ($regc > 7))
-      { die "ERROR: Register C ($regc) must be r0-r7 @ $input_filename:$linenum\n"; }
-      
-      if (($imm < 0) || ($imm > 7))
-      { die "ERROR: Imm ($imm) must be 0-7 @ $input_filename:$linenum\n"; }
-      
-      $rtn |= ($rega << 6) | ($imm << 3) | ($regc);  
-    }
-    elsif ($args =~ /[rR](\d+)\s*,\s*(\d\w*)/)
-    {
-      my $rega = $1;
-      my $imm = parse_num($2);
-      
-      if (($rega < 0) || ($rega > 7))
-      { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
-      
-      if (($imm < 0) || ($imm > 7))
-      { die "ERROR: Imm ($2) must be 0-7 @ $input_filename:$linenum\n"; }
-      
-      $rtn |= ($rega << 6) | ($imm << 3) | ($rega);  
-    }
-    else    
-    { die "ERROR: '$cmd($args)' syntax error @ $input_filename:$linenum\n"; }   
-    
-    if ($cmd eq 'bset') { $rtn |= (0x10 << 9); } #NOTE: bit 3 of command set above
-    elsif ($cmd eq 'bclr') { $rtn |= (0x11 << 9); }  
-    elsif ($cmd eq 'dec') { $rtn |= (0x12 << 9); }
-    elsif ($cmd eq 'inc') { $rtn |= (0x13 << 9); }
-    elsif ($cmd eq 'lsl') { $rtn |= (0x14 << 9); }
-    elsif ($cmd eq 'lsr') { $rtn |= (0x15 << 9); }
-    elsif ($cmd eq 'asr') { $rtn |= (0x16 << 9); }
-    elsif ($cmd eq 'sx')  { $rtn |= (0x17 << 9); }
-    else
-    { die "ERROR: Invalid AU command '$cmd' @ $input_filename:$linenum\n"; }
-
-    return $rtn;
-  }
-  
-  if ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)\s*,\s*[rR](\d+)/)
-  {
-    my $rega = $2;
-    my $regb = $3;
-    my $regc = $1;
-    
-    if (($rega < 0) || ($rega > 7))
-    { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; } 
-    
-    if (($regb < 0) || ($regb > 7))
-    { die "ERROR: Register B ($regb) must be r0-r7 @ $input_filename:$linenum\n"; } 
-    
-    if (($regc < 0) || ($regc > 7))
-    { die "ERROR: Register C ($regc) must be r0-r7 @ $input_filename:$linenum\n"; } 
-    
-    $rtn |= ($rega << 6) | ($regb << 3) | ($regc);  
-  }
-  elsif ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)\s*,\s*(\-?\d\w*)/)
-  {
-    my $rega = $2;
-    my $regc = $1;
-    my $imm = parse_num($3);
-    
-    if (($rega < 0) || ($rega > 7))
-    { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
-    
-    if (($regc < 0) || ($regc > 7))
-    { die "ERROR: Register C ($regc) must be r0-r7 @ $input_filename:$linenum\n"; }
-    
-    $Iwords[$PC] = (0xE0000000) | (($imm >> 4) & 0x0FFFFFFF);
-    $PC++;
-    $rtn |= (1 << 14) | ((($imm >> 3) & 1) << 13) | ($rega << 6) | (($imm & 7) << 3) | ($regc);
-  }
-  elsif ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)\s*,\s*(\w*)/)
-  {
-    my $rega = $2;
-    my $regc = $1;
-    my $target = $3;
-    
-    if ($target =~ /^PC:/)
-    { push(@FixUps, "imm32|$PC|".$target."|$input_filename:$linenum"); }
-    else
-    { push(@FixUps, "imm32|$PC|DC:".$target."|$input_filename:$linenum"); }
-    
-    if (($rega < 0) || ($rega > 7))
-    { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
-    
-    if (($regc < 0) || ($regc > 7))
-    { die "ERROR: Register C ($regc) must be r0-r7 @ $input_filename:$linenum\n"; }
-    
-    $Iwords[$PC] = (0xE0000000);
-    $PC++;
-    $rtn |= (1 << 14) | ($rega << 6) | ($regc);
-  }
-  elsif ($args =~ /[rR](\d+)\s*,\s*[rR](\d+)/)
-  {
-    my $rega = $1;
-    my $regb = $2;
-    
-    if (($rega < 0) || ($rega > 7))
-    { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; } 
-    
-    if (($regb < 0) || ($regb > 7))
-    { die "ERROR: Register B ($regb) must be r0-r7 @ $input_filename:$linenum\n"; } 
-    
-    $rtn |= ($rega << 6) | ($regb << 3) | ($rega);  
-  }
-  elsif ($args =~ /[rR](\d+)\s*,\s*(\-?\d\w*)/)
-  {
-    my $rega = $1;
-    my $imm = parse_num($2);
-    
-    if (($rega < 0) || ($rega > 7))
-    { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
-    
-    $Iwords[$PC] = (0xE0000000) | (($imm >> 4) & 0x0FFFFFFF);
-    $PC++;
-    $rtn |= (1 << 14) | ((($imm >> 3) & 1) << 13) | ($rega << 6) | (($imm & 7) << 3) | ($rega);
-  }
-  elsif ($args =~ /[rR](\d+)\s*,\s*(\w*)/)
-  {
-    my $rega = $1;
-    my $target = $2;
-    
-    if ($target =~ /^PC:/)
-    { push(@FixUps, "imm32|$PC|".$target."|$input_filename:$linenum"); }
-    else
-    { push(@FixUps, "imm32|$PC|DC:".$target."|$input_filename:$linenum"); }
-    
-    if (($rega < 0) || ($rega > 7))
-    { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; }
-    
-    $Iwords[$PC] = (0xE0000000);
-    $PC++;
-    $rtn |= (1 << 14) | ($rega << 6) | ($rega);
-  }
-  elsif ($args =~ /[rR](\d+)/)
-  {
-    my $rega = $1;
-    
-    if (($rega < 0) || ($rega > 7))
-    { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; } 
-    
-    $rtn |= ($rega << 6) | ($rega << 3) | ($rega);  
-  }
-  else
-  { die "ERROR: AU '$cmd($args)' syntax error @ $input_filename:$linenum\n"; }
-  
-  if ($cmd eq 'or')  { $rtn |= (0x00 << 9); }
-  elsif ($cmd eq 'xor') { $rtn |= (0x01 << 9); }
-  elsif ($cmd eq 'cmp') { $rtn |= (0x02 << 9); }
-  elsif ($cmd eq 'add') { $rtn |= (0x03 << 9); }
-  elsif ($cmd eq 'sub') { $rtn |= (0x04 << 9); }
-  elsif ($cmd eq 'and') { $rtn |= (0x05 << 9); }
-  else
-  { die "ERROR: Invalid AU command '$cmd' @ $input_filename:$linenum\n"; }
-  
-  return $rtn;
-}
-
-sub calljmp
-{
-  my $cmd = shift(@_);
-  my $args = shift(@_);
-  my $rtn = 0;
-  
-  #print "calljmp: $cmd ($args)\n";
-  
-  if ($cmd eq 'call')
-  {
-    if ($args =~ /(\w+)/)
-    {
-      push(@FixUps, "call|$PC|PC:".$1."|$input_filename:$linenum");
-           
-      $rtn = 0xFD000000;
-    }
-    else
-    { die "ERROR: CALL syntax error @ $input_filename:$linenum\n"; }
-  }
-  elsif ($cmd eq 'jmp')
-  {
-    if ($args =~ /(\w+)/)
-    {
-      push(@FixUps, "jmp|$PC|PC:".$1."|$input_filename:$linenum");
-           
-      $rtn = 0xFC000000;
-    }
-    else
-    { die "ERROR: JMP syntax error @ $input_filename:$linenum\n"; }
-  }
-  else
-  { die "ERROR: CALL/JMP/RTN syntax error @ $input_filename:$linenum\n"; }
-  
-  return $rtn;
-}
+if obj_out == '':
+  if infiles[0].endswith('.as'):
+    obj_out = infiles[0]
+    obj_out = obj_out[:-2] + 'to'
+  elif infiles[0].endswith('.a'):
+    obj_out = infiles[0]
+    obj_out = obj_out[:-1] + 'to'
+  else:
+    obj_out = 'a.to'
    
-sub ldi
-{
-  my $cmd = shift(@_);
-  my $args = shift(@_);
-  my $rtn = 0;
+#
+# Initialize database scructures
+#
+
+plabels = {}
+pc = 0
+prog = []
+pfixup = []
+
+dlabels = {}
+dc = 0
+data = []
+dfixup = []
+
+#
+# Open each file and build database
+#
+
+for filename in infiles:
+  try:
+    fin = open(filename, "r")
+  except IOError:
+    print("ERROR: File '%s' not found" % filename)
+    exit(-1)
   
-  #print "ldi: $cmd ($args)\n";
+  linenum = 0
   
-  if ($cmd eq 'ldi')
-  {
-    if ($args =~ /[rR](\d+)\s*,\s*(\-?\d\w*)/)
-    {
-      my $rega = $1;
-      my $imm = parse_num($2);
-           
-      if (($rega < 0) || ($rega > 7))
-      { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; } 
+  for line in fin:
+    linenum += 1
+    line = line.strip()
+    if line == '':
+      continue
+    if line[0] == '#':
+      continue
     
-      if ($imm & 0xFF000000)
-      { die "ERROR: Immediate value out of range @ $input_filename:$linenum\n"; } 
+    if line[-1] == ':':
+      plabels[line[:-1]] = pc
+      continue
       
-      $rtn = 0xF0000000 | ($rega << 24) | ($imm & 0x00FFFFFF);
-    }
-    elsif ($args =~ /[rR](\d+)\s*,\s*(\w+)/)
-    {
-      my $rega = $1;
-      my $target = $2;
+    if line[0] == '.':
+      dctv = line.split()
+      if dctv[0] == '.alloc':
+        if len(dctv) != 4:
+          print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
+          exit(-1)
+          
+        try:
+          cnt = int(dctv[3], 0)
+        except ValueError:
+          print("ERROR: Alloc count field is not a number '%s' @ %s:%d" % (line, filename, linenum))
+          exit(-1)
+          
+        if dctv[2] == 'word':
+          if dc & 3:
+            dc = (dc & 0xFFFFFFFC) + 4
+          dlabels[dctv[1]] = dc
+          for x in range(cnt):
+            data.append(0)
+            dc += 4
+        elif dctv[2] == 'half':
+          if dc & 1:
+            dc = (dc & 0xFFFFFFFE) + 2
+          dlabels[dctv[1]] = dc
+          for x in range(cnt):
+            if (dc & 2) == 0:
+              data.append(0)
+            else:
+              data[dc >> 2] = (data[dc >> 2] & 0x0000FFFF)
+            dc += 2
+        elif dctv[2] == 'byte':
+          dlabels[dctv[1]] = dc
+          for x in range(cnt):
+            if (dc & 3) == 0:
+              data.append(0)
+            elif (dc & 3) == 1:
+              data[dc >> 2] = (data[dc >> 2] & 0xFFFF00FF)
+            elif (dc & 3) == 2:
+              data[dc >> 2] = (data[dc >> 2] & 0xFF00FFFF)
+            else:
+              data[dc >> 2] = (data[dc >> 2] & 0x00FFFFFF)
+            dc += 1          
+        else:
+          print("ERROR: Invalid alloc data type '%s' @ %s:%d" % (dctv[1], filename, linenum))
+          exit(-1)
+          
+      elif dctv[0] == '.data':
+        if len(dctv) < 4:
+          print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
+          exit(-1)
+        
+        if dctv[2] == 'word':
+          if dc & 3:
+            dc = (dc & 0xFFFFFFFC) + 4
+          dlabels[dctv[1]] = dc
+          for x in dctv[3:]:
+            try:
+              value = int(x, 0)
+              data.append(value)
+            except ValueError:
+              data.append(0)
+              dfixup.append("%d:ptr32:%s" % (dc, x))
+            dc += 4
+        elif dctv[2] == 'half':
+          if dc & 1:
+            dc = (dc & 0xFFFFFFFE) + 2
+          dlabels[dctv[1]] = dc
+          for x in dctv[3:]:
+            try:
+              value = int(x, 0)
+              if (dc & 2) == 0:
+                data.append(value & 0xFFFF)
+              else:
+                data[dc >> 2] = (data[dc >> 2] & 0x0000FFFF) | ((value << 16) & 0xFFFF0000)
+            except ValueError:
+              if (dc & 2) == 0:
+                data.append(0)
+                dfixup.append("%d:ptr16.l:%s" % (dc, x))
+              else:
+                data[dc >> 2] = (data[dc >> 2] & 0x0000FFFF)
+                dfixup.append("%d:ptr16.h:%s" % (dc, x))
+            dc += 2
+        elif dctv[2] == 'byte':
+          dlabels[dctv[1]] = dc
+          for x in dctv[3:]:
+            try:
+              value = int(x, 0)
+            except ValueError:
+              print("ERROR: Alloc value field is not a number '%s' @ %s:%d" % (line, filename, linenum))
+              exit(-1)
+            if (dc & 3) == 0:
+              data.append(value & 0x000000FF)
+            elif (dc & 3) == 1:
+              data[dc >> 2] = (data[dc >> 2] & 0xFFFF00FF) | ((value << 8) & 0x0000FF00)
+            elif (dc & 3) == 2:
+              data[dc >> 2] = (data[dc >> 2] & 0xFF00FFFF) | ((value << 16) & 0x00FF0000)
+            else:
+              data[dc >> 2] = (data[dc >> 2] & 0x00FFFFFF) | ((value << 24) & 0xFF000000)
+            dc += 1          
+        else:
+          print("ERROR: Invalid alloc data type '%s' @ %s:%d" % (dctv[1], filename, linenum))
+          exit(-1)
       
-      if ($target =~ /^PC:/)
-      { push(@FixUps, "imm24|$PC|".$target."|$input_filename:$linenum"); }
-      else
-      { push(@FixUps, "imm24|$PC|DC:".$target."|$input_filename:$linenum"); }
-           
-      if (($rega < 0) || ($rega > 7))
-      { die "ERROR: Register A ($rega) must be r0-r7 @ $input_filename:$linenum\n"; } 
-           
-      $rtn = 0xF0000000 | ($rega << 24);
-    }
-    else
-    { die "ERROR: LDI syntax error @ $input_filename:$linenum\n"; }
-  }
-  else
-  { die "ERROR: LDI syntax error @ $input_filename:$linenum\n"; }
-  
-  return $rtn;
-}
-
-sub push_d32
-{
-  my $data = shift(@_);
-  my $idx = ($DC >> 2);
-  my $off = ($DC & 3);
-  my $rtn;
-  
-  if ($off != 0)
-  { 
-    $DC += (4 - $off);
-    $idx += 1;
-  }
-  
-  $rtn = $DC;
-  $DC += 4;
-  
-  $Dwords[$idx] = $data;
-  
-  return $rtn;
-}
-
-sub push_d16
-{
-  my $data = shift(@_);
-  my $idx = ($DC >> 2);
-  my $off = ($DC & 3);
-  my $rtn;
-  
-  if ($off == 1)
-  { 
-    $DC += 1;
-    $off += 1;
-  }
-  elsif ($off == 3)
-  {
-    $DC += 1;
-    $off = 0;
-    $idx += 1;
-  }
-  
-  $rtn = $DC;
-  $DC += 2;
-  
-  $data &= 0xFFFF;
-  if ($off == 2)
-  { $Dwords[$idx] = ($data << 16) | ($Dwords[$idx] & 0xFFFF); }
-  else
-  { $Dwords[$idx] = $data; }
-  
-  return $rtn;
-}
-
-sub push_d8
-{
-  my $data = shift(@_);
-  my $idx = ($DC >> 2);
-  my $off = ($DC & 3);
-  my $rtn;
-  
-  $rtn = $DC;
-  $DC += 1;
-  
-  $data &= 0xFF;
-  if ($off == 1)
-  { $Dwords[$idx] = ($data << 8) | ($Dwords[$idx] & 0xFF); }
-  elsif ($off == 2)
-  { $Dwords[$idx] = ($data << 16) | ($Dwords[$idx] & 0xFFFF); }
-  elsif ($off == 3)
-  { $Dwords[$idx] = ($data << 24) | ($Dwords[$idx] & 0xFFFFFF); }
-  else
-  { $Dwords[$idx] = $data; }
-  
-  return $rtn;
-}
-
-sub alloc_heap
-{
-  my $size = shift(@_);
-  my $name = shift(@_);
-  my $count = shift(@_);
-  my $fill = &parse_num(shift(@_));
-
-  $name =~ s/\s//g;
-  
-  if ($size == 32)
-  { 
-    $Labels{"DC:$name"} = &push_d32($fill);
-
-    for (my $x = 1; $x < $count; $x += 1)
-    { &push_d32($fill); }
-  }
-  elsif ($size == 16)
-  { 
-    $Labels{"DC:$name"} = &push_d16($fill);
-
-    for (my $x = 1; $x < $count; $x += 1)
-    { &push_d16($fill); }
-  }
-  elsif ($size == 8)
-  { 
-    $Labels{"DC:$name"} = &push_d8($fill);
-
-    for (my $x = 1; $x < $count; $x += 1)
-    { &push_d8($fill); }
-  }
-  else
-  { die "ERROR: Invalid size '$size' @ $input_filename:$linenum\n"; }
-
-  return 0;
-}
-
-sub data_heap
-{
-  my $size = shift(@_);
-  my $name = shift(@_);
-  my @values = split(/,/, shift(@_));
-  my $count = $#values + 1;
-  
-  $name =~ s/\s//g;
+      elif dctv[0] == '.string':
+        if len(dctv) < 3:
+          print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
+          exit(-1)
+      
+        s = line.replace('.string', '', 1)
+        s = s.replace(dctv[1], '', 1)
+        s = s.strip()
+        if s[0] == "'":
+          s = s.strip("'")
+        if s[0] == '"':
+          s = s.strip('"')
+          
+        dlabels[dctv[1]] = dc
+        for x in s:
+          value = ord(x)
+          if (dc & 3) == 0:
+            data.append(value & 0x000000FF)
+          elif (dc & 3) == 1:
+            data[dc >> 2] = (data[dc >> 2] & 0xFFFF00FF) | ((value << 8) & 0x0000FF00)
+          elif (dc & 3) == 2:
+            data[dc >> 2] = (data[dc >> 2] & 0xFF00FFFF) | ((value << 16) & 0x00FF0000)
+          else:
+            data[dc >> 2] = (data[dc >> 2] & 0x00FFFFFF) | ((value << 24) & 0xFF000000)
+          dc += 1    
+            
+        if (dc & 3) == 0:
+          data.append(0)
+        elif (dc & 3) == 1:
+          data[dc >> 2] = (data[dc >> 2] & 0xFFFF00FF)
+        elif (dc & 3) == 2:
+          data[dc >> 2] = (data[dc >> 2] & 0xFF00FFFF)
+        else:
+          data[dc >> 2] = (data[dc >> 2] & 0x00FFFFFF)
+        dc += 1  
+          
+      else:
+        print("ERROR: Invalid directive '%s' @ %s:%d" % (line, filename, linenum))
+        exit(-1)
+      continue
+      
+    if line[0] == '\\':
+      prog[-1].append(line[1:].strip())
+    else:
+      prog.append([line])
+      pc += 1
     
-  if ($size == 32)
-  { 
-    my $val = shift(@values);
-    $val =~ s/\s//g;
+  fin.close()
+
+#
+# Verbose output
+#
+
+if verbose != 0:
+  print("\nProgram Labels:")
+  for label in plabels:
+    print("  %20s = %08x" % (label, plabels[label]))
     
-    if ($val =~ /^[0-9]/)
-    { 
-      $Labels{"DC:$name"} = &push_d32(&parse_num($val));
-    }
-    elsif ($val =~ /^PC:/)
-    { 
-      my $addr = &push_d32(0);
-      $Labels{"DC:$name"} = $addr;
-      push(@FixUps, "data32|$addr|".$val."|$input_filename:$linenum");
-    }
-    else
-    {  
-      my $addr = &push_d32(0);
-      $Labels{"DC:$name"} = $addr;
-      push(@FixUps, "data32|$addr|DC:".$val."|$input_filename:$linenum");
-    }
+  print("\nProgram Fixups:")
+  for fixup in pfixup:
+    print("  %s" % (fixup))
+
+  print("\nData Labels:")
+  for label in dlabels:
+    print("  %20s = %08x" % (label, dlabels[label]))
+
+  print("\nData Fixups:")
+  for fixup in dfixup:
+    print("  %s" % (fixup))
   
-    for (my $x = 1; $x < $count; $x += 1)
-    {
-      my $val = shift(@values);
-      $val =~ s/\s//g;
+  print("\nProgram:")
+  for p in prog:
+    print("  %s" % (p))
     
-      if ($val =~ /^[0-9]/)
-      { 
-        &push_d32(&parse_num($val));
-      }
-      elsif ($val =~ /^PC:/)
-      {  
-        my $addr = &push_d32(0);
-        push(@FixUps, "data32|$addr|".$val."|$input_filename:$linenum");
-      }
-      else
-      {  
-        my $addr = &push_d32(0);
-        push(@FixUps, "data32|$addr|DC:".$val."|$input_filename:$linenum");
-      }
-    }
-  }
-  elsif ($size == 16)
-  { 
-    $Labels{"DC:$name"} = &push_d16(&parse_num(shift(@values)));
+  print("\nData:")
+  for d in data:
+    print("  %08X" % (d))
+    
+  print("")
 
-    for (my $x = 1; $x < $count; $x += 1)
-    { &push_d16(&parse_num(shift(@values))); }
-  }
-  elsif ($size == 8)
-  { 
-    $Labels{"DC:$name"} = &push_d8(&parse_num(shift(@values)));
-
-    for (my $x = 1; $x < $count; $x += 1)
-    { &push_d8(&parse_num(shift(@values))); }
-  }
-  else
-  { die "ERROR: Invalid size '$size' @ $input_filename:$linenum\n"; }
-
-  return 0;
-}
-
-sub string_heap
-{
-  my $name = shift(@_);
-  my $values = shift(@_);
-  my $count = length $values;
-  
-  $name =~ s/\s//g;
-  
-  $values =~ s/\\t/\t/g;
-  $values =~ s/\\s/ /g;
-  $values =~ s/\\r/\r/g;
-  $values =~ s/\\n/\n/g;
-  
-  if ($values ne "")
-  {
-    $Labels{"DC:$name"} = &push_d8(ord(substr($values,0,1)));
-  }
-  else
-  {
-    $Labels{"DC:$name"} = &push_d8(0);
-    return 0;
-  }
-  
-  for (my $x = 1; $x < $count; $x += 1)
-  { &push_d8(ord(substr($values,$x,1)));}
- 
-  &push_d8(0);
-  
-  return 0;
-}
+exit(0)
