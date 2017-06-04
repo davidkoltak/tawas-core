@@ -53,7 +53,7 @@ module tawas
   wire [23:0] pc_rtn;
   
   wire rf_imm_vld;
-  wire [2:0] rf_imm_sel;
+  wire [3:0] rf_imm_sel;
   wire [31:0] rf_imm;
   
   wire [1:0] slice;
@@ -61,9 +61,6 @@ module tawas
   
   wire au_op_vld;
   wire [14:0] au_op;
-
-  wire au_imm_vld;
-  wire [27:0] au_imm;
   
   wire ls_op_vld;
   wire [14:0] ls_op;
@@ -101,14 +98,14 @@ module tawas
     .LS_OP(ls_op)
   );
   
-  wire [2:0] au_ra_sel;
+  wire [3:0] au_ra_sel;
   wire [31:0] au_ra;
   
-  wire [2:0] au_rb_sel;
+  wire [3:0] au_rb_sel;
   wire [31:0] au_rb;
   
   wire au_rc_vld;
-  wire [2:0] au_rc_sel;
+  wire [3:0] au_rc_sel;
   wire [31:0] au_rc;
   
   tawas_au tawas_au
@@ -138,9 +135,7 @@ module tawas
   
   wire [31:0] daddr_out;
   wire raccoon_cs;
-  wire raccoon_nzl;
-  wire [2:0] writeback_reg;
-  wire dxchg;
+  wire [3:0] writeback_reg;
   wire dwr_out;
   wire [3:0] dmask_out;
   wire [31:0] dout_out;
@@ -153,7 +148,7 @@ module tawas
   wire [2:0] ls_ptr_sel;
   wire [31:0] ls_ptr;
   
-  wire [2:0] ls_store_sel;
+  wire [3:0] ls_store_sel;
   wire [31:0] ls_store;
   
   wire ls_ptr_upd_vld;
@@ -161,7 +156,7 @@ module tawas
   wire [31:0] ls_ptr_upd;
   
   wire ls_load_vld;
-  wire [2:0] ls_load_sel;
+  wire [3:0] ls_load_sel;
   wire [31:0] ls_load;
   
   tawas_ls tawas_ls
@@ -172,9 +167,7 @@ module tawas
     .DADDR(daddr_out),
     .DCS(DCS),
     .RACCOON_CS(raccoon_cs),
-    .RACCOON_NZL(raccoon_nzl),
     .WRITEBACK_REG(writeback_reg),
-    .DXCHG(dxchg),
     .DWR(dwr_out),
     .DMASK(dmask_out),
     .DOUT(dout_out),
@@ -200,7 +193,7 @@ module tawas
   
   wire raccoon_load_vld;
   wire [1:0] raccoon_load_slice;
-  wire [2:0] raccoon_load_sel;
+  wire [3:0] raccoon_load_sel;
   wire [31:0] raccoon_load;
 
   tawas_raccoon tawas_raccoon
@@ -213,9 +206,7 @@ module tawas
 
     .DADDR(daddr_out),
     .RACCOON_CS(raccoon_cs),
-    .RACCOON_NZL(raccoon_nzl),
     .WRITEBACK_REG(writeback_reg),
-    .DXCHG(dxchg),
     .DWR(dwr_out),
     .DMASK(dmask_out),
     .DOUT(dout_out),

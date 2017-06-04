@@ -43,23 +43,23 @@ module tawas_regfile
   output [23:0] PC_RTN,
 
   input RF_IMM_VLD,
-  input [2:0] RF_IMM_SEL,
+  input [3:0] RF_IMM_SEL,
   input [31:0] RF_IMM,
   
-  input [2:0] AU_RA_SEL,
+  input [3:0] AU_RA_SEL,
   output [31:0] AU_RA,
   
-  input [2:0] AU_RB_SEL,
+  input [3:0] AU_RB_SEL,
   output [31:0] AU_RB,
 
   input AU_RC_VLD,
-  input [2:0] AU_RC_SEL,
+  input [3:0] AU_RC_SEL,
   input [31:0] AU_RC,
 
   input [2:0] LS_PTR_SEL,
   output [31:0] LS_PTR,
 
-  input [2:0] LS_STORE_SEL,
+  input [3:0] LS_STORE_SEL,
   output [31:0] LS_STORE,
 
   input LS_PTR_UPD_VLD,
@@ -67,29 +67,29 @@ module tawas_regfile
   input [31:0] LS_PTR_UPD,
   
   input LS_LOAD_VLD,
-  input [2:0] LS_LOAD_SEL,
+  input [3:0] LS_LOAD_SEL,
   input [31:0] LS_LOAD,
   
   input RACCOON_LOAD_VLD,
   input [1:0] RACCOON_LOAD_SLICE,
-  input [2:0] RACCOON_LOAD_SEL,
+  input [3:0] RACCOON_LOAD_SEL,
   input [31:0] RACCOON_LOAD
 );
 
-  reg [31:0] regfile_0[7:0];
-  reg [31:0] regfile_0_nxt[7:0];
-  reg [31:0] regfile_1[7:0];
-  reg [31:0] regfile_1_nxt[7:0];
-  reg [31:0] regfile_2[7:0];
-  reg [31:0] regfile_2_nxt[7:0];
-  reg [31:0] regfile_3[7:0];
-  reg [31:0] regfile_3_nxt[7:0];
+  reg [31:0] regfile_0[15:0];
+  reg [31:0] regfile_0_nxt[15:0];
+  reg [31:0] regfile_1[15:0];
+  reg [31:0] regfile_1_nxt[15:0];
+  reg [31:0] regfile_2[15:0];
+  reg [31:0] regfile_2_nxt[15:0];
+  reg [31:0] regfile_3[15:0];
+  reg [31:0] regfile_3_nxt[15:0];
   
   integer x;
   
   always @ *
   begin
-    for (x = 0; x < 8; x = x + 1)
+    for (x = 0; x < 16; x = x + 1)
     begin
       regfile_0_nxt[x] = regfile_0[x];
       regfile_1_nxt[x] = regfile_1[x];
@@ -109,7 +109,7 @@ module tawas_regfile
     2'd0:
     begin
       if (PC_STORE)
-        regfile_3_nxt[6] = {8'd0, PC};
+        regfile_3_nxt[14] = {8'd0, PC};
         
       if (RF_IMM_VLD)
         regfile_3_nxt[RF_IMM_SEL] = RF_IMM;
@@ -118,7 +118,7 @@ module tawas_regfile
         regfile_1_nxt[AU_RC_SEL] = AU_RC;
         
       if (LS_PTR_UPD_VLD)
-        regfile_2_nxt[LS_PTR_UPD_SEL] = LS_PTR_UPD;
+        regfile_2_nxt[LS_PTR_UPD_SEL + 8] = LS_PTR_UPD;
     
       if (LS_LOAD_VLD)
         regfile_0_nxt[LS_LOAD_SEL] = LS_LOAD;
@@ -126,7 +126,7 @@ module tawas_regfile
     2'd1:
     begin
       if (PC_STORE)
-        regfile_0_nxt[6] = {8'd0, PC};
+        regfile_0_nxt[14] = {8'd0, PC};
         
       if (RF_IMM_VLD)
         regfile_0_nxt[RF_IMM_SEL] = RF_IMM;
@@ -135,7 +135,7 @@ module tawas_regfile
         regfile_2_nxt[AU_RC_SEL] = AU_RC;
         
       if (LS_PTR_UPD_VLD)
-        regfile_3_nxt[LS_PTR_UPD_SEL] = LS_PTR_UPD;
+        regfile_3_nxt[LS_PTR_UPD_SEL + 8] = LS_PTR_UPD;
     
       if (LS_LOAD_VLD)
         regfile_1_nxt[LS_LOAD_SEL] = LS_LOAD;
@@ -143,7 +143,7 @@ module tawas_regfile
     2'd2:
     begin
       if (PC_STORE)
-        regfile_1_nxt[6] = {8'd0, PC};
+        regfile_1_nxt[14] = {8'd0, PC};
         
       if (RF_IMM_VLD)
         regfile_1_nxt[RF_IMM_SEL] = RF_IMM;
@@ -152,7 +152,7 @@ module tawas_regfile
         regfile_3_nxt[AU_RC_SEL] = AU_RC;
         
       if (LS_PTR_UPD_VLD)
-        regfile_0_nxt[LS_PTR_UPD_SEL] = LS_PTR_UPD;
+        regfile_0_nxt[LS_PTR_UPD_SEL + 8] = LS_PTR_UPD;
     
       if (LS_LOAD_VLD)
         regfile_2_nxt[LS_LOAD_SEL] = LS_LOAD;
@@ -160,7 +160,7 @@ module tawas_regfile
     default:
     begin
       if (PC_STORE)
-        regfile_2_nxt[6] = {8'd0, PC};
+        regfile_2_nxt[14] = {8'd0, PC};
         
       if (RF_IMM_VLD)
         regfile_2_nxt[RF_IMM_SEL] = RF_IMM;
@@ -169,7 +169,7 @@ module tawas_regfile
         regfile_0_nxt[AU_RC_SEL] = AU_RC;
         
       if (LS_PTR_UPD_VLD)
-        regfile_1_nxt[LS_PTR_UPD_SEL] = LS_PTR_UPD;
+        regfile_1_nxt[LS_PTR_UPD_SEL + 8] = LS_PTR_UPD;
     
       if (LS_LOAD_VLD)
         regfile_3_nxt[LS_LOAD_SEL] = LS_LOAD;
@@ -179,7 +179,7 @@ module tawas_regfile
   
   always @ (posedge CLK or posedge RST)
     if (RST)
-      for (x = 0; x < 8; x = x + 1)
+      for (x = 0; x < 16; x = x + 1)
       begin
         regfile_0[x] <= 32'd0;
         regfile_1[x] <= 32'd0;
@@ -187,7 +187,7 @@ module tawas_regfile
         regfile_3[x] <= 32'd0;
       end
     else
-      for (x = 0; x < 8; x = x + 1)
+      for (x = 0; x < 16; x = x + 1)
       begin
         regfile_0[x] <= regfile_0_nxt[x];
         regfile_1[x] <= regfile_1_nxt[x];
@@ -205,34 +205,34 @@ module tawas_regfile
     case (SLICE[1:0])
     2'd0:
     begin
-      pc_out = regfile_3[6];
+      pc_out = regfile_3[14];
       ra_out = regfile_3[AU_RA_SEL];
       rb_out = regfile_3[AU_RB_SEL];
-      ptr_out = regfile_3[LS_PTR_SEL];
+      ptr_out = regfile_3[LS_PTR_SEL + 8];
       st_out = regfile_3[LS_STORE_SEL];
     end
     2'd1:
     begin
-      pc_out = regfile_0[6];
+      pc_out = regfile_0[14];
       ra_out = regfile_0[AU_RA_SEL];
       rb_out = regfile_0[AU_RB_SEL];
-      ptr_out = regfile_0[LS_PTR_SEL];
+      ptr_out = regfile_0[LS_PTR_SEL + 8];
       st_out = regfile_0[LS_STORE_SEL];
     end
     2'd2:
     begin
-      pc_out = regfile_1[6];
+      pc_out = regfile_1[14];
       ra_out = regfile_1[AU_RA_SEL];
       rb_out = regfile_1[AU_RB_SEL];
-      ptr_out = regfile_1[LS_PTR_SEL];
+      ptr_out = regfile_1[LS_PTR_SEL + 8];
       st_out = regfile_1[LS_STORE_SEL];
     end
     default:
     begin
-      pc_out = regfile_2[6];
+      pc_out = regfile_2[14];
       ra_out = regfile_2[AU_RA_SEL];
       rb_out = regfile_2[AU_RB_SEL];
-      ptr_out = regfile_2[LS_PTR_SEL];
+      ptr_out = regfile_2[LS_PTR_SEL + 8];
       st_out = regfile_2[LS_STORE_SEL];
     end
     endcase
@@ -256,6 +256,14 @@ module tawas_regfile
   wire [31:0] s0_r5;
   wire [31:0] s0_r6;
   wire [31:0] s0_r7;
+  wire [31:0] s0_r8;
+  wire [31:0] s0_r9;
+  wire [31:0] s0_r10;
+  wire [31:0] s0_r11;
+  wire [31:0] s0_r12;
+  wire [31:0] s0_r13;
+  wire [31:0] s0_r14;
+  wire [31:0] s0_r15;
   
   wire [31:0] s1_r0;
   wire [31:0] s1_r1;
@@ -265,6 +273,14 @@ module tawas_regfile
   wire [31:0] s1_r5;
   wire [31:0] s1_r6;
   wire [31:0] s1_r7;
+  wire [31:0] s1_r8;
+  wire [31:0] s1_r9;
+  wire [31:0] s1_r10;
+  wire [31:0] s1_r11;
+  wire [31:0] s1_r12;
+  wire [31:0] s1_r13;
+  wire [31:0] s1_r14;
+  wire [31:0] s1_r15;
   
   wire [31:0] s2_r0;
   wire [31:0] s2_r1;
@@ -274,6 +290,14 @@ module tawas_regfile
   wire [31:0] s2_r5;
   wire [31:0] s2_r6;
   wire [31:0] s2_r7;
+  wire [31:0] s2_r8;
+  wire [31:0] s2_r9;
+  wire [31:0] s2_r10;
+  wire [31:0] s2_r11;
+  wire [31:0] s2_r12;
+  wire [31:0] s2_r13;
+  wire [31:0] s2_r14;
+  wire [31:0] s2_r15;
   
   wire [31:0] s3_r0;
   wire [31:0] s3_r1;
@@ -283,6 +307,14 @@ module tawas_regfile
   wire [31:0] s3_r5;
   wire [31:0] s3_r6;
   wire [31:0] s3_r7;
+  wire [31:0] s3_r8;
+  wire [31:0] s3_r9;
+  wire [31:0] s3_r10;
+  wire [31:0] s3_r11;
+  wire [31:0] s3_r12;
+  wire [31:0] s3_r13;
+  wire [31:0] s3_r14;
+  wire [31:0] s3_r15;
   
   assign s0_r0 = regfile_0[0];
   assign s0_r1 = regfile_0[1];
@@ -292,6 +324,14 @@ module tawas_regfile
   assign s0_r5 = regfile_0[5];
   assign s0_r6 = regfile_0[6];
   assign s0_r7 = regfile_0[7];
+  assign s0_r8 = regfile_0[8];
+  assign s0_r9 = regfile_0[9];
+  assign s0_r10 = regfile_0[10];
+  assign s0_r11 = regfile_0[11];
+  assign s0_r12 = regfile_0[12];
+  assign s0_r13 = regfile_0[13];
+  assign s0_r14 = regfile_0[14];
+  assign s0_r15 = regfile_0[15];
   
   assign s1_r0 = regfile_1[0];
   assign s1_r1 = regfile_1[1];
@@ -301,6 +341,14 @@ module tawas_regfile
   assign s1_r5 = regfile_1[5];
   assign s1_r6 = regfile_1[6];
   assign s1_r7 = regfile_1[7];
+  assign s1_r8 = regfile_1[8];
+  assign s1_r9 = regfile_1[9];
+  assign s1_r10 = regfile_1[10];
+  assign s1_r11 = regfile_1[11];
+  assign s1_r12 = regfile_1[12];
+  assign s1_r13 = regfile_1[13];
+  assign s1_r14 = regfile_1[14];
+  assign s1_r15 = regfile_1[15];
   
   assign s2_r0 = regfile_2[0];
   assign s2_r1 = regfile_2[1];
@@ -310,6 +358,14 @@ module tawas_regfile
   assign s2_r5 = regfile_2[5];
   assign s2_r6 = regfile_2[6];
   assign s2_r7 = regfile_2[7];
+  assign s2_r8 = regfile_2[8];
+  assign s2_r9 = regfile_2[9];
+  assign s2_r10 = regfile_2[10];
+  assign s2_r11 = regfile_2[11];
+  assign s2_r12 = regfile_2[12];
+  assign s2_r13 = regfile_2[13];
+  assign s2_r14 = regfile_2[14];
+  assign s2_r15 = regfile_2[15];
   
   assign s3_r0 = regfile_3[0];
   assign s3_r1 = regfile_3[1];
@@ -319,6 +375,14 @@ module tawas_regfile
   assign s3_r5 = regfile_3[5];
   assign s3_r6 = regfile_3[6];
   assign s3_r7 = regfile_3[7];
+  assign s3_r8 = regfile_3[8];
+  assign s3_r9 = regfile_3[9];
+  assign s3_r10 = regfile_3[10];
+  assign s3_r11 = regfile_3[11];
+  assign s3_r12 = regfile_3[12];
+  assign s3_r13 = regfile_3[13];
+  assign s3_r14 = regfile_3[14];
+  assign s3_r15 = regfile_3[15];
   
 endmodule
  

@@ -40,118 +40,105 @@ module tawas_au
 
   input AU_OP_VLD,
   input [14:0] AU_OP,
-
-  input AU_IMM_VLD,
-  input [27:0] AU_IMM,
   
-  output [2:0] AU_RA_SEL,
+  output [3:0] AU_RA_SEL,
   input [31:0] AU_RA,
   
-  output [2:0] AU_RB_SEL,
+  output [3:0] AU_RB_SEL,
   input [31:0] AU_RB,
   
   output AU_RC_VLD,
-  output [2:0] AU_RC_SEL,
+  output [3:0] AU_RC_SEL,
   output [31:0] AU_RC
 );
-  
-  //
-  // Immediate Data holding registers
-  //
-  
-  reg [27:0] imm_hold_0;
-  reg [27:0] imm_hold_1;
-  reg [27:0] imm_hold_2;
-  reg [27:0] imm_hold_3;
-  
-  always @ (posedge CLK or posedge RST)
-    if (RST)
-      imm_hold_0 <= 28'd0;
-    else if (AU_IMM_VLD && (SLICE == 2'd0))
-      imm_hold_0 <= AU_IMM;
-
-  always @ (posedge CLK or posedge RST)
-    if (RST)
-      imm_hold_1 <= 28'd0;
-    else if (AU_IMM_VLD && (SLICE == 2'd1))
-      imm_hold_1 <= AU_IMM;
-
-  always @ (posedge CLK or posedge RST)
-    if (RST)
-      imm_hold_2 <= 28'd0;
-    else if (AU_IMM_VLD && (SLICE == 2'd2))
-      imm_hold_2 <= AU_IMM;
-
-  always @ (posedge CLK or posedge RST)
-    if (RST)
-      imm_hold_3 <= 28'd0;
-    else if (AU_IMM_VLD && (SLICE == 2'd3))
-      imm_hold_3 <= AU_IMM;
 
   //
   // OP DECODE
   //
   
+  wire tworeg_vld;
+  wire [3:0] tworeg_cmd
+  
+  wire bitop_vld;
+  wire [2:0] bitop_cmd;
+  wire [4:0] bitop_sel;
+  
   wire imm_vld;
+  wire [1:0] imm_cmd;
   wire [31:0] imm;
-  wire [4:0] op_mux;
-  wire [2:0] reg_c_sel;
   
-  assign imm_vld = AU_OP[14];
-  assign imm[31:4] = (SLICE == 2'd3) ? imm_hold_3 :
-                     (SLICE == 2'd2) ? imm_hold_2 :
-                     (SLICE == 2'd1) ? imm_hold_1 : imm_hold_0;
-  assign imm[3] = AU_OP[13];
-  assign imm[2:0] = AU_OP[5:3];
+  assign tworeg_vld = AU_OP_VLD && (AU_OP[14:12] == 3'b000);
+  assign tworeg_cmd = AU_OP[11:8];
   
-  assign op_mux = AU_OP[13:9] & ((imm_vld) ? 5'h0F : 5'h1F);
+  assign bitop_vld = AU_OP_VLD && (AU_OP[14:12] == 3'b001);
+  assign bitop_cmd = AU_OP[11:9];
+  assign bitop_sel = AU_OP[8:4];
   
-  assign AU_RA_SEL = AU_OP[8:6];
-  assign AU_RB_SEL = AU_OP[5:3];
-  assign reg_c_sel = AU_OP[2:0];
+  assign imm_vld = AU_OP_VLD && |AU_OP[14:13];
+  assign imm_cmd = AU_OP[14:13];
+  assign imm = {{23{AU_OP[12]}}, AU_OP[12:4]};
+  
+  assign AU_RA_SEL = AU_OP[3:0];
+  assign AU_RB_SEL = AU_OP[7:4];
+  assign reg_c_sel = AU_OP[3:0];
     
   //
-  // REGISTER STAGE
+  // REGISTER STAGES
   //
   
-  reg [31:0] reg_a;
-  reg [31:0] reg_b;
-  reg [4:0] op_mux_d1;
-  reg [4:0] op_mux_d2;
-  reg [2:0] reg_a_as_imm;
-  reg [2:0] reg_b_as_imm;
-  reg [2:0] reg_c_sel_d1;
-  reg [2:0] reg_c_sel_d2;
+  reg [31:0] reg_a_d1;
+  reg [31:0] reg_b_d1;
+  reg [3:0] tworeg_cmd_d1;
+  reg [1:0] imm_cmd_d1;
   
-  reg au_result_vld;
-  reg au_result_vld_d1;
+  reg tworeg_vld_d1;
+  reg bitop_vld_d1;
+  reg imm_vld_d1;
+  reg writeback_vld_d1;
+  reg [3:0] reg_c_sel_d1;
+  
+  reg tworeg_vld_d2;
+  reg bitop_vld_d2;
+  reg imm_vld_d2;
+  reg writeback_vld_d2;
+  reg [3:0] reg_c_sel_d2;
   
   always @ (posedge CLK)
     if (AU_OP_VLD)
     begin
-      reg_a <= AU_RA;
-      reg_b <= (imm_vld) ? imm : AU_RB;
-      reg_a_as_imm <= AU_OP[8:6];
-      reg_b_as_imm <= AU_OP[5:3];
+      reg_a_d1 <= AU_RA;
+      reg_b_d1 <= (imm_vld) ? imm : (bitop_vld) ? {24'd0, bitop_cmd, bitop_sel} : AU_RB;
+      tworeg_cmd_d1 <= tworeg_cmd;
+      imm_cmd_d1 <= imm_cmd;  
     end
-  
+
   always @ (posedge CLK or posedge RST)
     if (RST)
     begin
-      au_result_vld <= 1'b0;
-      au_result_vld_d1 <= 1'b0;
-      op_mux_d1 <= 5'd0;
-      op_mux_d2 <= 5'd0;
-      reg_c_sel_d1 <= 3'd0;
-      reg_c_sel_d2 <= 3'd0;
+      tworeg_vld_d1 <= 1'b0;
+      bitop_vld_d1 <= 1'b0;
+      imm_vld_d1 <= 1'b0;
+      writeback_vld_d1 <= 1'b0;
+      reg_c_sel_d1 <= 4'd0;
+      
+      tworeg_vld_d2 <= 1'b0;
+      bitop_vld_d2 <= 1'b0;
+      imm_vld_d2 <= 1'b0;
+      writeback_vld_d2 <= 1'b0;
+      reg_c_sel_d2 <= 4'd0;
     end
     else
     begin
-      au_result_vld <= AU_OP_VLD;
-      au_result_vld_d1 <= au_result_vld;
-      op_mux_d1 <= op_mux;
-      op_mux_d2 <= op_mux_d1;
+      tworeg_vld_d1 <= tworeg_vld;
+      bitop_vld_d1 <= bitop_vld;
+      imm_vld_d1 <= imm_vld_d1;
+      writeback_vld_d1 <= (tworeg_vld && (tworeg_cmd != 4'h5)) || bitop_vld || (imm_vld_d1 && (imm_cmd != 2'b01));
       reg_c_sel_d1 <= reg_c_sel;
+      
+      tworeg_vld_d2 <= tworeg_vld_d1;
+      bitop_vld_d2 <= bitop_vld_d1;
+      imm_vld_d2 <= imm_vld_d1;
+      writeback_vld_d2 <= writeback_vld_d1;
       reg_c_sel_d2 <= reg_c_sel_d1;
     end
   
@@ -159,64 +146,69 @@ module tawas_au
   // Generate AU results
   //
   
-  reg [32:0] add_value;
-  reg [32:0] add_sub;
-  reg [32:0] add_result;
-  reg [31:0] au_result;
-  reg [31:0] bit_mask;
-  
-  always @ *
-  begin
-    add_value = (op_mux_d1[4]) ? {{30{1'b0}}, reg_b_as_imm} : {reg_b[31], reg_b};
-    add_sub = (op_mux_d1[0]) ? add_value : (~add_value) + 33'd1;
-    add_result = {reg_a[31], reg_a} + add_sub;
-    bit_mask = (1 << reg_b_as_imm);
-  end
+  reg [32:0] tworeg_result;
   
   always @ (posedge CLK)
-  begin
-    if (op_mux_d1[4:3] == 2'b11)
-      au_result <= {{23{op_mux_d1[2]}}, op_mux_d1[2:0], reg_a_as_imm[2:0], reg_b_as_imm[2:0]};
-    else
-      case (op_mux_d1)
-      5'h00: au_result <= reg_a | reg_b;
-      5'h01: au_result <= reg_a ^ reg_b;
-      5'h02: au_result <= add_result[31:0]; // a - b : compare (squash write-back)
-      5'h03: au_result <= add_result[31:0]; // a + b
-      5'h04: au_result <= add_result[31:0]; // a - b
-      5'h05: au_result <= reg_a & reg_b;
-      5'h07: au_result <= 32'hFFFFFBAD;
-      5'h08: au_result <= 32'hFFFFFBAD;
+    if (tworeg_vld_d1)
+      case (tworeg_cmd_d1)
+      4'h0: tworeg_result <= {1'b0, reg_a_d1 | reg_b_d1};
+      4'h1: tworeg_result <= {1'b0, reg_a_d1 & reg_b_d1};
+      4'h2: tworeg_result <= {1'b0, reg_a_d1 ^ reg_b_d1};
+      4'h3: tworeg_result <= {reg_a_d1[31], reg_a_d1} + {reg_b_d1[31], reg_b_d1};
+      4'h4:
+      4'h5: tworeg_result <= {reg_a_d1[31], reg_a_d1} - {reg_b_d1[31], reg_b_d1};
       
-      5'h09: au_result <= 32'hFFFFFBAD;
-      5'h0A: au_result <= 32'hFFFFFBAD;
-      5'h0B: au_result <= 32'hFFFFFBAD;
-      5'h0C: au_result <= 32'hFFFFFBAD;
-      5'h0D: au_result <= 32'hFFFFFBAD;
-      5'h0E: au_result <= 32'hFFFFFBAD;
-      5'h0F: au_result <= 32'hFFFFFBAD;
+      4'h8: tworeg_result <= {reg_b_d1[31], reg_b_d1};
+      4'h9: tworeg_result <= ~{reg_b_d1[31], reg_b_d1};
+      4'hA: tworeg_result <= 33'd1 + ~{reg_b_d1[31], reg_b_d1};
       
-      5'h10: au_result <= reg_a | bit_mask;
-      5'h11: au_result <= reg_a & ~bit_mask;
-      5'h12: au_result <= add_result[31:0]; // a - imm_b
-      5'h13: au_result <= add_result[31:0]; // a + imm_b
-
-      5'h14: au_result <= (reg_a << reg_b_as_imm);
-      5'h15: au_result <= (reg_a >> reg_b_as_imm);
-      5'h16: au_result <= (reg_a >>> reg_b_as_imm);
-
-      5'h17: au_result <= (reg_b_as_imm[1:0] == 2'b00) ? {32{reg_a[0]}}:
-                          (reg_b_as_imm[1:0] == 2'b01) ? {{24{reg_a[7]}}, reg_a[7:0]} :
-                          (reg_b_as_imm[1:0] == 2'b10) ? {{16{reg_a[15]}}, reg_a[15:0]} :
-                          (reg_b_as_imm[1:0] == 2'b11) ? {{8{reg_a[23]}}, reg_a[23:0]} : reg_a;
-
-      default: au_result <= 32'd0;
+      default: tworeg_result <= 33'd0;
       endcase
-  end
+    
+  reg [32:0] bitop_result;
+  wire [2:0] bitop_cmd_d1 = reg_b_d1[7:5];
+  wire [4:0] bitop_sel_d1 = reg_b_d1[4:0];
   
-  assign AU_RC_VLD = au_result_vld_d1 && (op_mux_d2 != 5'h02);
+  always @ (posedge CLK)
+    if (bitop_vld_d1)
+      case (bitop_cmd_d1)
+      3'd0: bitop_result <= {1'b0, reg_b_d1 | (1 << bitop_sel_d1)};
+      3'd1: bitop_result <= {1'b0, reg_b_d1 & ~(1 << bitop_sel_d1)};
+      
+      3'd4: bitop_result <= ({1'b0, reg_b_d1} << bitop_sel_d1);
+      3'd5: bitop_result <= ({1'b0, reg_b_d1} >> bitop_sel_d1);
+      3'd6: bitop_result <= ({reg_b_d1[31], reg_b_d1} >>> bitop_sel_d1);
+      3'd7: 
+      begin
+        for (integer x = 0; x < bitop_sel_d1; x += 1)
+          bitop_result[x] = reg_b_d1[x];
+        for (integer x = bitop_sel_d1; x < 33; x += 1)
+           bitop_result[x] = reg_b_d1[bitop_sel_d1];
+      end    
+      default: bitop_result <= 33'd0;
+      endcase    
+    
+  reg [32:0] imm_result;
+
+  always @ (posedge CLK)
+    if (imm_vld_d1)
+      case (imm_cmd_d1)
+      2'd1:
+      2'd2: imm_result <= {reg_a_d1[31], reg_a_d1} + {reg_b_d1[31], reg_b_d1};
+      2'd3: imm_result <= {reg_b_d1[31], reg_b_d1};      
+      default: imm_result <= 33'd0;
+      endcase  
+  
+  //
+  // Send result back to register file
+  //
+  
+  wire au_result_vld = tworeg_result_d2
+  wire [32:0] au_result = (imm_vld_d2) ? imm_result : (bitop_vld_d2) : tworeg_result;
+  
+  assign AU_RC_VLD = writeback_vld_d2;
   assign AU_RC_SEL = reg_c_sel_d2;
-  assign AU_RC = au_result;
+  assign AU_RC = au_result[31:0];
   
   //
   // Select Flags
@@ -239,9 +231,7 @@ module tawas_au
     
     result_flags[0] = (au_result == 32'd0);                               // zero
     result_flags[1] = au_result[31];                                      // neg
-    result_flags[2] = add_result[32] ^ add_result[31];                    // sovfl
-    result_flags[3] = (reg_a[31] && !add_sub[32] && !add_result[32]) ||   // uovfl
-                      (!reg_a[31] && add_sub[32] && add_result[31]);
+    result_flags[2] = au_result[32] ^ au_result[31];                      // ovfl
   end
   
   always @ (posedge CLK or posedge RST)

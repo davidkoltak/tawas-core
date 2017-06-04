@@ -73,17 +73,17 @@ AU Opcodes: 15-bits
 000 iiii bbbb aaaa : i.op a, b      (a = a *i* b)
 
   0 : Or       (a | b) -> a  (aka nop) (aka mv a, a)
-  1 : Xor      (a ^ b) -> a  (aka clr a)
-  2 : Cmp      (a - b) -> a
+  1 : And      (a & b) -> a
+  2 : Xor      (a ^ b) -> a  (aka clr a)
   3 : Add      (a + b) -> a
   4 : Sub      (a - b) -> a
-  5 : And      (a & b) -> a
+  5 : Cmp      (a - b) -> a
   6 :
   7 :
 
+  8 : Mv        b -> a
   8 : Not      ~b -> a
-  9 : Neg      -b -> a
-  A :
+  A : Neg      -b -> a
   B :
   C : 
   D :
@@ -101,9 +101,9 @@ AU Opcodes: 15-bits
   6 : asr      (a >> #v) -> a
   7 : sx       sign-extend(a, bit(v)) -> a
 
-01 iiiiiiiii  aaaa : addi a, [0, 1023]
-10 iiiiiiiii  aaaa : subi a, [0, 1023]
-11 iiiiiiiii  aaaa : mvi a, [-512, +511]
+01 iiiiiiiii  aaaa : cmpi a, [-256, 255]
+10 iiiiiiiii  aaaa : inc a, [-256, 255] (aka dec, which flips sign of imm in assembler)
+11 iiiiiiiii  aaaa : mvi a, [-256, 255]
 
 LS Opcodes: 15-bits
 ------------------------------------------
