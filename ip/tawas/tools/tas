@@ -311,24 +311,24 @@ for filename in infiles:
 # Convert opcode strings to 32-bit instruction data
 # - NOTE: This is the heavy lift
 
-fw_cmds = ['call', 'calls', 'jmp', 'ldi']
+fw_cmds = ['call', 'calls', 'jmp', 'jmps', 'ldi']
 br_cmds = ['br', 'rtn', 'jmpi', 'calli']
 ls_cmds = ['ld', 'st', 'push', 'pop', 'xchg']
 au_cmds = ['or', 'xor', 'cmp', 'add', 'sub', 'and', 'clr', 'tstz',
            'bset', 'bclr', 'inc', 'dec',
            'lsl', 'lsr', 'asr', 'sx',
-           'mv', 'mvi', 'nop']
+           'mv', 'mvi', 'addi', 'subi', 'nop']
 
 def decode_reg(reg):
-  if len(reg) != 2:
+  if len(reg) < 2:
     return -1
   if reg[0] != 'r':
     return -1
   try:
-    r = int(reg[1])
+    r = int(reg[1:])
   except ValueError:
     return -1
-  if (r < 0) or (r > 7):
+  if (r < 0) or (r > 15):
     return -1
   return r
 
@@ -371,24 +371,27 @@ def decode_hw_op(pc, hw_op, upper):
   elif (opcode[0] == 'rtn') | (opcode[0] == 'jmpi') | (opcode[0] == 'calli'):
     rtn = 0x1001
 
-  elif opcode[0] == 'ld':
-    rtn = 0x700F
-  
   elif opcode[0] in ls_cmds:
     rtn = 0x7F0F
   
-  elif opcode[0] == 'mvi':
+  elif (opcode[0] == 'subi') or (opcode[0] == 'addi') or (opcode[0] == 'mvi'):
     if len(opcode) != 3:
       print("ERROR: Bad opcode: %s" %(hw_op))
       exit(-1)
+    if opcode[0] == 'subi':
+      rtn = 0x2000
+    elif opcode[0] == 'addi':
+      rtn = 0x4000
+    else:
+      rtn = 0x6000
     reg = decode_reg(opcode[1])
+    rtn |= reg
     if reg < 0:
       print("ERROR: Bad register name: %s" %(hw_op))
       exit(-1)
-    rtn = 0x7000 | reg
     try:
       value = int(opcode[2], 0)
-      rtn |= ((value & 0x000001FF) << 3)
+      rtn |= ((value & 0x000001FF) << 4)
     except ValueError:
       if upper:
         pfixup.append("%d:imm9.h:%s" % (pc, opcode[2]))

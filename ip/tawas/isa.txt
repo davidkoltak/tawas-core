@@ -38,14 +38,19 @@ Symetrical Quad-threaded (25% clocks each)
  - Also provides natural TX/RX, Read/Write, or Consumer/Producer thread separation
  - All threads share same IROM, but start at different offsets
 
-Each thread has 8 x 32-bit registers: r6->link, r7->stack
+Each thread has 16 x 32-bit registers. With four threads, a core contains 64 x 32-bit
+registers. All registers can be used in AU operations, but there are limitation 
+for bus load/store commands.
+
+Load/store instruction address registers are limited to register r8-r15.  Registers 
+r7-r15 can only be used as a data source/sink register when 32-bit word loads are 
+used. Only registers r0-r7 can be loaded/store in smaller sizes (half/byte).
+
+The r14 register is used as call/rtn link, and r15 is inferred as the stack
+pointer for all push/pop insructions.
 
 Connects to "Raccoon Bus", a 32-bit ring style bus with Ack/Err/Retry signalling.  Each thread
-will individually stall waiting for bus transactions to complete. A polling "Non-Zero Load"
-feature is provided to idle a thread while the Raccoon master polls a bus address for a
-non-zero 32-bit read result.
-
-Semaphores/Spinlocks via atomic "exchange" stores - swap register and bus value in single cycle.
+will individually stall waiting for bus transactions to complete.
 
 32-bit instruction words formated as follows...
 ___________________________________________
@@ -55,48 +60,50 @@ ___________________________________________
 10    [LS_OP]    [AU_OP]    - Parallel LS/AU Ops
 1100  [BR_OP]    [AU_OP]    - Parallel BR/AU Ops
 1101  [BR_OP]    [LS_OP]    - Parallel BR/LS Ops
-11100      [IMM_LD]         - Load 24-bit signed extended immediate to register
-11101   - RSVD 27 BIT -
+1110       [IMM_LD]         - Load 24-bit signed extended immediate to register
 111100  - RSVD 26 BIT -
 111101  - RSVD 26 BIT -
 111110  - RSVD 26 BIT -
 111111     [CALL_OP]        - Call/Jmp
 
 
-AU Opcodes: 15-bits (triadic)
+AU Opcodes: 15-bits
 ------------------------------------------
 
-iiiiii aaa bbb ccc : i.op c, a, b      (c = a *i* b)
+000 iiii bbbb aaaa : i.op a, b      (a = a *i* b)
 
-00 : Or       (a | b) -> c  (aka nop) (aka mv c, a)
-01 : Xor      (a ^ b) -> c  (aka clr c)
-02 : Cmp      (a - b) -> c
-03 : Add      (a + b) -> c
-04 : Sub      (a - b) -> c
-05 : And      (a & b) -> c
-06 :
-07 :
+  0 : Or       (a | b) -> a  (aka nop) (aka mv a, a)
+  1 : Xor      (a ^ b) -> a  (aka clr a)
+  2 : Cmp      (a - b) -> a
+  3 : Add      (a + b) -> a
+  4 : Sub      (a - b) -> a
+  5 : And      (a & b) -> a
+  6 :
+  7 :
 
-08 :
- ...
-0F :
+  8 : Not      ~b -> a
+  9 : Neg      -b -> a
+  A :
+  B :
+  C : 
+  D :
+  E :
+  F :
 
-10 : bset     (a | (1 << #b) -> c  (bit 0-7 only)
-11 : bclr     (a & ~(1 << #b) -> c
-12 : Dec      (a - #b) -> c        (imm 0-7 only)
-13 : Inc      (a + #b) -> c
-14 : lsl      (a << #b) -> c       (shift 0-7 only)
-15 : lsr      (a >> #b) -> c
-16 : asr      (a >> #b) -> c
-17 : sx       sign-extend(a, byte(b)) -> c
+001 iii vvvvv aaaa : i.op a, v     (a = f[a,v])
 
-20 :
- ...
-2F :
+  0 : bset     (a | (1 << #v) -> a
+  1 : bclr     (a & ~(1 << #v) -> a
+  2 :
+  3 :
+  4 : lsl      (a << #v) -> a
+  5 : lsr      (a >> #v) -> a
+  6 : asr      (a >> #v) -> a
+  7 : sx       sign-extend(a, bit(v)) -> a
 
-38 :
----  mvi      {#i[2:0],#a,#b} -> c (imm -256,255 into c)
-3F : 
+01 iiiiiiiii  aaaa : addi a, [0, 1023]
+10 iiiiiiiii  aaaa : subi a, [0, 1023]
+11 iiiiiiiii  aaaa : mvi a, [-512, +511]
 
 LS Opcodes: 15-bits
 ------------------------------------------
@@ -104,155 +111,48 @@ LS Opcodes: 15-bits
 00 tt iiiii ppp ddd  : Load  (type) p[i] -> d  (ld.t rx, p[i])
 01 tt iiiii ppp ddd                            (ld.t rx, p++/--i)
 
-00 11 iiiii ppp ddd  : Extended (word) p[i]    (ld.z rx, p[i+32])
-01 11 iiiii ppp ddd  :                         (ld.z rx, p++/--(i+32))
-
 10 tt iiiii ppp ddd  : Store (type) d -> p[i]  (st.t rx, p[i])
 11 tt iiiii ppp ddd                            (st.t rx, p++/--i)
 
-10 11 iiiii ppp ddd  : Xchg (word) d <-> p[i]  (st.x rx, p[i])
-11 11 iiiii ppp ddd  :                         (st.x rx, p++/--i)
+ NOTE: p 0-7 uses r8-r15
+       d 0-7 uses r0-r7, unless type is 11, when r8-r15 are selected
 
  TYPE
  -----------
  00 : 8-bit
  01 : 16-bit
  10 : 32-bit
- 11 : 32-bit ld: extended index load, st: exchange register
+ 11 : 32-bit (load/store 32-bit value to/from r8-r15 instead of r0-r7)
 
 NOTE: Pre-decrement, Post-increment
 
-st.w rx, r7--1  == push rx
-ld.w rx, r7++1  == pop rx
+st.w rx, r15--1  == push rx
+ld.w rx, r15++1  == pop rx
 
 
 BR Opcodes: 13-bits
 ------------------------------------------
 
 0 iiii iiii iiii  : br -2048,2047 words
-1 xxxx 0000 0001  : rtn (pc->r6, r6->pc)
+1 xxxx 0000 0001  : rtn (pc->r14, r14->pc)
 1 cccc iiii iiii  : br.cc -128,127 words
 
-NOTE: rtn() saves pc-next back to r6, so it can be used
+NOTE: rtn() saves pc-next back to r14, so it can be used
       as an indirect call/jmp
 
-Imm Hold: 24-bits
+
+Imm Load: 28-bits
 ------------------------------------------
 
-eeeeeeee eeeeeeee eeeeeeee : 24-bits are placed in a holding register
-                             for later use by AU Opcode 'imm' field
-
-Imm Load: 27-bits
-------------------------------------------
-
-rrr eeeeeeee eeeeeeee eeeeeeee : Store signed extended 24-bit value
-                                 into Rx
+rrrr eeeeeeee eeeeeeee eeeeeeee : Store signed extended 24-bit value
+                                  into Rx
                                  
 
 Call Opcodes: 26-bits
 ------------------------------------------
 
-00 eeeeeeee eeeeeeee eeeeeeee : jmp a (e->pc)
-01 eeeeeeee eeeeeeee eeeeeeee : call a (pc->r6, e->pc)
-11 eeeeeeee eeeeeeee eeeeeeee : calls a (push(r6), pc->r6, e->pc)
+00 eeeeeeee eeeeeeee eeeeeeee : jmp e (e->pc)
+01 eeeeeeee eeeeeeee eeeeeeee : call e (e->pc, pc->r14)
+10 eeeeeeee eeeeeeee eeeeeeee : jmps e (e->pc, push(r14))
+11 eeeeeeee eeeeeeee eeeeeeee : calls e (e->pc, pc->r14, push(r14))
   
-
-
-ASSEMBLY OPCODES
----------------------------
-
-  call(label);
-  icall(r6);
-  rtn();
-  
-  nop();    // Single cycle NOP in one 32-bit word
-  nop2();   // Two cycle NOP in one 32-bit word
-  
-  jmp(label);
-  br(label);
-  br(cond, label);
-  
-  ldi(rX, Imm24); // sign extended to 32-bits
-
-  push(rX);
-  st(b|h|w, rX, rY++/--#); // pre-dec, post-inc, # in type size
-  st(b|h|w, rX, rY[#]);
-  
-  pop(rX);
-  ld(b|h|w, rX, rY++/--#);
-  ld(b|h|w, rX, rY[#]);
-  
-  mv(rX, rY);
-  clr(rX);
-  
-  inv(rX);
-  inv(rX, rY);
-  
-  inc(rX, Imm3); // 1-8
-  inc(rX, rY, Imm3);
-  
-  dec(rX, Imm3);
-  dec(rX, rY, Imm3);
-  
-  lsl(rX, Imm3);
-  lsl(rX, rY, Imm3);
-  
-  lsr(rX, Imm3);
-  lsr(rX, rY, Imm3);
-  
-  asr(rX, Imm3);
-  asr(rX, rY, Imm3);
-  
-  sx(rX, {1,2,3});
-  sx(rX, rY, {1,2,3});
-  
-  cmp(rX, rY);
-  
-  Triadic Ops (t_op) = add, sub, and, or, xor
-  --------------------------------------------
-  t_op(rX);
-  t_op(rX, rY);
-  t_op(rX, rY, rZ);
-  t_op(rX, Imm32);
-  t_op(rX, rY, Imm32);
-  
-  
-  Full Word Ops
-  --------------
-  call (optionally can include 'push(r6)')
-  jmp
-  ldi
-  
-  Parallel Ops (Execute in same clock cycle)
-  ------------------------------------------
-  call; push(r6);
-  (br|rtn|icall); (mv|inv|inc|inc|dec|lsl|lsr|asr|sx|cmp|add|sub|and|or|xor);
-  (br|rtn|icall); (ld|st|push|pop);
-  (ld|st|push|pop); (mv|inv|inc|inc|dec|lsl|lsr|asr|sx|cmp|add|sub|and|or|xor);
-  
-  Serial Ops (Left instruction on first cycle, right instruction on second cycle)
-  --------------------------------------------------------------------------------
-  (mv|inv|inc|inc|dec|lsl|lsr|asr|sx|cmp|add|sub|and|or|xor); (mv|inv|inc|inc|dec|lsl|lsr|asr|sx|cmp|add|sub|and|or|xor);
-  (ld|st|push|pop); (ld|st|push|pop);
-
-
-  ldi(r0, string1);
-  ldi(r1, string2);
-  call(strcmp); push(r6);
-  pop(r6); and(r0, r0);
-  br(zero, match);
-  br(dont_match);
-  
-strmp:
-  push(r3); mv(r2, r0);             // NOTE: r0-r2, caller saved, r3-r5 callee saved, r6/r7 are link/stack
-  ld(b, r0, r2++); mv(r3, r1)
-strcmp_next:
-  ld(b, r1, r3++);
-  sub(r0, r1);
-  br(!zero, strcmp_end); and(r1, r1);
-  br(zero, strcmp_end);
-  br(strcmp_next); ld(b, r0, r2++); 
-strcmp_end:
-  rtn(); pop(r3);
-
-
