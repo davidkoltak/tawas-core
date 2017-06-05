@@ -102,7 +102,7 @@ AU Opcodes: 15-bits
   7 : sx       sign-extend(a, bit(v)) -> a
 
 01 iiiiiiiii  aaaa : cmpi a, [-256, 255]
-10 iiiiiiiii  aaaa : inc a, [-256, 255] (aka dec, which flips sign of imm in assembler)
+10 iiiiiiiii  aaaa : inc a, [-256, 255]
 11 iiiiiiiii  aaaa : mvi a, [-256, 255]
 
 LS Opcodes: 15-bits
@@ -115,7 +115,7 @@ LS Opcodes: 15-bits
 11 tt iiiii ppp ddd                            (st.t rx, p++/--i)
 
  NOTE: p 0-7 uses r8-r15
-       d 0-7 uses r0-r7, unless type is 11, when r8-r15 are selected
+       d 0-7 uses r0-r7, unless type is 3, when r8-r15 are selected
 
  TYPE
  -----------

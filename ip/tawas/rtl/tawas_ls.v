@@ -38,9 +38,7 @@ module tawas_ls
   output reg [31:0] DADDR,
   output reg DCS,
   output reg RACCOON_CS,
-  output reg RACCOON_NZL,
-  output reg [2:0] WRITEBACK_REG,
-  output reg DXCHG,
+  output reg [3:0] WRITEBACK_REG,
   output reg DWR,
   output reg [3:0] DMASK,
   output reg [31:0] DOUT,
@@ -52,7 +50,7 @@ module tawas_ls
   output [2:0] LS_PTR_SEL,
   input [31:0] LS_PTR,
   
-  output [2:0] LS_STORE_SEL,
+  output [3:0] LS_STORE_SEL,
   input [31:0] LS_STORE,
 
   output reg LS_PTR_UPD_VLD,
@@ -60,7 +58,7 @@ module tawas_ls
   output reg [31:0] LS_PTR_UPD,
   
   output LS_LOAD_VLD,
-  output [2:0] LS_LOAD_SEL,
+  output [3:0] LS_LOAD_SEL,
   output [31:0] LS_LOAD
 );
 
@@ -72,8 +70,6 @@ module tawas_ls
   reg [7:0] ld_d2;
   reg [7:0] ld_d3;
   
-  wire cmd_xchg;
-  wire cmd_nzl;
   wire raccoon_space;
   wire [31:0] addr_offset;
   wire [31:0] addr_adj;
@@ -84,10 +80,7 @@ module tawas_ls
   wire [3:0] data_mask;
   
   assign LS_PTR_SEL = LS_OP[5:3];
-  assign LS_STORE_SEL = LS_OP[2:0];
-  
-  assign cmd_xchg = LS_OP[14] && (LS_OP[12:11] == 2'b11);
-  assign cmd_nzl = (!LS_OP[14]) && (LS_OP[12:11] == 2'b11);
+  assign LS_STORE_SEL = {&LS_OP[12:11], LS_OP[2:0]};
   
   assign addr_offset = (LS_OP[12]) ? {{25{1'b0}}, LS_OP[10:6], 2'd0} :
                        (LS_OP[11]) ? {{26{1'b0}}, LS_OP[10:6], 1'd0} 
@@ -100,7 +93,7 @@ module tawas_ls
   assign addr_next = LS_PTR + ((LS_OP[13]) ? addr_adj : addr_offset);
   assign addr_out = (LS_OP[13] && !addr_adj[31]) ? LS_PTR : addr_next;
   
-  assign raccoon_space = |addr_out[31:24];
+  assign raccoon_space = addr_out[31];
   
   assign wr_data = (LS_OP[12]) ? LS_STORE[31:0] :
                    (LS_OP[11]) ? {LS_STORE[15:0], LS_STORE[15:0]}
@@ -137,15 +130,15 @@ module tawas_ls
   
   always @ (posedge CLK or posedge RST)
     if (RST)
-      ld_d1 <= {8{1'b0}};
+      ld_d1 <= 8'd0;
     else if (LS_OP_VLD)
-      ld_d1 <= {(!LS_OP[14] || cmd_xchg) && !raccoon_space, LS_OP[12:11], addr_out[1:0], LS_OP[2:0]};
+      ld_d1 <= {!LS_OP[14] && !raccoon_space, LS_OP[12:11], addr_out[1:0], LS_OP[2:0]};
     else
-      ld_d1 <= {8{1'b0}};
+      ld_d1 <= 8'd0;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
-      {ld_d3, ld_d2} <= {{4{1'b0}}, {4{1'b0}}};
+      {ld_d3, ld_d2} <= {8'd0, 8'd0};
     else
       {ld_d3, ld_d2} <= {ld_d2, ld_d1};
     
@@ -155,9 +148,7 @@ module tawas_ls
       DADDR <= {addr_out[31:2], 2'b00};
       DCS <=  LS_OP_VLD && !raccoon_space;
       RACCOON_CS <= LS_OP_VLD && raccoon_space;
-      RACCOON_NZL <= cmd_nzl;
-      WRITEBACK_REG <= LS_OP[2:0];
-      DXCHG <= cmd_xchg;
+      WRITEBACK_REG <= {&LS_OP[12:11], LS_OP[2:0]};
       DWR <= LS_OP[14];
       DMASK <= data_mask;
       DOUT <= (LS_OP[14]) ? wr_data : 32'd0;
@@ -167,9 +158,7 @@ module tawas_ls
       DADDR <= 24'd0;
       DCS <= 1'b0;
       RACCOON_CS <= 1'b0;
-      RACCOON_NZL <= 1'b0;
-      WRITEBACK_REG <= 3'd0;
-      DXCHG <= 1'b0;
+      WRITEBACK_REG <= 4'd0;
       DWR <= 1'b0;
       DMASK <= 4'b0000;
       DOUT <= 32'd0;
@@ -195,7 +184,7 @@ module tawas_ls
                                                              : {24'd0, rd_data[7:0]};        
   
   assign LS_LOAD_VLD = ld_d3[7];
-  assign LS_LOAD_SEL = ld_d3[2:0];
+  assign LS_LOAD_SEL = {&ld_d3[6:5], ld_d3[2:0]};
   assign LS_LOAD = rd_data_final;
   
 endmodule
