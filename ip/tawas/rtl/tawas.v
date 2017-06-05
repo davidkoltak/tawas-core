@@ -65,6 +65,11 @@ module tawas
   wire ls_op_vld;
   wire [14:0] ls_op;
   
+  wire ls_dir_vld;
+  wire ls_dir_store;
+  wire [3:0] ls_dir_sel;
+  wire [31:0] ls_dir_addr;
+  
   wire [3:0] raccoon_stall;
   
   tawas_fetch tawas_fetch
@@ -95,7 +100,12 @@ module tawas
     .AU_IMM(au_imm),
     
     .LS_OP_VLD(ls_op_vld),
-    .LS_OP(ls_op)
+    .LS_OP(ls_op),
+    
+    .LS_DIR_VLD(ls_dir_vld),
+    .LS_DIR_STORE(ls_dir_store),
+    .LD_DIR_SEL(ls_dir_sel),
+    .LD_DIR_ADDR(ls_dir_addr)
   );
   
   wire [3:0] au_ra_sel;
@@ -175,6 +185,11 @@ module tawas
   
     .LS_OP_VLD(ls_op_vld),
     .LS_OP(ls_op),
+    
+    .LS_DIR_VLD(ls_dir_vld),
+    .LS_DIR_STORE(ls_dir_store),
+    .LD_DIR_SEL(ls_dir_sel),
+    .LD_DIR_ADDR(ls_dir_addr)
     
     .LS_PTR_SEL(ls_ptr_sel),
     .LS_PTR(ls_ptr),

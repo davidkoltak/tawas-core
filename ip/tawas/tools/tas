@@ -311,13 +311,13 @@ for filename in infiles:
 # Convert opcode strings to 32-bit instruction data
 # - NOTE: This is the heavy lift
 
-fw_cmds = ['call', 'calls', 'jmp', 'jmps', 'ldi']
-br_cmds = ['br', 'rtn', 'jmpi', 'calli']
-ls_cmds = ['ld', 'st', 'push', 'pop', 'xchg']
+fw_cmds = ['call', 'calls', 'jmp', 'jmps', 'ldi', 'ldd', 'std']
+br_cmds = ['br', 'rtn', 'jmpi', 'calli', 'skip', 'halt']
+ls_cmds = ['ld', 'st', 'push', 'pop']
 au_cmds = ['or', 'xor', 'cmp', 'add', 'sub', 'and', 'clr', 'tstz',
            'bset', 'bclr', 'inc', 'dec',
            'lsl', 'lsr', 'asr', 'sx',
-           'mv', 'mvi', 'addi', 'subi', 'nop']
+           'mv', 'mvi', 'cmpi', 'nop']
 
 def decode_reg(reg):
   if len(reg) < 2:

@@ -1,12 +1,14 @@
 
+.global test_fail
 test_fail:
-  mvi(r0, -16); mvi(r1, 1);
-  st(w, r1, r0[3]);
-test_fail_stop:
-  br(test_fail_stop);
+  mvi r8 -16
+  \ mvi r1 1 
+  st w r1 r8[3] 
+  halt
 
+.global test_pass
 test_pass:
-  mvi(r0, -16); mvi(r1, 1);
-  st(w, r1, r0[2]);
-test_pass_stop:
-  br(test_pass_stop);
+  mvi r8 -16
+  \ mvi r1 1 
+  st w r1 r8[2] 
+  halt

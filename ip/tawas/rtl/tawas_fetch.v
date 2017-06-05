@@ -61,7 +61,12 @@ module tawas_fetch
   output [14:0] AU_OP,
   
   output LS_OP_VLD,
-  output [14:0] LS_OP
+  output [14:0] LS_OP,
+  
+  output LS_DIR_VLD,
+  output LS_DIR_STORE,
+  output [3:0] LD_DIR_SEL,
+  output [31:0] LD_DIR_ADDR
 );
 
   //
@@ -298,9 +303,14 @@ module tawas_fetch
   assign AU_OP_VLD = !fetch_stall_d1 && ((IDATA[31:30] == 2'b00) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1100));
   assign AU_OP = (au_upper) ? IDATA[30:15] : IDATA[14:0];
   
-  assign RF_IMM_VLD = !fetch_stall_d1 && (IDATA[31:28] == 4'hE);
+  assign RF_IMM_VLD = !fetch_stall_d1 && (IDATA[31:28] == 4'b1110);
   assign RF_IMM_SEL = IDATA[27:24];
   assign RF_IMM = {{8{IDATA[23]}}, IDATA[23:0]};
+  
+  assign LS_DIR_VLD = !fetch_stall_d1 && (IDATA[31:27] == 5'b11110);
+  assign LS_DIR_STORE = IDATA[26];
+  assign LS_DIR_SEL = IDATA[25:22];
+  assign LS_DIR_ADDR = {{8{IDATA[21]}}, IDATA[21:0], 2'd0};
   
   assign LS_OP_VLD = !fetch_stall_d1 && (r6_push_en || (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101));
   assign LS_OP = (r6_push_en) ? {3'h7, 6'h3F, 3'd7, 3'd6} : (ls_upper) ? IDATA[30:15] : IDATA[14:0];
