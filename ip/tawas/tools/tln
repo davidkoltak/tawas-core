@@ -250,13 +250,25 @@ for fixup in pfixup:
     if ((label & 0xFFFFFF00) != 0) and ((label & 0xFFFFFF00) != 0xFFFFFF00):
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
-    prog[addr] = (prog[addr] & 0xF803FFFF) | ((label << 18) & 0x07FC0000)
+    prog[addr] = (prog[addr] & 0xF007FFFF) | ((label << 19) & 0x0FF80000)
     
   elif ftype == 'imm9.l':
     if ((label & 0xFFFFFF00) != 0) and ((label & 0xFFFFFF00) != 0xFFFFFF00):
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
-    prog[addr] = (prog[addr] & 0xFFFFF007) | ((label << 3) & 0x00000FF8)
+    prog[addr] = (prog[addr] & 0xFFFFE00F) | ((label << 4) & 0x00001FF0)
+    
+  elif ftype == 'imm8.h':
+    if ((label & 0xFFFFFF80) != 0) and ((label & 0xFFFFFF80) != 0xFFFFFF80):
+      print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
+      exit(-1)
+    prog[addr] = (prog[addr] & 0xF807FFFF) | ((label << 19) & 0x07F80000)
+    
+  elif ftype == 'imm8.l':
+    if ((label & 0xFFFFFF00) != 0) and ((label & 0xFFFFFF00) != 0xFFFFFF00):
+      print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
+      exit(-1)
+    prog[addr] = (prog[addr] & 0xFFFFF00F) | ((label << 4) & 0x00000FF0)
 
   elif ftype == 'wordptr22':
     if ltype == 'p':

@@ -340,12 +340,12 @@ for filename in infiles:
 # - NOTE: This is the heavy lift
 
 fw_cmds = ['call', 'calls', 'jmp', 'jmps', 'halt', 'ldi', 'ldd', 'std']
-br_cmds = ['br', 'rtn', 'jmpi', 'calli', 'skip']
+br_cmds = ['br', 'rtn', 'jmpi', 'calli', 'skip', 'br_nop']
 ls_cmds = ['ld', 'st', 'push', 'pop']
 au_cmds = ['or', 'xor', 'cmp', 'add', 'sub', 'and', 'clr', 'tstz',
            'bset', 'bclr', 'inc', 'dec',
            'lsl', 'lsr', 'asr', 'sx',
-           'mv', 'mvi', 'cmpi', 'nop']
+           'mv', 'mvi', 'cmpi', 'nop', 'au_nop']
 
 def decode_reg(reg):
   if len(reg) < 2:
@@ -374,12 +374,14 @@ def decode_hw_op(pc, hw_op, upper):
         rtn = 0x1800
       elif opcode[1] == 'neg':
         rtn = 0x1100
-      elif opcode[1] == 'sovfl':
-        rtn = 0x1200
+      elif opcode[1] == 'pos':
+        rtn = 0x1900
       elif opcode[1] == 'ovfl':
-        rtn = 0x1300
+        rtn = 0x1200
+      elif opcode[1] == 'not-ovfl':
+        rtn = 0x1A00
       else:
-        print("ERROR: Bad condition code: %s" %(hw_op))
+        print("ERROR: Bad condition code: %s" % (hw_op))
         exit(-1)
       try:
         value = int(opcode[2], 0)
@@ -393,7 +395,7 @@ def decode_hw_op(pc, hw_op, upper):
       except ValueError:
         pfixup.append("%d:rel12:%s" % (pc, opcode[1])) 
     else:
-      print("ERROR: Bad opcode: %s" %(hw_op))
+      print("ERROR: Bad opcode: %s" % (hw_op))
       exit(-1)
   
   elif (opcode[0] == 'skip'):
@@ -404,53 +406,261 @@ def decode_hw_op(pc, hw_op, upper):
         rtn = 0x1802
       elif opcode[1] == 'neg':
         rtn = 0x1102
-      elif opcode[1] == 'sovfl':
-        rtn = 0x1202
+      elif opcode[1] == 'pos':
+        rtn = 0x1902
       elif opcode[1] == 'ovfl':
-        rtn = 0x1302
+        rtn = 0x1202
+      elif opcode[1] == 'not-ovfl':
+        rtn = 0x1A02
       else:
-        print("ERROR: Bad condition code: %s" %(hw_op))
+        print("ERROR: Bad condition code: %s" % (hw_op))
         exit(-1)
     else:
-      print("ERROR: Bad opcode: %s" %(hw_op))
+      print("ERROR: Bad opcode: %s" % (hw_op))
       exit(-1)
   
 
   elif (opcode[0] == 'rtn') | (opcode[0] == 'jmpi') | (opcode[0] == 'calli'):
     rtn = 0x1001
-    
-  elif opcode[0] in ls_cmds:
-    rtn = 0x7F0F
   
-  elif (opcode[0] == 'subi') or (opcode[0] == 'addi') or (opcode[0] == 'mvi'):
-    if len(opcode) != 3:
-      print("ERROR: Bad opcode: %s" %(hw_op))
+  elif (opcode[0] == 'push') or (opcode[0] == 'pop'):
+    if len(opcode) != 2:
+      print("ERROR: Bad opcode: %s" % (hw_op))
       exit(-1)
-    if opcode[0] == 'subi':
-      rtn = 0x2000
-    elif opcode[0] == 'addi':
+    if opcode[0] == 'push':
+      rtn = 0x67C0
+    else:
+      rtn = 0x2040
+    reg = decode_reg(opcode[1])
+    rtn |= (reg & 7)
+    if reg < 0:
+      print("ERROR: Bad register name: %s" % (hw_op))
+      exit(-1)
+    ptr = 15
+    rtn |= ((ptr & 7) << 3)
+    if reg > 7:
+      rtn |= (3 << 11)
+    else:
+      rtn |= (2 << 11)
+  
+  elif (opcode[0] == 'ld') or (opcode[0] == 'st'):
+    if len(opcode) != 5:
+      print("ERROR: Bad opcode: %s" % (hw_op))
+      exit(-1)
+    if opcode[0] == 'st':
+      rtn = 0x4000
+    else:
+      rtn = 0x0000
+    reg = decode_reg(opcode[2])
+    rtn |= (reg & 7)
+    if reg < 0:
+      print("ERROR: Bad register name: %s" % (hw_op))
+      exit(-1)
+    ptr = decode_reg(opcode[3])
+    rtn |= ((ptr & 7) << 3)
+    if ptr < 8:
+      print("ERROR: Bad pointer name: %s" % (hw_op))
+      exit(-1)
+    if opcode[1] == 'b':
+      if reg > 7:
+        print("ERROR: Cannot load/store byte with upper registers: %s" % (hw_op))
+        exit(-1)
+    elif opcode[1] == 'h':
+      rtn |= (1 << 11)
+      if reg > 7:
+        print("ERROR: Cannot load/store byte with upper registers: %s" % (hw_op))
+        exit(-1)
+    elif opcode[1] == 'w': 
+      if reg > 7:
+        rtn |= (3 << 11)
+      else:
+        rtn |= (2 << 11)
+    else:
+      print("ERROR: Invalid load/store size: %s" % (hw_op))
+      exit(-1)
+    if opcode[4][0] == '[':
+      idx = opcode[4].strip('[]')
+      try:
+        idx = int(idx, 0)
+      except ValueError:
+        print("ERROR: Invalid load/store index: %s" % (hw_op))
+        exit(-1)
+      if (idx < 0) or (idx > 31):
+        print("ERROR: Load/store index out of range (0-31): %s" % (hw_op))
+        exit(-1)
+      rtn |= (idx << 6)
+    elif opcode[4][0:2] == '++':
+      rtn |= (1 << 13)
+      offset = opcode[4][2:]
+      try:
+        offset = int(offset, 0)
+      except ValueError:
+        print("ERROR: Invalid load/store offset: %s" % (hw_op))
+        exit(-1)
+      if (offset < 0) or (offset > 15):
+        print("ERROR: Load/store offset out of range (0-15): %s" % (hw_op))
+        exit(-1)
+      rtn |= (offset << 6)
+    elif opcode[4][0:2] == '--':
+      rtn |= (1 << 13)
+      offset = opcode[4][2:]
+      try:
+        offset = int(offset, 0)
+      except ValueError:
+        print("ERROR: Invalid load/store offset: %s" % (hw_op))
+        exit(-1)
+      if (offset < 1) or (offset > 16):
+        print("ERROR: Load/store offset out of range -(1-16): %s" % (hw_op))
+        exit(-1)
+      offset = (-offset) & 0x1F
+      rtn |= (offset << 6)
+    else:
+      print("ERROR: Invalid load/store address modifier: %s" % (hw_op))
+      exit(-1)
+
+  elif (opcode[0] == 'addi') or (opcode[0] == 'cmpi') or (opcode[0] == 'mvi'):
+    if len(opcode) != 3:
+      print("ERROR: Bad opcode: %s" % (hw_op))
+      exit(-1)
+    if opcode[0] == 'addi':
+      rtn = 0x3000
+    elif opcode[0] == 'cmpi':
       rtn = 0x4000
     else:
       rtn = 0x6000
     reg = decode_reg(opcode[1])
     rtn |= reg
     if reg < 0:
-      print("ERROR: Bad register name: %s" %(hw_op))
+      print("ERROR: Bad register name: %s" % (hw_op))
       exit(-1)
-    try:
-      value = int(opcode[2], 0)
-      rtn |= ((value & 0x000001FF) << 4)
-    except ValueError:
-      if upper:
-        pfixup.append("%d:imm9.h:%s" % (pc, opcode[2]))
-      else:
-        pfixup.append("%d:imm9.l:%s" % (pc, opcode[2]))
+    if opcode[0] == 'addi':
+      try:
+        value = int(opcode[2], 0)
+        if ((value & 0xFFFFFF80) != 0) and ((value & 0xFFFFFF80) != 0xFFFFFF80):
+          print("ERROR: Immediate 8-bit overflow: %s" % (hw_op))
+          exit(-1)
+        rtn |= ((value & 0x000000FF) << 4)
+      except ValueError:
+        if upper:
+          pfixup.append("%d:imm8.h:%s" % (pc, opcode[2]))
+        else:
+          pfixup.append("%d:imm8.l:%s" % (pc, opcode[2]))
+    else:
+      try:
+        value = int(opcode[2], 0)
+        if ((value & 0xFFFFFF00) != 0) and ((value & 0xFFFFFF00) != 0xFFFFFF00):
+          print("ERROR: Immediate 9-bit overflow: %s" % (hw_op))
+          exit(-1)
+        rtn |= ((value & 0x000001FF) << 4)
+      except ValueError:
+        if upper:
+          pfixup.append("%d:imm9.h:%s" % (pc, opcode[2]))
+        else:
+          pfixup.append("%d:imm9.l:%s" % (pc, opcode[2]))
     return(rtn)
+
+  elif (opcode[0] == 'mv') or (opcode[0] == 'not') or (opcode[0] == 'neg') or (opcode[0] == 'cmp'):
+    if len(opcode) != 3:
+      print("ERROR: Bad opcode: %s" % (hw_op))
+      exit(-1)
+    if opcode[0] == 'mv':
+      rtn = 0x0800
+    if opcode[0] == 'not':
+      rtn = 0x0900
+    if opcode[0] == 'neg':
+      rtn = 0x0A00
+    if opcode[0] == 'cmp':
+      rtn = 0x0B00   
+    reg = decode_reg(opcode[1])
+    rtn |= reg
+    if reg < 0:
+      print("ERROR: Bad register name: %s" % (hw_op))
+      exit(-1)
+    reg = decode_reg(opcode[2])
+    rtn |= (reg << 4)
+    if reg < 0:
+      print("ERROR: Bad register name: %s" % (hw_op))
+      exit(-1)
+  
+  elif opcode[0] == 'tstz':
+    if len(opcode) != 2:
+      print("ERROR: Bad opcode: %s" % (hw_op))
+      exit(-1)
+    rtn = 0
+    reg = decode_reg(opcode[1])
+    rtn |= reg
+    rtn |= (reg << 4)
+    if reg < 0:
+      print("ERROR: Bad register name: %s" % (hw_op))
+      exit(-1)
+
+  elif opcode[0] == 'clr':
+    if len(opcode) != 2:
+      print("ERROR: Bad opcode: %s" % (hw_op))
+      exit(-1)
+    rtn = 0x0200
+    reg = decode_reg(opcode[1])
+    rtn |= reg
+    rtn |= (reg << 4)
+    if reg < 0:
+      print("ERROR: Bad register name: %s" % (hw_op))
+      exit(-1)
+              
+  elif (opcode[0] == 'or') or (opcode[0] == 'and') or (opcode[0] == 'xor') or (opcode[0] == 'add') or (opcode[0] == 'sub'):
+    if opcode[0] == 'or':
+      cmd = 0
+    elif opcode[0] == 'and':
+      cmd = 1
+    elif opcode[0] == 'xor':
+      cmd = 2
+    elif opcode[0] == 'add':
+      cmd = 3
+    elif opcode[0] == 'sub':
+      cmd = 4    
+    if len(opcode) == 2:
+      reg = decode_reg(opcode[1])
+      if reg < 0:
+        print("ERROR: Bad register name: %s" % (hw_op))
+        exit(-1)
+      rtn = (cmd << 8) | (reg << 4) | (reg)
+    elif len(opcode) == 3:
+      reg_a = decode_reg(opcode[1])
+      if reg_a < 0:
+        print("ERROR: Bad register name: %s" % (hw_op))
+        exit(-1)
+      reg_b = decode_reg(opcode[2])
+      if reg_b < 0:
+        print("ERROR: Bad register name: %s" % (hw_op))
+        exit(-1)
+      rtn = (cmd << 8) | (reg_b << 4) | (reg_a)
+    elif len(opcode) == 4:
+      reg_a = decode_reg(opcode[2])
+      if (reg_a < 0) or (reg_a > 7):
+        print("ERROR: Bad register name: %s" % (hw_op))
+        exit(-1)
+      reg_b = decode_reg(opcode[3])
+      if (reg_b < 0) or (reg_b > 7):
+        print("ERROR: Bad register name: %s" % (hw_op))
+        exit(-1)
+      reg_c = decode_reg(opcode[1])
+      if (reg_c < 0) or (reg_c > 7):
+        print("ERROR: Bad register name: %s" % (hw_op))
+        exit(-1)
+      if cmd > 7:
+        print("ERROR: Cannot use this command with three register form: %s" % (hw_op))
+        exit(-1)
+      rtn = (1 << 12) | (cmd << 9) | (reg_c << 6) | (reg_b << 3) | (reg_a)
+    else:
+      print("ERROR: Bad opcode: %s" % (hw_op))
+      exit(-1)
+      
+  elif (opcode[0] == 'au_nop') or (opcode[0] == 'nop'):
+    return 0
+  elif opcode[0] == 'br_nop':
+    return 1
     
-  elif opcode[0] in au_cmds:
-    rtn = 0x7FFF
   else:
-      print("ERROR: Unknown opcode: %s" %(hw_op))
+      print("ERROR: Unknown opcode: %s" % (hw_op))
       exit(-1)
 
   return(rtn)
@@ -463,18 +673,18 @@ def decode_fw_op(pc, fw_op):
  
   if opcode[0] == 'halt':
     if len(opcode) != 1:
-      print("ERROR: Bad opcode: %s" %(fw_op))
+      print("ERROR: Bad opcode: %s" % (fw_op))
       exit(-1)
     rtn = 0xC0000000
     return(rtn)
     
   if opcode[0] == 'ldi':
     if len(opcode) != 3:
-      print("ERROR: Bad opcode: %s" %(fw_op))
+      print("ERROR: Bad opcode: %s" % (fw_op))
       exit(-1)
     reg = decode_reg(opcode[1])
     if reg < 0:
-      print("ERROR: Bad register name: %s" %(fw_op))
+      print("ERROR: Bad register name: %s" % (fw_op))
       exit(-1)
     rtn = 0xE0000000 | (reg << 24)
     try:
@@ -486,11 +696,11 @@ def decode_fw_op(pc, fw_op):
  
   if (opcode[0] == 'ldd') or (opcode[0] == 'std'):
     if len(opcode) != 3:
-      print("ERROR: Bad opcode: %s" %(fw_op))
+      print("ERROR: Bad opcode: %s" % (fw_op))
       exit(-1)
     reg = decode_reg(opcode[1])
     if reg < 0:
-      print("ERROR: Bad register name: %s" %(fw_op))
+      print("ERROR: Bad register name: %s" % (fw_op))
       exit(-1)
     rtn = 0xF0000000 | (reg << 22)
     if opcode[0] == 'std':
@@ -503,7 +713,7 @@ def decode_fw_op(pc, fw_op):
     return(rtn)
        
   if len(opcode) != 2:
-    print("ERROR: Bad opcode: %s" %(fw_op))
+    print("ERROR: Bad opcode: %s" % (fw_op))
     exit(-1)
       
   if opcode[0] == 'jmp':
@@ -543,7 +753,10 @@ for p in prog:
   if len(p) == 1:
     cmd0 = p[0].split()[0]
     if (cmd0 not in fw_cmds):
-      p.append('nop @ n:0')
+      if (cmd0 in au_cmds):
+        p.append('br_nop @ n:0')
+      else:
+        p.append('au_nop @ n:0')
     
   if len(p) == 2:
     cmd0 = p[0].split()[0]

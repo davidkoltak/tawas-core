@@ -4,35 +4,35 @@
 
 .global strcpy
 strcpy:
-  push r3
-  \ mv r3 r1 
-  ld b r2 r0 ++1 
+  push r1
+  \ mv r1 r8
+  ld b r0 r8 ++1 
 strcpy_loop:
-  or r2 r2
-  \ st b r2 r1 ++1 
+  tstz r0
+  \ st b r0 r9 ++1 
   br nz strcpy_loop
-  \ ld b r2 r0 ++1 
+  \ ld b r0 r8 ++1 
 strcpy_done:
-  pop r3
-  \ sub r0 r1 r3 
-  rtn  
+  pop r1
+  \ sub r8 r1
+  mv r0 r8
+  \ rtn  
   
   
 .global strcmp
 strcmp:
-  push r4
-  \ push r3 
-  ld b r2 r0 ++1
-  \ ld b r3 r1 ++1 
+  push r1
+  \ push r2 
+  ld b r1 r8 ++1
+  \ ld b r2 r9 ++1 
 strcmp_loop:
-  ld b r2 r0 ++1
-  \ sub r4 r2 r3 
+  ld b r1 r8 ++1
+  \ sub r0 r1 r2 
   br nz strcmp_done
-  \ or r3 r3 
+  \ tstz r2
   br nz strcmp_loop
-  \ ld b r3 r1 ++1 
+  \ ld b r2 r9 ++1 
 strcmp_done:
-  pop r3
-  \ mv r0 r4 
-  pop r4
+  pop r2
+  pop r1
   \ rtn  
