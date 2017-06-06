@@ -69,39 +69,50 @@ ___________________________________________
 AU Opcodes: 15-bits
 ------------------------------------------
 
-000 iiii bbbb aaaa : i.op a, b      (a = a *i* b)
+000 iiii bbbb aaaa :
 
   0 : Or       (a | b) -> a  (aka nop) (aka mv a, a)
   1 : And      (a & b) -> a
   2 : Xor      (a ^ b) -> a  (aka clr a)
   3 : Add      (a + b) -> a
   4 : Sub      (a - b) -> a
-  5 : Cmp      (a - b) -> a
+  5 :
   6 :
   7 :
 
   8 : Mv        b -> a
-  8 : Not      ~b -> a
+  9 : Not      ~b -> a
   A : Neg      -b -> a
-  B :
+  B : Cmp      (a - b)
   C : 
   D :
   E :
   F :
 
-001 iii vvvvv aaaa : i.op a, v     (a = f[a,v])
+001 iii ccc bbb aaa : i.op c, a, b    (c = a *i* b)
+
+  0 : Or       (a | b) -> c
+  1 : And      (a & b) -> c
+  2 : Xor      (a ^ b) -> c
+  3 : Add      (a + b) -> c
+  4 : Sub      (a - b) -> c
+  5 :
+  6 :
+  7 :
+      
+010 iii vvvvv aaaa : i.op a, v     (a = f[a,v])
 
   0 : bset     (a | (1 << #v) -> a
   1 : bclr     (a & ~(1 << #v) -> a
-  2 :
+  2 : btst     (a & (1 << #v)
   3 :
   4 : lsl      (a << #v) -> a
   5 : lsr      (a >> #v) -> a
   6 : asr      (a >> #v) -> a
   7 : sx       sign-extend(a, bit(v)) -> a
 
-01 iiiiiiiii  aaaa : cmpi a, [-256, 255]
-10 iiiiiiiii  aaaa : inc a, [-256, 255]
+011 iiiiiiii  aaaa : inc a, [-128, 127]
+10 iiiiiiiii  aaaa : cmpi a, [-256, 255]
 11 iiiiiiiii  aaaa : mvi a, [-256, 255]
 
 LS Opcodes: 15-bits
@@ -202,7 +213,13 @@ pop rx
 
 mvi ra imm9
 cmpi ra imm9
-inc ra imm9
+inc ra imm8
+
+add rc ra rb
+sub rc ra rb
+or rc ra rb
+and rc ra rb
+xor rc ra rb
 
 add ra rb
 sub ra rb
@@ -210,6 +227,7 @@ cmp ra rb
 or ra rb
 and ra rb
 xor ra rb
+clr ra
 
 mv ra rb
 not ra rb
@@ -217,6 +235,7 @@ neg ra rb
 
 bset ra bit
 bclr ra bit
+btst ra bit
 lsl ra bit
 lsr ra bit
 asr ra bit
@@ -224,40 +243,44 @@ sx ra bit
 
 EXAMPLE CODE:
 
-  # COMMENT          (NOTE: '#' must be first non-whitespace character)
-  // or COMMENT      (      No comments on same line as an opcode     )
+  // COMMENT          (NOTE: Since we use CPP, we get C style comments for free)
+  /* COMMENT */
   
+  // R8 = from ptr
+  // R9 = to ptr
+  // R0 = RTN number of bytes copied
   .global strcpy
   strcpy:            (NOTE: Labels cannot be on same line as an opcode)
-    push r3
-    \ mv r3 r1       (NOTE: '\' means this opcode combined with previous)
-    ld b r2 r0 ++1 
+    push r1
+    \ mv r8 r0       (NOTE: '\' means this opcode combined with previous)
+    ld b r1 r8 ++1 
   strcpy_loop:
-    or r2 r2
-    \ st b r2 r1 ++1 
+    testz r1
+    \ st b r1 r9 ++1 
     br nz strcpy_loop
-    \ ld b r2 r0 ++1 
+    \ ld b r1 r8 ++1 
   strcpy_done:
-    pop r3
-    \ sub r0 r1 r3 
+    pop r1
+    \ sub r0 r8 
     rtn  
 
-
+  // R8 = ptr
+  // R9 = ptr
+  // R0 = RTN 0 if same 
   .global strcmp
   strcmp:
-    push r4
-    \ push r3 
-    ld b r2 r0 ++1
-    \ ld b r3 r1 ++1 
+    push r1
+    \ push r2
+    ld b r1 r8 ++1
+    \ ld b r2 r9 ++1 
   strcmp_loop:
-    ld b r2 r0 ++1
-    \ sub r4 r2 r3 
-    br nz strcmp_done
-    \ or r3 r3 
+    ld b r1 r8 ++1
+    \ sub r0 r1 r2 
+    br nz strcmp_not_equal
+    \ testz r2
     br nz strcmp_loop
-    \ ld b r3 r1 ++1 
+    \ ld b r2 r8 ++1 
   strcmp_done:
-    pop r3
-    \ mv r0 r4 
-    pop r4
-    \ rtn  
+    pop r1
+    \ pop r2
+    rtn

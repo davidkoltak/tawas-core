@@ -67,20 +67,20 @@ module tawas_au
   wire [1:0] imm_cmd;
   wire [31:0] imm;
   
-  assign tworeg_vld = AU_OP_VLD && (AU_OP[14:12] == 3'b000);
-  assign tworeg_cmd = AU_OP[11:8];
+  assign tworeg_vld = AU_OP_VLD && (AU_OP[14:13] == 2'b00);
+  assign [3:0] tworeg_cmd = (AU_OP[12]) ? {1'b0, AU_OP[11:9]} : AU_OP[11:8];
   
-  assign bitop_vld = AU_OP_VLD && (AU_OP[14:12] == 3'b001);
-  assign bitop_cmd = AU_OP[11:9];
+  assign bitop_vld = AU_OP_VLD && (AU_OP[14:12] == 3'b010);
+  assign [2:0] bitop_cmd = AU_OP[11:9];
   assign bitop_sel = AU_OP[8:4];
   
-  assign imm_vld = AU_OP_VLD && |AU_OP[14:13];
-  assign imm_cmd = AU_OP[14:13];
-  assign imm = {{23{AU_OP[12]}}, AU_OP[12:4]};
+  assign imm_vld = AU_OP_VLD && (AU_OP[14] | (AU_OP[14:12] == 3'b011));
+  assign [1:0] imm_cmd = AU_OP[14:13];
+  assign imm = (AU_OP[14]) ? {{23{AU_OP[12]}}, AU_OP[12:4]} : {{24{AU_OP[11]}}, AU_OP[11:4]};
   
-  assign AU_RA_SEL = AU_OP[3:0];
-  assign AU_RB_SEL = AU_OP[7:4];
-  assign reg_c_sel = AU_OP[3:0];
+  assign AU_RA_SEL = (AU_OP[14:12] == 3'b001) ? {1'b0, AU_OP[2:0]} : AU_OP[3:0];
+  assign AU_RB_SEL = (AU_OP[14:12] == 3'b001) ? {1'b0, AU_OP[5:3]} : AU_OP[7:4];
+  assign reg_c_sel = (AU_OP[14:12] == 3'b001) ? {1'b0, AU_OP[8:6]} : AU_OP[3:0];
     
   //
   // REGISTER STAGES
@@ -132,7 +132,7 @@ module tawas_au
       tworeg_vld_d1 <= tworeg_vld;
       bitop_vld_d1 <= bitop_vld;
       imm_vld_d1 <= imm_vld_d1;
-      writeback_vld_d1 <= (tworeg_vld && (tworeg_cmd != 4'h5)) || bitop_vld || (imm_vld_d1 && (imm_cmd != 2'b01));
+      writeback_vld_d1 <= (tworeg_vld && (tworeg_cmd != 4'hB)) || (bitop_vld && (bitop_cmd != 3'd2)) || (imm_vld_d1 && (imm_cmd != 2'd2));
       reg_c_sel_d1 <= reg_c_sel;
       
       tworeg_vld_d2 <= tworeg_vld_d1;
@@ -155,12 +155,12 @@ module tawas_au
       4'h1: tworeg_result <= {1'b0, reg_a_d1 & reg_b_d1};
       4'h2: tworeg_result <= {1'b0, reg_a_d1 ^ reg_b_d1};
       4'h3: tworeg_result <= {reg_a_d1[31], reg_a_d1} + {reg_b_d1[31], reg_b_d1};
-      4'h4:
-      4'h5: tworeg_result <= {reg_a_d1[31], reg_a_d1} - {reg_b_d1[31], reg_b_d1};
+      4'h4: tworeg_result <= {reg_a_d1[31], reg_a_d1} - {reg_b_d1[31], reg_b_d1};
       
       4'h8: tworeg_result <= {reg_b_d1[31], reg_b_d1};
       4'h9: tworeg_result <= ~{reg_b_d1[31], reg_b_d1};
       4'hA: tworeg_result <= 33'd1 + ~{reg_b_d1[31], reg_b_d1};
+      4'hB: tworeg_result <= {reg_a_d1[31], reg_a_d1} - {reg_b_d1[31], reg_b_d1};
       
       default: tworeg_result <= 33'd0;
       endcase
@@ -174,6 +174,7 @@ module tawas_au
       case (bitop_cmd_d1)
       3'd0: bitop_result <= {1'b0, reg_b_d1 | (1 << bitop_sel_d1)};
       3'd1: bitop_result <= {1'b0, reg_b_d1 & ~(1 << bitop_sel_d1)};
+      3'd2: bitop_result <= {1'b0, reg_b_d1 & (1 << bitop_sel_d1)};
       
       3'd4: bitop_result <= ({1'b0, reg_b_d1} << bitop_sel_d1);
       3'd5: bitop_result <= ({1'b0, reg_b_d1} >> bitop_sel_d1);
@@ -193,8 +194,8 @@ module tawas_au
   always @ (posedge CLK)
     if (imm_vld_d1)
       case (imm_cmd_d1)
-      2'd1:
-      2'd2: imm_result <= {reg_a_d1[31], reg_a_d1} + {reg_b_d1[31], reg_b_d1};
+      2'd1: imm_result <= {reg_a_d1[31], reg_a_d1} + {reg_b_d1[31], reg_b_d1};
+      2'd2: imm_result <= {reg_a_d1[31], reg_a_d1} - {reg_b_d1[31], reg_b_d1};
       2'd3: imm_result <= {reg_b_d1[31], reg_b_d1};      
       default: imm_result <= 33'd0;
       endcase  
