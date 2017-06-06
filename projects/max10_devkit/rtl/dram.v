@@ -39,7 +39,7 @@ module dram
   output [31:0] DOUT
 );
 
-  parameter DRAM_DATA_FILE = "./dram.hex";
+  parameter DRAM_DATA_FILE = "dram.hex";
   
   reg [31:0] data_array[(1024 * 16)-1:0];
   reg [31:0] data_out;

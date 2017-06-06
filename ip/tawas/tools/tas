@@ -71,7 +71,7 @@ if len(infiles) == 0:
   exit(-1)
   
 if obj_out == '':
-  if infiles[0].endswith('.as'):
+  if infiles[0].endswith('.ta'):
     obj_out = infiles[0]
     obj_out = obj_out[:-2] + 'to'
   elif infiles[0].endswith('.a'):
@@ -311,8 +311,8 @@ for filename in infiles:
 # Convert opcode strings to 32-bit instruction data
 # - NOTE: This is the heavy lift
 
-fw_cmds = ['call', 'calls', 'jmp', 'jmps', 'ldi', 'ldd', 'std']
-br_cmds = ['br', 'rtn', 'jmpi', 'calli', 'skip', 'halt']
+fw_cmds = ['call', 'calls', 'jmp', 'jmps', 'halt', 'ldi', 'ldd', 'std']
+br_cmds = ['br', 'rtn', 'jmpi', 'calli', 'skip']
 ls_cmds = ['ld', 'st', 'push', 'pop']
 au_cmds = ['or', 'xor', 'cmp', 'add', 'sub', 'and', 'clr', 'tstz',
            'bset', 'bclr', 'inc', 'dec',
@@ -338,7 +338,7 @@ def decode_hw_op(pc, hw_op, upper):
   parts = hw_op.split('@')
   opcode = parts[0].split()
   
-  if opcode[0] == 'br':
+  if (opcode[0] == 'br'):
     if len(opcode) == 3:
       if (opcode[1] == 'z') or (opcode[1] == 'eq'):
         rtn = 0x1000
@@ -368,9 +368,29 @@ def decode_hw_op(pc, hw_op, upper):
       print("ERROR: Bad opcode: %s" %(hw_op))
       exit(-1)
   
+  elif (opcode[0] == 'skip'):
+    if len(opcode) == 2:
+      if (opcode[1] == 'z') or (opcode[1] == 'eq'):
+        rtn = 0x1002
+      elif (opcode[1] == 'nz') or (opcode[1] == 'ne'):
+        rtn = 0x1802
+      elif opcode[1] == 'neg':
+        rtn = 0x1102
+      elif opcode[1] == 'sovfl':
+        rtn = 0x1202
+      elif opcode[1] == 'ovfl':
+        rtn = 0x1302
+      else:
+        print("ERROR: Bad condition code: %s" %(hw_op))
+        exit(-1)
+    else:
+      print("ERROR: Bad opcode: %s" %(hw_op))
+      exit(-1)
+  
+
   elif (opcode[0] == 'rtn') | (opcode[0] == 'jmpi') | (opcode[0] == 'calli'):
     rtn = 0x1001
-
+    
   elif opcode[0] in ls_cmds:
     rtn = 0x7F0F
   
@@ -413,6 +433,13 @@ def decode_fw_op(pc, fw_op):
   parts = fw_op.split('@')
   opcode = parts[0].split()
  
+  if opcode[0] == 'halt':
+    if len(opcode) != 1:
+      print("ERROR: Bad opcode: %s" %(fw_op))
+      exit(-1)
+    rtn = 0xC0000000
+    return(rtn)
+    
   if opcode[0] == 'ldi':
     if len(opcode) != 3:
       print("ERROR: Bad opcode: %s" %(fw_op))

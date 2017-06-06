@@ -51,7 +51,7 @@ module sram
   wire [31:0] DIN,
   wire [31:0] DOUT
   
-  raccoon2ram raccoon2ram
+  raccoon2ram #(.ADDR_MASK(ADDR_MASK), .ADDR_BASE(ADDR_BASE)) raccoon2ram
   (
     .CLK(CLK),
     .RST(RST),

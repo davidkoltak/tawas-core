@@ -1,5 +1,10 @@
 
 
+.global _t0_reset
+.global _t1_reset
+.global _t2_reset
+.global _t3_reset
+
 _t1_reset:
 _t2_reset:
 _t3_reset:
@@ -7,10 +12,10 @@ STALL_LOOP:
   br STALL_LOOP 
   
 _t0_reset:
-  .alloc32 stack_0_bot 31
-  .data32 stack_0_top 0xAAAAAAAA 
+  .alloc stack_0_bot w 31
+  .data stack_0_top w 0xAAAAAAAA 
   .string test_string "This is a test" 
-  .alloc8 string_buf 32
+  .alloc string_buf b 32
   
   ldi r15 stack_0_top 
   

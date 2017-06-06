@@ -214,7 +214,7 @@ for fixup in pfixup:
     print("ERROR: Unable to resolve label '%s' @ %s:%s" % (label, f[3], f[4]))
     exit(-1)
   
-  if (ftype == 'call') or (type == 'jump'):
+  if (ftype == 'call') or (ftype == 'jump'):
     if ltype == 'd':
       print("ERROR: Cannot use data label '%s' for jmp/call @ %s:%s" % (label, f[3], f[4]))
       exit(-1)

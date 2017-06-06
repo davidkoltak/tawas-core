@@ -22,7 +22,7 @@ strcpy_done:
 // R0: string 1 pointer
 // R1: string 2 pointer
 // --: returns 0 if same
-.global .strcmp
+.global strcmp
 strcmp:
   push r4
   \ push r3 

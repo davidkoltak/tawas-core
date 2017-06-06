@@ -36,7 +36,7 @@ module irom
   output [31:0] DOUT
 );
 
-  parameter IROM_DATA_FILE = "./irom.hex";
+  parameter IROM_DATA_FILE = "irom.hex";
   
   reg [31:0] data_array[(1024 * 16)-1:0];
   reg [31:0] data_out;

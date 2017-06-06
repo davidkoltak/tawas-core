@@ -51,8 +51,6 @@ my @defines = ("-DMAX_CLOCKS=500");
 
 my $toplevel = "testbench";
 
-my $tas_path = $script_dir."../../../ip/tawas/tools/tas";
-
 #
 # Generate rtl file list
 #
@@ -153,14 +151,24 @@ close(_CMD_FILE_);
 #
 
 my $testname = $ARGV[0];
-if (!(testname =~ /\.as$/))
-{ $testname .= ".as"; }
+if (!(testname =~ /\.ta$/))
+{ $testname .= ".ta"; }
 
 $testname = $script_dir."testcase/$testname";
 if (!(-e $testname))
 { die "ERROR: No testcase '$testname'\n"; }
 
-$cmd = "$tas_path $testname";
+$cmd = "cd $script_dir"."testcase/ && make -f ".$ARGV[0].".mk";
+print "RUNNING: $cmd\n";
+if (system($cmd))
+{ die "ERROR: Command failed\n"; }
+
+$cmd = "cp $script_dir"."testcase/irom.hex ./";
+print "RUNNING: $cmd\n";
+if (system($cmd))
+{ die "ERROR: Command failed\n"; }
+
+$cmd = "cp $script_dir"."testcase/dram.hex ./";
 print "RUNNING: $cmd\n";
 if (system($cmd))
 { die "ERROR: Command failed\n"; }
