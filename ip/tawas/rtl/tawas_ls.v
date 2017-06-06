@@ -196,7 +196,7 @@ module tawas_ls
                                                              : {24'd0, rd_data[7:0]};        
   
   assign LS_LOAD_VLD = ld_d3[8];
-  assign LS_LOAD_SEL = ld_d3[3:0]};
+  assign LS_LOAD_SEL = ld_d3[3:0];
   assign LS_LOAD = rd_data_final;
   
 endmodule

@@ -57,7 +57,7 @@ module tawas_au
   //
   
   wire tworeg_vld;
-  wire [3:0] tworeg_cmd
+  wire [3:0] tworeg_cmd;
   
   wire bitop_vld;
   wire [2:0] bitop_cmd;
@@ -68,14 +68,14 @@ module tawas_au
   wire [31:0] imm;
   
   assign tworeg_vld = AU_OP_VLD && (AU_OP[14:13] == 2'b00);
-  assign [3:0] tworeg_cmd = (AU_OP[12]) ? {1'b0, AU_OP[11:9]} : AU_OP[11:8];
+  assign tworeg_cmd = (AU_OP[12]) ? {1'b0, AU_OP[11:9]} : AU_OP[11:8];
   
   assign bitop_vld = AU_OP_VLD && (AU_OP[14:12] == 3'b010);
-  assign [2:0] bitop_cmd = AU_OP[11:9];
+  assign bitop_cmd = AU_OP[11:9];
   assign bitop_sel = AU_OP[8:4];
   
   assign imm_vld = AU_OP_VLD && (AU_OP[14] | (AU_OP[14:12] == 3'b011));
-  assign [1:0] imm_cmd = AU_OP[14:13];
+  assign imm_cmd = AU_OP[14:13];
   assign imm = (AU_OP[14]) ? {{23{AU_OP[12]}}, AU_OP[12:4]} : {{24{AU_OP[11]}}, AU_OP[11:4]};
   
   assign AU_RA_SEL = (AU_OP[14:12] == 3'b001) ? {1'b0, AU_OP[2:0]} : AU_OP[3:0];
@@ -168,22 +168,23 @@ module tawas_au
   reg [32:0] bitop_result;
   wire [2:0] bitop_cmd_d1 = reg_b_d1[7:5];
   wire [4:0] bitop_sel_d1 = reg_b_d1[4:0];
+  integer x;
   
   always @ (posedge CLK)
     if (bitop_vld_d1)
       case (bitop_cmd_d1)
-      3'd0: bitop_result <= {1'b0, reg_b_d1 | (1 << bitop_sel_d1)};
-      3'd1: bitop_result <= {1'b0, reg_b_d1 & ~(1 << bitop_sel_d1)};
-      3'd2: bitop_result <= {1'b0, reg_b_d1 & (1 << bitop_sel_d1)};
+      3'd0: bitop_result <= {1'b0, reg_b_d1 | (32'd1 << bitop_sel_d1)};
+      3'd1: bitop_result <= {1'b0, reg_b_d1 & ~(32'd1 << bitop_sel_d1)};
+      3'd2: bitop_result <= {1'b0, reg_b_d1 & (32'd1 << bitop_sel_d1)};
       
       3'd4: bitop_result <= ({1'b0, reg_b_d1} << bitop_sel_d1);
       3'd5: bitop_result <= ({1'b0, reg_b_d1} >> bitop_sel_d1);
       3'd6: bitop_result <= ({reg_b_d1[31], reg_b_d1} >>> bitop_sel_d1);
       3'd7: 
       begin
-        for (integer x = 0; x < bitop_sel_d1; x += 1)
+        for (x = 0; x < bitop_sel_d1; x = x + 1)
           bitop_result[x] = reg_b_d1[x];
-        for (integer x = bitop_sel_d1; x < 33; x += 1)
+        for (x = bitop_sel_d1; x < 33; x = x + 1)
            bitop_result[x] = reg_b_d1[bitop_sel_d1];
       end    
       default: bitop_result <= 33'd0;
@@ -204,8 +205,9 @@ module tawas_au
   // Send result back to register file
   //
   
-  wire au_result_vld = tworeg_result_d2
-  wire [32:0] au_result = (imm_vld_d2) ? imm_result : (bitop_vld_d2) : tworeg_result;
+  wire au_result_vld = imm_vld_d2 | bitop_vld_d2 | tworeg_result_d2;
+  wire [32:0] au_result = (imm_vld_d2) ? imm_result : 
+                          (bitop_vld_d2) ? bitop_result : tworeg_result;
   
   assign AU_RC_VLD = writeback_vld_d2;
   assign AU_RC_SEL = reg_c_sel_d2;
@@ -238,25 +240,25 @@ module tawas_au
   always @ (posedge CLK or posedge RST)
     if (RST)
       s0_flags <= 8'd0;
-    else if (au_result_vld_d1 && (SLICE == 2'd3))
+    else if (au_result_vld && (SLICE == 2'd3))
       s0_flags <= result_flags;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
       s1_flags <= 8'd0;
-    else if (au_result_vld_d1 && (SLICE == 2'd0))
+    else if (au_result_vld && (SLICE == 2'd0))
       s1_flags <= result_flags;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
       s2_flags <= 8'd0;
-    else if (au_result_vld_d1 && (SLICE == 2'd1))
+    else if (au_result_vld && (SLICE == 2'd1))
       s2_flags <= result_flags;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
       s3_flags <= 8'd0;
-    else if (au_result_vld_d1 && (SLICE == 2'd2))
+    else if (au_result_vld && (SLICE == 2'd2))
       s3_flags <= result_flags;
       
   assign AU_FLAGS = (SLICE == 2'd3) ? s2_flags :

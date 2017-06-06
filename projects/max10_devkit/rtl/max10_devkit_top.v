@@ -43,6 +43,8 @@ module max10_devkit_top
   input [3:0] user_pb
 );
 
+  assign user_led = 5'b0;
+  
   wire irom_cs;
   wire [23:0] irom_addr;
   wire [31:0] irom_data;
@@ -75,8 +77,8 @@ module max10_devkit_top
     .DOUT(dram_dout)
   );
 
-  wire [79:0] RaccOut;
-  wire [79:0] RaccIn;
+  wire [79:0] RaccCore2Ram;
+  wire [79:0] RaccRam2Core;
   
   tawas tawas
   (
@@ -94,17 +96,17 @@ module max10_devkit_top
     .DOUT(dram_din),
     .DIN(dram_dout),
     
-    .RaccOut(RaccOut),
-    .RaccIn(RaccIn)
+    .RaccOut(RaccCore2Ram),
+    .RaccIn(RaccRam2Core)
   );
 
-  sram #(.ADDR_MASK(32'hFFFF0000), .ADDR_BASE(32'h00010000)) sram
+  sram #(.ADDR_MASK(32'hFFFF0000), .ADDR_BASE(32'h00100000)) sram
   (
     .CLK(clk_50),
     .RST(!fpga_reset_n),
 
-    .RaccIn(RaccOut),
-    .RaccOut(RaccIn)
+    .RaccIn(RaccCore2Ram),
+    .RaccOut(RaccRam2Core)
   );
   
 endmodule

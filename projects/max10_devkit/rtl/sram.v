@@ -44,20 +44,20 @@ module sram
   input [79:0] RaccIn;
   output [79:0] RaccOut;
   
-  wire [31:0] ADDR,
-  wire CS,
-  wire WE,
-  wire [3:0] MASK,
-  wire [31:0] DIN,
-  wire [31:0] DOUT
+  wire [31:0] ADDR;
+  wire CS;
+  wire WE;
+  wire [3:0] MASK;
+  wire [31:0] DIN;
+  wire [31:0] DOUT;
   
   raccoon2ram #(.ADDR_MASK(ADDR_MASK), .ADDR_BASE(ADDR_BASE)) raccoon2ram
   (
     .CLK(CLK),
     .RST(RST),
 
-    .RaccIn(RaccOut),
-    .RaccOut(RaccIn),
+    .RaccIn(RaccIn),
+    .RaccOut(RaccOut),
 
     .CS(CS),
     .WE(WE),
@@ -74,7 +74,7 @@ module sram
   assign bitmask = {{8{MASK[3]}}, {8{MASK[2]}}, {8{MASK[1]}}, {8{MASK[0]}}};
   
   always @ (posedge CLK)
-    if (CS && WR)
+    if (CS && WE)
       data_array[ADDR[15:2]] <= (data_array[ADDR[15:2]] & ~bitmask) | (DIN & bitmask);
     
   always @ (posedge CLK)

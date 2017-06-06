@@ -96,9 +96,6 @@ module tawas
     .AU_OP_VLD(au_op_vld),
     .AU_OP(au_op),
     
-    .AU_IMM_VLD(au_imm_vld),
-    .AU_IMM(au_imm),
-    
     .LS_OP_VLD(ls_op_vld),
     .LS_OP(ls_op),
     
@@ -128,9 +125,6 @@ module tawas
     
     .AU_OP_VLD(au_op_vld),
     .AU_OP(au_op),
-    
-    .AU_IMM_VLD(au_imm_vld),
-    .AU_IMM(au_imm),
      
     .AU_RA_SEL(au_ra_sel),
     .AU_RA(au_ra),
@@ -189,7 +183,7 @@ module tawas
     .LS_DIR_VLD(ls_dir_vld),
     .LS_DIR_STORE(ls_dir_store),
     .LD_DIR_SEL(ls_dir_sel),
-    .LD_DIR_ADDR(ls_dir_addr)
+    .LD_DIR_ADDR(ls_dir_addr),
     
     .LS_PTR_SEL(ls_ptr_sel),
     .LS_PTR(ls_ptr),
