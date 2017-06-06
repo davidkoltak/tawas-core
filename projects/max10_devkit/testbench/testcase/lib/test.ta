@@ -1,0 +1,16 @@
+
+.equ test_reg_base 0xFFFFFFF0
+
+.global test_fail
+test_fail:
+  mvi r8 test_reg_base
+  \ mvi r1 1 
+  st w r1 r8 [3] 
+  halt
+
+.global test_pass
+test_pass:
+  mvi r8 test_reg_base
+  \ mvi r1 1 
+  st w r1 r8 [2] 
+  halt

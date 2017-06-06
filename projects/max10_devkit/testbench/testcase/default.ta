@@ -1,5 +1,4 @@
 
-
 .global _t0_reset
 .global _t1_reset
 .global _t2_reset
@@ -13,7 +12,7 @@ STALL_LOOP:
   
 _t0_reset:
   .alloc stack_0_bot w 31
-  .data stack_0_top w 0xAAAAAAAA 
+  .data stack_0_top w 0xAAAAAAAA
   .string test_string "This is a test" 
   .alloc string_buf b 32
   
@@ -36,7 +35,7 @@ _t0_reset:
   ldi r8 test_string  
   ldi r9 string_buf 
   mvi r2 0x30 
-  st b r2 r9[2] 
+  st b r2 r9 [2] 
   call strcmp  
   cmpi r0 0
   skip ne

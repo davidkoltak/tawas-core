@@ -30,10 +30,13 @@
 
 import sys
 import time
+import subprocess
 
 def print_help():
-  print("\nUSAGE: %s [-Ooutput] {input} ..." % (sys.argv[0]))
+  print("\nUSAGE: %s [-Ooutput] [-Idir] [-Dm[=v]] {input} ..." % (sys.argv[0]))
   print("  -O   output object file")
+  print("  -I   cpp include directories")
+  print("  -D   cpp macro definitions")
   print("  -v   verbose output")
   print("  -V   version output")
   print("  -h   this message")
@@ -48,6 +51,8 @@ if len(sys.argv) < 2:
 #
 
 verbose = 0
+inc_dirs = ''
+macro_defs = ''
 infiles = []
 obj_out = ''
 dram_out = 'dram.hex'
@@ -55,6 +60,10 @@ dram_out = 'dram.hex'
 for arg in sys.argv[1:]:
   if arg[0:2] == '-O':
     obj_out = arg[2:]
+  elif arg[0:2] == '-I':
+    inc_dirs += ' ' + arg
+  elif arg[0:2] == '-D':
+    macro_defs += ' ' + arg
   elif arg == '-v':
     verbose = 1
     print("WARNING: Verbose output is currently unimplemented")
@@ -110,11 +119,22 @@ ouid = '_' + str(hash(t) & 0xFFFFFF)
 # Open each file and build database
 #
 
+local_equates = {}
+def run_equate(name, value):
+  global local_equates
+  try:
+    local_equates[name] = eval(value, {}, local_equates)
+  except:
+    return -1
+  return 0
+
 for filename in infiles:
   try:
-    fin = open(filename, "r")
-  except IOError:
-    print("ERROR: File '%s' not found" % filename)
+    cmd = 'cpp %s %s %s' % (inc_dirs, macro_defs, filename)
+    cpp_out = subprocess.check_output(cmd, shell=True)
+    fin = cpp_out.splitlines()
+  except subprocess.CalledProcessError:
+    print("ERROR: Unable to run CPP on '%s'" % filename)
     exit(-1)
   
   linenum = 0
@@ -168,20 +188,12 @@ for filename in infiles:
           for x in range(cnt):
             if (dc & 2) == 0:
               data.append(0)
-            else:
-              data[dc >> 2] = (data[dc >> 2] & 0x0000FFFF)
             dc += 2
         elif dctv[2] == 'b':
           dlabels[dctv[1]] = dc
           for x in range(cnt):
             if (dc & 3) == 0:
               data.append(0)
-            elif (dc & 3) == 1:
-              data[dc >> 2] = (data[dc >> 2] & 0xFFFF00FF)
-            elif (dc & 3) == 2:
-              data[dc >> 2] = (data[dc >> 2] & 0xFF00FFFF)
-            else:
-              data[dc >> 2] = (data[dc >> 2] & 0x00FFFFFF)
             dc += 1          
         else:
           print("ERROR: Invalid alloc data type '%s' @ %s:%d" % (dctv[1], filename, linenum))
@@ -206,7 +218,7 @@ for filename in infiles:
               data.append(value)
             except ValueError:
               data.append(0)
-              dfixup.append("%d:ptr32:%s" % (dc, x))
+              dfixup.append("%d:data32:%s" % (dc, x))
             dc += 4
         elif dctv[2] == 'h':
           if dc & 1:
@@ -222,27 +234,34 @@ for filename in infiles:
             except ValueError:
               if (dc & 2) == 0:
                 data.append(0)
-                dfixup.append("%d:ptr16.l:%s" % (dc, x))
+                dfixup.append("%d:data16.0:%s" % (dc, x))
               else:
                 data[dc >> 2] = (data[dc >> 2] & 0x0000FFFF)
-                dfixup.append("%d:ptr16.h:%s" % (dc, x))
+                dfixup.append("%d:data16.1:%s" % (dc, x))
             dc += 2
         elif dctv[2] == 'b':
           dlabels[dctv[1]] = dc
           for x in dctv[3:]:
             try:
               value = int(x, 0)
+              if (dc & 3) == 0:
+                data.append(value & 0x000000FF)
+              elif (dc & 3) == 1:
+                data[dc >> 2] = (data[dc >> 2] & 0xFFFF00FF) | ((value << 8) & 0x0000FF00)
+              elif (dc & 3) == 2:
+                data[dc >> 2] = (data[dc >> 2] & 0xFF00FFFF) | ((value << 16) & 0x00FF0000)
+              else:
+                data[dc >> 2] = (data[dc >> 2] & 0x00FFFFFF) | ((value << 24) & 0xFF000000)
             except ValueError:
-              print("ERROR: Alloc value field is not a number '%s' @ %s:%d" % (line, filename, linenum))
-              exit(-1)
-            if (dc & 3) == 0:
-              data.append(value & 0x000000FF)
-            elif (dc & 3) == 1:
-              data[dc >> 2] = (data[dc >> 2] & 0xFFFF00FF) | ((value << 8) & 0x0000FF00)
-            elif (dc & 3) == 2:
-              data[dc >> 2] = (data[dc >> 2] & 0xFF00FFFF) | ((value << 16) & 0x00FF0000)
-            else:
-              data[dc >> 2] = (data[dc >> 2] & 0x00FFFFFF) | ((value << 24) & 0xFF000000)
+              if (dc & 3) == 0:
+                data.append(0)
+                dfixup.append("%d:data8.0:%s" % (dc, x))
+              elif (dc & 3) == 1:
+                dfixup.append("%d:data8.1:%s" % (dc, x))
+              elif (dc & 3) == 2:
+                dfixup.append("%d:data8.2:%s" % (dc, x))
+              else:
+                dfixup.append("%d:data8.3:%s" % (dc, x))
             dc += 1          
         else:
           print("ERROR: Invalid alloc data type '%s' @ %s:%d" % (dctv[1], filename, linenum))
@@ -293,7 +312,18 @@ for filename in infiles:
           print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
           exit(-1)
         glabels.append(dctv[1])
-         
+      
+      elif dctv[0] == '.equ':
+        if len(dctv) < 3:
+          print("ERROR: fWrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
+          exit(-1)
+        if run_equate(dctv[1], ' '.join(dctv[2:])) < 0:
+          print("ERROR: Unable to evaluate directive '%s' @ %s:%d" % (line, filename, linenum))
+          exit(-1)
+        if (dctv[1] in plabels) or (dctv[1] in dlabels):
+          print("ERROR: Redefined label in directive '%s' @ %s:%d" % (line, filename, linenum))
+          exit(-1)
+        dlabels[dctv[1]] = local_equates[dctv[1]]
       else:
         print("ERROR: Invalid directive '%s' @ %s:%d" % (line, filename, linenum))
         exit(-1)
@@ -304,8 +334,6 @@ for filename in infiles:
     else:
       prog.append(["%s @ %s:%d" %(line, filename, linenum)])
       pc += 1
-    
-  fin.close()
 
 #
 # Convert opcode strings to 32-bit instruction data
@@ -357,13 +385,13 @@ def decode_hw_op(pc, hw_op, upper):
         value = int(opcode[2], 0)
         rtn |= (value & 0x000000FF)
       except ValueError:
-        pfixup.append("%d:br8:%s" % (pc, opcode[2])) 
+        pfixup.append("%d:rel8:%s" % (pc, opcode[2])) 
     elif len(opcode) == 2:
       try:
         value = int(opcode[1], 0)
         rtn |= (value & 0x00000FFF)
       except ValueError:
-        pfixup.append("%d:br12:%s" % (pc, opcode[1])) 
+        pfixup.append("%d:rel12:%s" % (pc, opcode[1])) 
     else:
       print("ERROR: Bad opcode: %s" %(hw_op))
       exit(-1)
@@ -455,7 +483,25 @@ def decode_fw_op(pc, fw_op):
     except ValueError:
       pfixup.append("%d:imm24:%s" % (pc, opcode[2]))
     return(rtn)
-    
+ 
+  if (opcode[0] == 'ldd') or (opcode[0] == 'std'):
+    if len(opcode) != 3:
+      print("ERROR: Bad opcode: %s" %(fw_op))
+      exit(-1)
+    reg = decode_reg(opcode[1])
+    if reg < 0:
+      print("ERROR: Bad register name: %s" %(fw_op))
+      exit(-1)
+    rtn = 0xF0000000 | (reg << 22)
+    if opcode[0] == 'std':
+      rtn |= (1 << 26)
+    try:
+      value = int(opcode[2], 0)
+      rtn |= ((value & 0x00FFFFFF) >> 2)
+    except ValueError:
+      pfixup.append("%d:wordptr22:%s" % (pc, opcode[2]))
+    return(rtn)
+       
   if len(opcode) != 2:
     print("ERROR: Bad opcode: %s" %(fw_op))
     exit(-1)
@@ -466,21 +512,28 @@ def decode_fw_op(pc, fw_op):
       value = int(opcode[1], 0)
       rtn |= (value & 0x00FFFFFF)
     except ValueError:
-      pfixup.append("%d:jump:%s" % (pc, opcode[1]))   
+      pfixup.append("%d:abs24:%s" % (pc, opcode[1]))
+  elif opcode[0] == 'jmps':
+    rtn = 0xFE000000
+    try:
+      value = int(opcode[1], 0)
+      rtn |= (value & 0x00FFFFFF)
+    except ValueError:
+      pfixup.append("%d:abs24:%s" % (pc, opcode[1]))  
   elif opcode[0] == 'call':
     rtn = 0xFD000000
     try:
       value = int(opcode[1], 0)
       rtn |= (value & 0x00FFFFFF)
     except ValueError:
-      pfixup.append("%d:call:%s" % (pc, opcode[1]))  
+      pfixup.append("%d:abs24:%s" % (pc, opcode[1]))  
   elif opcode[0] == 'calls':
     rtn = 0xFF000000
     try:
       value = int(opcode[1], 0)
       rtn |= (value & 0x00FFFFFF)
     except ValueError:
-      pfixup.append("%d:call:%s" % (pc, opcode[1]))
+      pfixup.append("%d:abs24:%s" % (pc, opcode[1]))
 
   return(rtn)
   

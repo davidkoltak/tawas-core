@@ -99,8 +99,8 @@ if dram_out == '':
 plabels = {}
 pc = 4
 prog = [0xFC000000, 0xFC000000, 0xFC000000, 0xFC000000]
-pfixup = ['0:jump:_t0_reset:builtin:0', '1:jump:_t1_reset:builtin:0', 
-          '2:jump:_t2_reset:builtin:0', '3:jump:_t3_reset:builtin:0']
+pfixup = ['0:abs24:_t0_reset:builtin:0', '1:abs24:_t1_reset:builtin:0', 
+          '2:abs24:_t2_reset:builtin:0', '3:abs24:_t3_reset:builtin:0']
 
 dlabels = {}
 dc = 0
@@ -164,9 +164,9 @@ for filename in infiles:
       d = line.split(':')
       if len(d) == 3:
         if section == 'p':
-          pfixup.append('%d:%s:%s:%s:%d' % (pc, d[1].strip(), d[2].strip(), filename, linenum));
+          pfixup.append('%d:%s:%s:%s:%d' % (pc - 1, d[1].strip(), d[2].strip(), filename, linenum));
         elif section == 'd':
-          dfixup.append('%d:%s:%s:%s:%d' % (dc, d[1].strip(), d[2].strip(), filename, linenum));
+          dfixup.append('%d:%s:%s:%s:%d' % (dc - 4, d[1].strip(), d[2].strip(), filename, linenum));
       else:
         print("ERROR: Invalid fixup '%s' @ %s:%d" % (line, filename, linenum))
         exit(-1)
@@ -214,47 +214,59 @@ for fixup in pfixup:
     print("ERROR: Unable to resolve label '%s' @ %s:%s" % (label, f[3], f[4]))
     exit(-1)
   
-  if (ftype == 'call') or (ftype == 'jump'):
+  if ftype == 'abs24':
     if ltype == 'd':
       print("ERROR: Cannot use data label '%s' for jmp/call @ %s:%s" % (label, f[3], f[4]))
       exit(-1)
     prog[addr] = (prog[addr] & 0xFF000000) | (label & 0x00FFFFFF)
   
-  elif ftype == 'br12':
+  elif ftype == 'rel12':
     if ltype == 'd':
       print("ERROR: Cannot use data label '%s' for br @ %s:%s" % (label, f[3], f[4]))
       exit(-1)
     offset = label - addr
-    if ((offset & 0xFFFFF000) != 0) and ((offset & 0xFFFFF000) != 0xFFFFF000):
+    if ((offset & 0xFFFFF800) != 0) and ((offset & 0xFFFFF800) != 0xFFFFF800):
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
     prog[addr] == (prog[addr] & 0xF8007FFF) | ((offset << 15) & 0x07FF8000)
     
-  elif ftype == 'br8':
+  elif ftype == 'rel8':
     if ltype == 'd':
       print("ERROR: Cannot use data label '%s' for br @ %s:%s" % (label, f[3], f[4]))
       exit(-1)
     offset = label - addr
-    if ((offset & 0xFFFFFF00) != 0) and ((offset & 0xFFFFFF00) != 0xFFFFFF00):
+    if ((offset & 0xFFFFFF80) != 0) and ((offset & 0xFFFFFF80) != 0xFFFFFF80):
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
     prog[addr] == (prog[addr] & 0xFF807FFF) | ((offset << 15) & 0x007F8000)
     
   elif ftype == 'imm24':
+    if ((label & 0xFF800000) != 0) and ((label & 0xFF800000) != 0xFF800000):
+      print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
+      exit(-1)
     prog[addr] = (prog[addr] & 0xFF000000) | (label & 0x00FFFFFF)
     
   elif ftype == 'imm9.h':
-    if (label & 0xFFFFFE00) != 0:
+    if ((label & 0xFFFFFF00) != 0) and ((label & 0xFFFFFF00) != 0xFFFFFF00):
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
     prog[addr] = (prog[addr] & 0xF803FFFF) | ((label << 18) & 0x07FC0000)
     
   elif ftype == 'imm9.l':
-    if (label & 0xFFFFFE00) != 0:
+    if ((label & 0xFFFFFF00) != 0) and ((label & 0xFFFFFF00) != 0xFFFFFF00):
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
     prog[addr] = (prog[addr] & 0xFFFFF007) | ((label << 3) & 0x00000FF8)
-    
+
+  elif ftype == 'wordptr22':
+    if ltype == 'p':
+      print("ERROR: Cannot use program label '%s' for ldd/std @ %s:%s" % (label, f[3], f[4]))
+      exit(-1)
+    if (label & 0xFF000000) != 0:
+      print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
+      exit(-1)
+    prog[addr] = (prog[addr] & 0xFFC00000) | ((label & 0x00FFFFFF) >> 2)
+        
   else:
     print("ERROR: Invalid fixup type @ %s:%s" % (f[3], f[4]))
     exit(-1)
@@ -266,7 +278,7 @@ for fixup in pfixup:
 for fixup in dfixup:
   f = fixup.split(':')
   addr = int(f[0])
-  type = f[1]
+  ftype = f[1]
   label = f[2]
   
   if label in plabels:
@@ -277,18 +289,38 @@ for fixup in dfixup:
     print("ERROR: Unable to resolve label '%s' @ %s:%s" % (label, f[3], f[4]))
     exit(-1)
   
-  if type == 'ptr32':
-    data[addr >> 2] = label
-  elif type == 'ptr16.h':
+  if ftype == 'data32':
+    data[addr >> 2] = label & 0xffffffff
+  elif ftype == 'data16.0':
+    if (label & 0xFFFF0000) != 0:
+      print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
+      exit(-1)
+    data[addr >> 2] = (data[addr >> 2] & 0xFFFF0000) | ((label << 0) & 0x0000FFFF)
+  elif ftype == 'data16.1':
     if (label & 0xFFFF0000) != 0:
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
     data[addr >> 2] = (data[addr >> 2] & 0x0000FFFF) | ((label << 16) & 0xFFFF0000)
-  elif type == 'ptr16.l':
-    if (label & 0xFFFF0000) != 0:
+  elif ftype == 'data8.0':
+    if (label & 0xFFFFFF00) != 0:
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
-    data[addr >> 2] = (data[addr >> 2] & 0xFFFF0000) | ((label << 0) & 0xFFFFFFFF)
+    data[addr >> 2] = (data[addr >> 2] & 0xFFFFFF00) | ((label << 0) & 0x000000FF)
+  elif ftype == 'data8.1':
+    if (label & 0xFFFFFF00) != 0:
+      print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
+      exit(-1)
+    data[addr >> 2] = (data[addr >> 2] & 0xFFFF00FF) | ((label << 8) & 0x0000FF00)
+  elif ftype == 'data8.2':
+    if (label & 0xFFFFFF00) != 0:
+      print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
+      exit(-1)
+    data[addr >> 2] = (data[addr >> 2] & 0xFF00FFFF) | ((label << 16) & 0x00FF0000)
+  elif ftype == 'data8.3':
+    if (label & 0xFFFFFF00) != 0:
+      print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
+      exit(-1)
+    data[addr >> 2] = (data[addr >> 2] & 0x00FFFFFF) | ((label << 24) & 0xFF000000)
   else:
     print("ERROR: Invalid fixup type @ %s:%s" % (f[3], f[4]))
     exit(-1)

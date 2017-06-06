@@ -151,7 +151,7 @@ Direct Load: 27-bits (ldd/std)
 ------------------------------------------
 
 0 rrrr aaaaaaaa aaaaaaaa aaaaaa : Load Rx with 32-bit value at sx{a{21:0}, 2'b00}
-1 rrrr aaaaaaaa aaaaaaaa aaaaaa : Load Rx with 32-bit value at sx{a{21:0}, 2'b00}
+1 rrrr aaaaaaaa aaaaaaaa aaaaaa : Store Rx 32-bit value to sx{a{21:0}, 2'b00}
 
 
 Call Opcodes: 26-bits
@@ -162,3 +162,102 @@ Call Opcodes: 26-bits
 10 eeeeeeee eeeeeeee eeeeeeee : jmps e (e->pc, push(r14))
 11 eeeeeeee eeeeeeee eeeeeeee : calls e (e->pc, pc->r14, push(r14))
   
+
+ASM Instructions
+------------------------------------------
+
+[directives]
+   
+.alloc label {b|h|w} {count}
+.data label {b|h|w} {data} ...
+.string label "string"
+.global label
+.equ label (expr)
+
+[opcodes]
+
+jmp label
+call label
+jmps label
+calls label
+rtn
+calli
+jmpi
+
+ldi imm24
+ldd rx label
+std rx label
+
+br label
+br cond label
+skip cond
+
+ld {b|h|w} rx ry #
+ld {b|h|w} rx ry ++/--#
+st {b|h|w} rx ry #
+st {b|h|w} rx ry ++/--#
+
+push rx
+pop rx
+
+mvi ra imm9
+cmpi ra imm9
+inc ra imm9
+
+add ra rb
+sub ra rb
+cmp ra rb
+or ra rb
+and ra rb
+xor ra rb
+
+mv ra rb
+not ra rb
+neg ra rb
+
+bset ra bit
+bclr ra bit
+lsl ra bit
+lsr ra bit
+asr ra bit
+sx ra bit
+
+EXAMPLE CODE:
+
+  # COMMENT          (NOTE: '#' must be first non-whitespace character)
+  // or COMMENT      (      No comments on same line as an opcode     )
+  
+  .global strcpy
+  strcpy:            (NOTE: Labels cannot be on same line as an opcode)
+    push r3
+    \ mv r3 r1       (NOTE: '\' means this opcode combined with previous)
+    ld b r2 r0 ++1 
+  strcpy_loop:
+    or r2 r2
+    \ st b r2 r1 ++1 
+    br nz strcpy_loop
+    \ ld b r2 r0 ++1 
+  strcpy_done:
+    pop r3
+    \ sub r0 r1 r3 
+    rtn  
+
+
+  .global strcmp
+  strcmp:
+    push r4
+    \ push r3 
+    ld b r2 r0 ++1
+    \ ld b r3 r1 ++1 
+  strcmp_loop:
+    ld b r2 r0 ++1
+    \ sub r4 r2 r3 
+    br nz strcmp_done
+    \ or r3 r3 
+    br nz strcmp_loop
+    \ ld b r3 r1 ++1 
+  strcmp_done:
+    pop r3
+    \ mv r0 r4 
+    pop r4
+    \ rtn  
