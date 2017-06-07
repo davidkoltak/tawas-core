@@ -137,8 +137,8 @@ for filename in infiles:
       section = 'p'
     elif line == '<data>':
       section = 'd'
-    elif line.find('=') >= 0:
-      l = line.split('=')
+    elif line.find('+=') >= 0:
+      l = line.split('+=')
       l[0] = l[0].strip()
       l[1] = l[1].strip()
       
@@ -160,6 +160,29 @@ for filename in infiles:
         plabels[l[0]] = pc_start + offset
       elif section == 'd':
         dlabels[l[0]] = dc_start + offset
+    elif line.find('==') >= 0:
+      l = line.split('==')
+      l[0] = l[0].strip()
+      l[1] = l[1].strip()
+      
+      if l[0] in plabels:
+        print("ERROR: Redefined program label '%s' @ %s:%d" % (l[0], filename, linenum))
+        exit(-1)
+        
+      if l[0] in dlabels:
+        print("ERROR: Redefined data label '%s' @ %s:%d" % (l[0], filename, linenum))
+        exit(-1)
+        
+      try:
+        value = int(l[1], 0)
+      except ValueError:
+        print("ERROR: Invalid label offset '%s' @ %s:%d" % (l[1], filename, linenum))
+        exit(-1)
+      
+      if section == 'p':
+        plabels[l[0]] = value
+      elif section == 'd':
+        dlabels[l[0]] = value
     elif line[0] == ':':
       d = line.split(':')
       if len(d) == 3:
@@ -228,7 +251,7 @@ for fixup in pfixup:
     if ((offset & 0xFFFFF800) != 0) and ((offset & 0xFFFFF800) != 0xFFFFF800):
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
-    prog[addr] == (prog[addr] & 0xF8007FFF) | ((offset << 15) & 0x07FF8000)
+    prog[addr] = (prog[addr] & 0xF8007FFF) | ((offset << 15) & 0x07FF8000)
     
   elif ftype == 'rel8':
     if ltype == 'd':
@@ -238,7 +261,7 @@ for fixup in pfixup:
     if ((offset & 0xFFFFFF80) != 0) and ((offset & 0xFFFFFF80) != 0xFFFFFF80):
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
-    prog[addr] == (prog[addr] & 0xFF807FFF) | ((offset << 15) & 0x007F8000)
+    prog[addr] = (prog[addr] & 0xFF807FFF) | ((offset << 15) & 0x007F8000)
     
   elif ftype == 'imm24':
     if ((label & 0xFF800000) != 0) and ((label & 0xFF800000) != 0xFF800000):
@@ -274,11 +297,12 @@ for fixup in pfixup:
     if ltype == 'p':
       print("ERROR: Cannot use program label '%s' for ldd/std @ %s:%s" % (label, f[3], f[4]))
       exit(-1)
-    if (label & 0xFF000000) != 0:
+    if ((label & 0xFF800000) != 0) and ((label & 0xFF800000) != 0xFF800000):
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
     prog[addr] = (prog[addr] & 0xFFC00000) | ((label & 0x00FFFFFF) >> 2)
-        
+    print("WDPTR: %08X : %08X = %08X" % (addr, prog[addr], label))
+    
   else:
     print("ERROR: Invalid fixup type @ %s:%s" % (f[3], f[4]))
     exit(-1)

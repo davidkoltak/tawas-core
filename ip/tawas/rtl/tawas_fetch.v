@@ -65,8 +65,8 @@ module tawas_fetch
   
   output LS_DIR_VLD,
   output LS_DIR_STORE,
-  output [3:0] LD_DIR_SEL,
-  output [31:0] LD_DIR_ADDR
+  output [3:0] LS_DIR_SEL,
+  output [31:0] LS_DIR_ADDR
 );
 
   //
@@ -80,7 +80,7 @@ module tawas_fetch
   reg [23:0] pc_inc;
   reg pc_stall;
   reg pc_store_en;
-  reg r6_push_en;
+  reg r14_push_en;
   
   reg instr_vld;
   reg [1:0] pc_sel;
@@ -103,7 +103,7 @@ module tawas_fetch
   
   assign SLICE = pc_sel[1:0];
   
-  assign PC_STORE = pc_store_en;
+  assign PC_STORE = !fetch_stall_d1 && pc_store_en;
   assign PC = pc_inc;
   
   assign IADDR = pc;
@@ -144,11 +144,11 @@ module tawas_fetch
     
     pc_inc = pc_next + 24'd1;
     pc_store_en = 1'b0;
-    r6_push_en = 1'b0;
+    r14_push_en = 1'b0;
     
     if (IDATA[31:26] == 6'b111111)
     begin
-      r6_push_en = IDATA[25];
+      r14_push_en = IDATA[25];
       pc_store_en = IDATA[24];
       pc_next = IDATA[23:0];
     end
@@ -312,7 +312,7 @@ module tawas_fetch
   assign LS_DIR_SEL = IDATA[25:22];
   assign LS_DIR_ADDR = {{8{IDATA[21]}}, IDATA[21:0], 2'd0};
   
-  assign LS_OP_VLD = !fetch_stall_d1 && (r6_push_en || (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101));
-  assign LS_OP = (r6_push_en) ? {3'h7, 6'h3F, 3'd7, 3'd6} : (ls_upper) ? IDATA[30:15] : IDATA[14:0];
+  assign LS_OP_VLD = !fetch_stall_d1 && (r14_push_en || (IDATA[31:30] == 2'b01) || (IDATA[31:30] == 2'b10) || (IDATA[31:28] == 4'b1101));
+  assign LS_OP = (r14_push_en) ? {4'hF, 5'h1F, 3'd7, 3'd6} : (ls_upper) ? IDATA[30:15] : IDATA[14:0];
         
 endmodule

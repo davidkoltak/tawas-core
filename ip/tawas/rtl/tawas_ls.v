@@ -49,8 +49,8 @@ module tawas_ls
 
   input LS_DIR_VLD,
   input LS_DIR_STORE,
-  input [3:0] LD_DIR_SEL,
-  input [31:0] LD_DIR_ADDR,
+  input [3:0] LS_DIR_SEL,
+  input [31:0] LS_DIR_ADDR,
   
   output [2:0] LS_PTR_SEL,
   input [31:0] LS_PTR,
@@ -87,7 +87,7 @@ module tawas_ls
   wire [31:0] wr_data;
   wire [3:0] data_mask;
   
-  assign data_reg = (LS_DIR_VLD) ? LD_DIR_SEL : {&LS_OP[12:11], LS_OP[2:0]};
+  assign data_reg = (LS_DIR_VLD) ? LS_DIR_SEL : {&LS_OP[12:11], LS_OP[2:0]};
   
   assign LS_PTR_SEL = LS_OP[5:3];
   assign LS_STORE_SEL = data_reg;
@@ -101,11 +101,11 @@ module tawas_ls
                                 : {{27{LS_OP[10]}}, LS_OP[10:6]};
   
   assign addr_next = LS_PTR + ((LS_OP[13]) ? addr_adj : addr_offset);
-  assign addr_out = (LD_DIR_VLD) ? LD_DIR_ADDR : (LS_OP[13] && !addr_adj[31]) ? LS_PTR : addr_next;
+  assign addr_out = (LS_DIR_VLD) ? LS_DIR_ADDR : (LS_OP[13] && !addr_adj[31]) ? LS_PTR : addr_next;
   
   assign raccoon_space = |addr_out[31:20];
   
-  assign wr_en = (LD_DIR_VLD && LD_DIR_STORE) || (LS_OP_VLD && LS_OP[14]);
+  assign wr_en = (LS_DIR_VLD && LS_DIR_STORE) || (LS_OP_VLD && LS_OP[14]);
   
   assign wr_data = (LS_OP[12] || LS_DIR_VLD) ? LS_STORE[31:0] :
                    (LS_OP[11]) ? {LS_STORE[15:0], LS_STORE[15:0]}

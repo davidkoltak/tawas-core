@@ -58,6 +58,7 @@ module tawas_au
   
   wire tworeg_vld;
   wire [3:0] tworeg_cmd;
+  wire [3:0] reg_c_sel;
   
   wire bitop_vld;
   wire [2:0] bitop_cmd;
@@ -131,7 +132,7 @@ module tawas_au
     begin
       tworeg_vld_d1 <= tworeg_vld;
       bitop_vld_d1 <= bitop_vld;
-      imm_vld_d1 <= imm_vld_d1;
+      imm_vld_d1 <= imm_vld;
       writeback_vld_d1 <= (tworeg_vld && (tworeg_cmd != 4'hB)) || (bitop_vld && (bitop_cmd != 3'd2)) || (imm_vld_d1 && (imm_cmd != 2'd2));
       reg_c_sel_d1 <= reg_c_sel;
       

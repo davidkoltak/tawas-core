@@ -5,7 +5,7 @@
 .global strcpy
 strcpy:
   push r1
-  \ mv r1 r8
+  \ mv r1 r9
   ld b r0 r8 ++1 
 strcpy_loop:
   tstz r0
@@ -14,8 +14,8 @@ strcpy_loop:
   \ ld b r0 r8 ++1 
 strcpy_done:
   pop r1
-  \ sub r8 r1
-  mv r0 r8
+  \ sub r9 r1
+  mv r0 r9
   \ rtn  
   
   

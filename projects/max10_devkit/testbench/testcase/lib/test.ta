@@ -1,8 +1,8 @@
 
 .equ test_reg_base 0xFFFFFFF0
 
-.equ test_reg_pass test_reg_base + 8
-.equ test_reg_fail test_reg_base + 12
+.equ test_reg_pass test_reg_base + 12
+.equ test_reg_fail test_reg_base + 8
 
 .global test_fail
 test_fail:

@@ -79,10 +79,10 @@ module testbench();
         $finish();
       end
       if (max10_devkit_top.tawas.raccoon_cs && max10_devkit_top.tawas.dwr_out)
-         if (max10_devkit_top.tawas.daddr_out[31:0] == 32'hFFFFFFFC)
+         if (max10_devkit_top.tawas.daddr_out[31:0] == 32'hFFFFFFF0)
         begin
           $display(" ****** TEST STATUS %X - ENDING SIMULATION *****", 
-                   max10_devkit_top.tawas.daddr_out[31:0]);
+                   max10_devkit_top.tawas.dout_out[31:0]);
         end
         else if (max10_devkit_top.tawas.daddr_out[31:0] == 32'hFFFFFFF8)
         begin

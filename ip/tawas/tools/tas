@@ -103,6 +103,7 @@ dc = 0
 data = []
 dfixup = []
 
+elabels = {}
 glabels = []
 
 #
@@ -151,7 +152,7 @@ for filename in infiles:
     
     if line[-1] == ':':
       label = line[:-1]
-      if (label in plabels) or (label in dlabels):
+      if (label in plabels) or (label in dlabels) or (label in elabels):
         print("ERROR: Redefined label '%s' @ %s:%d" % (label, filename, linenum))
         exit(-1)
       plabels[label] = pc
@@ -170,7 +171,7 @@ for filename in infiles:
           print("ERROR: Alloc count field is not a number '%s' @ %s:%d" % (line, filename, linenum))
           exit(-1)
           
-        if (dctv[1] in plabels) or (dctv[1] in dlabels):
+        if (dctv[1] in plabels) or (dctv[1] in dlabels) or (dctv[1] in elabels):
           print("ERROR: Redefined label '%s' @ %s:%d" % (dctv[1], filename, linenum))
           exit(-1)
             
@@ -204,7 +205,7 @@ for filename in infiles:
           print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
           exit(-1)
         
-        if (dctv[1] in plabels) or (dctv[1] in dlabels):
+        if (dctv[1] in plabels) or (dctv[1] in dlabels) or (dctv[1] in elabels):
           print("ERROR: Redefined label '%s' @ %s:%d" % (dctv[1], filename, linenum))
           exit(-1)
           
@@ -272,7 +273,7 @@ for filename in infiles:
           print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
           exit(-1)
       
-        if (dctv[1] in plabels) or (dctv[1] in dlabels):
+        if (dctv[1] in plabels) or (dctv[1] in dlabels) or (dctv[1] in elabels):
           print("ERROR: Redefined label '%s' @ %s:%d" % (dctv[1], filename, linenum))
           exit(-1)
           
@@ -320,10 +321,10 @@ for filename in infiles:
         if run_equate(dctv[1], ' '.join(dctv[2:])) < 0:
           print("ERROR: Unable to evaluate directive '%s' @ %s:%d" % (line, filename, linenum))
           exit(-1)
-        if (dctv[1] in plabels) or (dctv[1] in dlabels):
+        if (dctv[1] in plabels) or (dctv[1] in dlabels) or (dctv[1] in elabels):
           print("ERROR: Redefined label in directive '%s' @ %s:%d" % (line, filename, linenum))
           exit(-1)
-        dlabels[dctv[1]] = local_equates[dctv[1]]
+        elabels[dctv[1]] = local_equates[dctv[1]]
       else:
         print("ERROR: Invalid directive '%s' @ %s:%d" % (line, filename, linenum))
         exit(-1)
@@ -586,7 +587,7 @@ def decode_hw_op(pc, hw_op, upper):
     if len(opcode) != 2:
       print("ERROR: Bad opcode: %s" % (hw_op))
       exit(-1)
-    rtn = 0
+    rtn = 0x4000
     reg = decode_reg(opcode[1])
     rtn |= reg
     rtn |= (reg << 4)
@@ -828,7 +829,7 @@ for fixup in pfixup:
   f = fixup.split(':')
   if f[2] in glabels:
     label = f[2]
-  elif (f[2] in plabels) or (f[2] in dlabels):
+  elif (f[2] in plabels) or (f[2] in dlabels) or (f[2] in elabels):
     label = f[2] + ouid
   else:
     label = f[2]
@@ -848,7 +849,7 @@ for fixup in dfixup:
   f = fixup.split(':')
   if f[2] in glabels:
     label = f[2]
-  elif (f[2] in plabels) or (f[2] in dlabels):
+  elif (f[2] in plabels) or (f[2] in dlabels) or (f[2] in elabels):
     label = f[2] + ouid
   else:
     label = f[2]
@@ -874,7 +875,7 @@ for label in plabels:
     label_o = label
   else:
     label_o = label + ouid
-  fout.write("%s = %d\n" % (label_o, plabels[label]))
+  fout.write("%s += %d\n" % (label_o, plabels[label]))
 fout.write("\n")
 
 for p in prog:
@@ -888,7 +889,15 @@ for label in dlabels:
     label_o = label
   else:
     label_o = label + ouid
-  fout.write("%s = %d\n" % (label_o, dlabels[label]))
+  fout.write("%s += %d\n" % (label_o, dlabels[label]))
+fout.write("\n")
+
+for label in elabels:
+  if label in glabels:
+    label_o = label
+  else:
+    label_o = label + ouid
+  fout.write("%s == %d\n" % (label_o, elabels[label]))
 fout.write("\n")
 
 for d in data:

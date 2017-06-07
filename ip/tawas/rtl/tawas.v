@@ -101,8 +101,8 @@ module tawas
     
     .LS_DIR_VLD(ls_dir_vld),
     .LS_DIR_STORE(ls_dir_store),
-    .LD_DIR_SEL(ls_dir_sel),
-    .LD_DIR_ADDR(ls_dir_addr)
+    .LS_DIR_SEL(ls_dir_sel),
+    .LS_DIR_ADDR(ls_dir_addr)
   );
   
   wire [3:0] au_ra_sel;
@@ -182,8 +182,8 @@ module tawas
     
     .LS_DIR_VLD(ls_dir_vld),
     .LS_DIR_STORE(ls_dir_store),
-    .LD_DIR_SEL(ls_dir_sel),
-    .LD_DIR_ADDR(ls_dir_addr),
+    .LS_DIR_SEL(ls_dir_sel),
+    .LS_DIR_ADDR(ls_dir_addr),
     
     .LS_PTR_SEL(ls_ptr_sel),
     .LS_PTR(ls_ptr),
