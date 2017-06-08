@@ -108,7 +108,7 @@ module max10_devkit_top
     .RaccIn(RaccRam2Core)
   );
 
-  raccoon_event #(.ADDR_MASK(20'hFFFFF), .ADDR_BASE(20'hE0000)) raccoon_event
+  raccoon_event #(.ADDR_MASK(20'hFFFF8), .ADDR_BASE(20'hE0000)) raccoon_event
   (
     .CLK(clk_50),
     .RST(!fpga_reset_n),
@@ -119,7 +119,7 @@ module max10_devkit_top
     .RaccOut(RaccEvent2Test)
   );
 
-  raccoon_testregs #(.ADDR_MASK(20'hFFFFF), .ADDR_BASE(20'hE0000)) raccoon_testregs
+  raccoon_testregs #(.ADDR_MASK(20'hFFFF8), .ADDR_BASE(20'hFFFF8)) raccoon_testregs
   (
     .CLK(clk_50),
     .RST(!fpga_reset_n),
