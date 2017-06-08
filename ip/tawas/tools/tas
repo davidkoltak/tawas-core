@@ -536,6 +536,21 @@ def decode_hw_op(pc, hw_op, upper):
       print("ERROR: Invalid load/store address modifier: %s" % (hw_op))
       exit(-1)
 
+  elif (opcode[0] == 'inc') or (opcode[0] == 'dec'):
+    if len(opcode) != 2:
+      print("ERROR: Bad opcode: %s" % (hw_op))
+      exit(-1)
+    if opcode[0] == 'inc':
+      reg = 0x3010
+    else:
+      reg = 0x3FF0
+    reg = decode_reg(opcode[1])
+    rtn |= reg
+    if reg < 0:
+      print("ERROR: Bad register name: %s" % (hw_op))
+      exit(-1)
+    return(rtn)
+        
   elif (opcode[0] == 'addi') or (opcode[0] == 'cmpi') or (opcode[0] == 'mvi'):
     if len(opcode) != 3:
       print("ERROR: Bad opcode: %s" % (hw_op))

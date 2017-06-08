@@ -65,10 +65,12 @@ module testbench();
   
   integer CLOCK_LIMIT;
   wire [4:0] user_leds;
+  reg [31:] test_progress;
   
   always @ (posedge sim_clk or posedge sim_rst)
     if (sim_rst)
       CLOCK_LIMIT <= 32'd0;
+      test_progress <= max10_devkit_top.raccoon_testregs.TEST_PROGRESS;
     else
     begin
       CLOCK_LIMIT <= CLOCK_LIMIT + 32'd1;
@@ -78,24 +80,28 @@ module testbench();
         $display(" ****** MAX CLOCKS - ENDING SIMULATION *****");
         $finish();
       end
-      if (max10_devkit_top.tawas.raccoon_cs && max10_devkit_top.tawas.dwr_out)
-         if (max10_devkit_top.tawas.daddr_out[31:0] == 32'hFFFFFFF0)
-        begin
-          $display(" ****** TEST STATUS %X - ENDING SIMULATION *****", 
-                   max10_devkit_top.tawas.dout_out[31:0]);
-        end
-        else if (max10_devkit_top.tawas.daddr_out[31:0] == 32'hFFFFFFF8)
-        begin
-          #20;
-          $display(" ****** TEST FAILED - ENDING SIMULATION *****");
-          $finish();
-        end
-        else if (max10_devkit_top.tawas.daddr_out[31:0] == 32'hFFFFFFFC)
-        begin
-          #20;
-          $display(" ****** TEST PASSED - ENDING SIMULATION *****");
-          $finish();
-        end
+      
+      if (max10_devkit_top.raccoon_testregs.TEST_PROGRESS != test_progress)
+      begin
+        test_progress <= max10_devkit_top.raccoon_testregs.TEST_PROGRESS;
+        $display(" ****** TEST PROGRESS %X *****", 
+                 max10_devkit_top.raccoon_testregs.TEST_PROGRESS);
+      end
+      if (max10_devkit_top.raccoon_testregs.TEST_FAIL != 32'd0)
+      begin
+        #20;
+        $display(" ****** TEST FAILED  %08X *****" ,
+                 max10_devkit_top.raccoon_testregs.TEST_FAIL);
+        $finish();
+      end
+
+      if (max10_devkit_top.raccoon_testregs.TEST_PASS != 32'd0)
+      begin
+        #20;
+        $display(" ****** TEST PASSED  %08X *****" ,
+                 max10_devkit_top.raccoon_testregs.TEST_PASS);
+        $finish();
+      end
     end
   
   max10_devkit_top max10_devkit_top

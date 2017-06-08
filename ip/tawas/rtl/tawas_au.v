@@ -174,19 +174,19 @@ module tawas_au
   always @ (posedge CLK)
     if (bitop_vld_d1)
       case (bitop_cmd_d1)
-      3'd0: bitop_result <= {1'b0, reg_b_d1 | (32'd1 << bitop_sel_d1)};
-      3'd1: bitop_result <= {1'b0, reg_b_d1 & ~(32'd1 << bitop_sel_d1)};
-      3'd2: bitop_result <= {1'b0, reg_b_d1 & (32'd1 << bitop_sel_d1)};
+      3'd0: bitop_result <= {1'b0, reg_a_d1 | (32'd1 << bitop_sel_d1)};
+      3'd1: bitop_result <= {1'b0, reg_a_d1 & ~(32'd1 << bitop_sel_d1)};
+      3'd2: bitop_result <= {1'b0, reg_a_d1 & (32'd1 << bitop_sel_d1)};
       
-      3'd4: bitop_result <= ({1'b0, reg_b_d1} << bitop_sel_d1);
-      3'd5: bitop_result <= ({1'b0, reg_b_d1} >> bitop_sel_d1);
-      3'd6: bitop_result <= ({reg_b_d1[31], reg_b_d1} >>> bitop_sel_d1);
+      3'd4: bitop_result <= ({1'b0, reg_a_d1} << bitop_sel_d1);
+      3'd5: bitop_result <= ({1'b0, reg_a_d1} >> bitop_sel_d1);
+      3'd6: bitop_result <= ({reg_a_d1[31], reg_a_d1} >>> bitop_sel_d1);
       3'd7: 
       begin
         for (x = 0; x < bitop_sel_d1; x = x + 1)
-          bitop_result[x] = reg_b_d1[x];
+          bitop_result[x] = reg_a_d1[x];
         for (x = bitop_sel_d1; x < 33; x = x + 1)
-           bitop_result[x] = reg_b_d1[bitop_sel_d1];
+           bitop_result[x] = reg_a_d1[bitop_sel_d1];
       end    
       default: bitop_result <= 33'd0;
       endcase    

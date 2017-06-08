@@ -45,7 +45,7 @@ module raccoon_event
   RaccIn,
   RaccOut
 );
-  parameter ADDR_MASK = 20'hFFFF0;
+  parameter ADDR_MASK = 20'hFFFE0;
   parameter ADDR_BASE = 20'hFFFE0;
   
   input CLK;

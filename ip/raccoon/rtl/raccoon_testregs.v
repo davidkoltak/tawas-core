@@ -43,8 +43,8 @@ module raccoon_testregs
   RaccIn,
   RaccOut
 );
-  parameter ADDR_MASK = 20'hF0000;
-  parameter ADDR_BASE = 20'h10000;
+  parameter ADDR_MASK = 20'hFFFF0;
+  parameter ADDR_BASE = 20'hFFFF0;
   
   input CLK;
   input RST;

@@ -15,18 +15,9 @@ _t0_reset:
   ldi r5 test_0_buf
   call string_test
   tstz r0
-  br eq t0_pass
-
-t0_fail:
-  ldi r0 3
-  std r0 test_0_result
-  br wait_for_t1
-  
-t0_pass:
-  ldi r0 2
-  std r0 test_0_result
-  br wait_for_t1
-  
+  skip eq
+  jmp test_fail_wait
+  jmp test_pass_wait
   
 _t1_reset:
   .alloc stack_1_bot w 127
@@ -39,19 +30,10 @@ _t1_reset:
   ldi r5 test_1_buf
   call string_test
   tstz r0
-  br eq t1_pass
+  skip eq
+  jmp test_fail_wait
+  jmp test_pass_wait
 
-t1_fail:
-  ldi r0 3
-  std r0 test_1_result
-  halt
-  
-t1_pass:
-  ldi r0 2
-  std r0 test_1_result
-  halt
-  
-  
 _t2_reset:
   .alloc stack_2_bot w 127
   .data stack_2_top w 0xCCCCCCCC
@@ -63,17 +45,9 @@ _t2_reset:
   ldi r5 test_2_buf
   call string_test
   tstz r0
-  br eq t2_pass
-
-t2_fail:
-  ldi r0 3
-  std r0 test_2_result
-  halt
-  
-t2_pass:
-  ldi r0 2
-  std r0 test_2_result
-  halt
+  skip eq
+  jmp test_fail_wait
+  jmp test_pass_wait
   
 _t3_reset:
   .alloc stack_3_bot w 127
@@ -86,17 +60,9 @@ _t3_reset:
   ldi r5 test_3_buf
   call string_test
   tstz r0
-  br eq t3_pass
-
-t1_fail:
-  ldi r0 3
-  std r0 test_1_result
-  halt
-  
-t1_pass:
-  ldi r0 2
-  std r0 test_1_result
-  halt
+  skip eq
+  jmp test_fail_wait
+  jmp test_pass_wait
 
 string_test:  
   mv r8 r4
@@ -124,30 +90,7 @@ string_test:
   skip ne
   mvi r0 1
   \ rtn
+  
   mvi r0 0
   \ rtn
-
-
-wait_for_t1:
-  ldd r1 test_1_reset
-  tstz r1
-  br eq wait_for_t1
-  
-wait_for_t2:
-  ldd r2 test_2_reset
-  tstz r2
-  br eq wait_for_t2
-  
-wait_for_t3:
-  ldd r3 test_3_reset
-  tstz r3
-  br eq wait_for_t3
-  
-  or r0 r1
-  \ or r0 r2
-  or r0 r3
-  btst r0 0
-  skip nz
-  call test_pass
-  call test_fail
   
