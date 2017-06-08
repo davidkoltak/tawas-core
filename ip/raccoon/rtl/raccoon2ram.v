@@ -42,51 +42,51 @@ module raccoon2ram
   WR_DATA,
   RD_DATA
 );
-  parameter ADDR_MASK = 32'hFFFF0000;
-  parameter ADDR_BASE = 32'h00010000;
+  parameter ADDR_MASK = 20'hF0000;
+  parameter ADDR_BASE = 20'h10000;
   
   input CLK;
   input RST;
 
-  input [79:0] RaccIn;
-  output [79:0] RaccOut;
-
+  input [63:0] RaccIn;
+  output [63:0] RaccOut;
+  
   output CS;
   output WE;
-  output [31:0] ADDR;
+  output [19:0] ADDR;
   output [3:0] MASK;
   output [31:0] WR_DATA;
   input [31:0] RD_DATA;
-
-  reg [79:0] din;
-  reg [79:0] din_d1;
-  reg [79:0] dout;
+  
+  reg [63:0] din;
+  reg [63:0] din_d1;
+  reg [63:0] dout;
   
   assign RaccOut = dout;
   
-  wire addr_match = din[79] && (din[77:76] == 2'b00) && ((din[31:0] & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
+  wire addr_match = (din[63:62] == 2'b11) && (({din[49:32], 2'b00} & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
   reg addr_match_d1;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
     begin
-      din <= 80'd0;
+      din <= 64'd0;
       addr_match_d1 <= 1'b0;
-      din_d1 <= 80'd0;
-      dout <= 80'd0;
+      din_d1 <= 64'd0;
+      dout <= 64'd0;
     end
     else
     begin
       din <= RaccIn;
       addr_match_d1 <= addr_match;
       din_d1 <= din;
-      dout <= (addr_match_d1) ? {din_d1[79:78], 2'b10, din_d1[75:64], RD_DATA[31:0], din_d1[31:0]} : din_d1[79:0];
+      dout <= (addr_match_d1) ? {2'b10, din_d1[61:32], RD_DATA} : din_d1[63:0];
     end
    
   assign CS = addr_match;
-  assign WE = din[78];
-  assign ADDR = din[31:0];
-  assign MASK = din[67:64];
-  assign WR_DATA = din[63:32];
+  assign WE = |din[53:50];
+  assign ADDR = {din[49:32], 2'b00};
+  assign MASK = din[53:50];
+  assign WR_DATA = din[31:0];
   
 endmodule

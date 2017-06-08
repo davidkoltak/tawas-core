@@ -76,14 +76,15 @@ module raccoon2axi64
   RVALID,
   RREADY
 );
-  parameter ADDR_MASK = 32'hFFFF0000;
-  parameter ADDR_BASE = 32'h00010000;
+  parameter ADDR_MASK = 20'hF0000;
+  parameter ADDR_BASE = 20'h10000;
+  parameter AXI_UPPER_12 = 12'h000;
   
   input CLK;
   input RST;
 
-  input [79:0] RaccIn;
-  output [79:0] RaccOut;
+  input [63:0] RaccIn;
+  output [63:0] RaccOut;
 
   output [8:0] AWID;
   output [31:0] AWADDR;
@@ -126,8 +127,8 @@ module raccoon2axi64
   input RVALID;
   output RREADY;
 
-  reg [79:0] din;
-  reg [79:0] dout;
+  reg [63:0] din;
+  reg [63:0] dout;
   
   assign RaccOut = dout;
   
@@ -142,14 +143,15 @@ module raccoon2axi64
   reg [31:0] pending_w_data;
   reg [3:0] pending_w_mask;
    
-  wire addr_match = din[79] && (din[77:76] == 2'b00) && ((din[31:0] & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
+  wire addr_match = (din[63:62] == 2'b11) && (({din[49:32], 2'b00} & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
   
-  wire send_read_req = addr_match && !din[78] && (!pending_ar || ARREADY);
-  wire send_write_req = addr_match && din[78] && (!pending_aw || AWREADY) && (!pending_w || WREADY);
+  wire req_is_read = |din[53:50];
+  wire send_read_req = addr_match && !req_is_read && (!pending_ar || ARREADY);
+  wire send_write_req = addr_match && req_is_read && (!pending_aw || AWREADY) && (!pending_w || WREADY);
 
-  wire send_read_rsp = (!din[79] || send_read_req || send_write_req) && RVALID;
+  wire send_read_rsp = (!din[63] || send_read_req || send_write_req) && RVALID;
   wire send_read_rsp_err = |RRESP[1:0];
-  wire send_write_rsp = (!din[79] || send_read_req || send_write_req) && BVALID;
+  wire send_write_rsp = (!din[63] || send_read_req || send_write_req) && BVALID;
   wire send_write_rsp_err = |BRESP[1:0];
 
   wire [31:0] read_data_word = (RID[0]) ? RDATA[63:32] : RDATA[31:0];
@@ -157,8 +159,8 @@ module raccoon2axi64
   always @ (posedge CLK or posedge RST)
     if (RST)  
     begin
-      din <= 80'd0;
-      dout <= 80'd0;
+      din <= 64'd0;
+      dout <= 64'd0;
       
       pending_ar <= 1'b0;
       pending_aw <= 1'b0;
@@ -167,9 +169,9 @@ module raccoon2axi64
     else
     begin
       din <= RaccIn;
-      dout <= (send_read_req || send_write_req) ? 80'd0 : 
-              (send_read_rsp) ? {3'b101, send_read_rsp_err, RID[8:1], 4'd0, read_data_word[31:0], 32'd0} :
-              (send_write_rsp) ? {3'b111, send_write_rsp_err, BID[8:1], 4'd0, 64'd0} : din;
+      dout <= (send_read_req || send_write_req) ? 64'd0 : 
+              (send_read_rsp) ? {2'b10, RID, 22'd0, read_data_word} :
+              (send_write_rsp) ? {2'b10, BID, 22'd0, 32'd0} : din;
       
       pending_ar <= (pending_ar || send_read_req) && !ARREADY;
       pending_aw <= (pending_aw || send_write_req) && !AWREADY;
@@ -179,17 +181,17 @@ module raccoon2axi64
   always @ (posedge CLK)
     if (send_read_req)
     begin
-      pending_ar_id <= din[75:68];
-      pending_ar_addr <= din[31:0];
+      pending_ar_id <= din[61:54];
+      pending_ar_addr <= {AXI_UPPER_12, din[49:32], 2'b00};
     end
   
   always @ (posedge CLK)
     if (send_write_req)
     begin
-      pending_aw_id <= din[75:68];
-      pending_aw_addr <= din[31:0];
-      pending_w_data <= din[63:32];
-      pending_w_mask <= din[67:64];
+      pending_aw_id <= din[61:54];
+      pending_aw_addr <= {AXI_UPPER_12, din[49:32], 2'b00};
+      pending_w_data <= din[31:0];
+      pending_w_mask <= din[53:50];
     end
     
   assign ARID = {pending_ar_id, pending_ar_addr[2]};
@@ -218,7 +220,7 @@ module raccoon2axi64
   assign WLAST = 1'b1;
   assign WVALID = pending_w;
   
-  assign RREADY = (!din[79] || send_read_req || send_write_req);
-  assign BREADY = (!din[79] || send_read_req || send_write_req) && !RVALID;
+  assign RREADY = (!din[63] || send_read_req || send_write_req);
+  assign BREADY = (!din[63] || send_read_req || send_write_req) && !RVALID;
   
 endmodule

@@ -40,41 +40,45 @@ module raccoon_event
   CLK,
   RST,
 
+  EventPending,
+  
   RaccIn,
   RaccOut
 );
-  parameter ADDR_MASK = 32'hFFFFFFF0;
-  parameter ADDR_BASE = 32'hFFFFFFE0;
+  parameter ADDR_MASK = 20'hFFFF0;
+  parameter ADDR_BASE = 20'hFFFE0;
   
   input CLK;
   input RST;
 
-  input [79:0] RaccIn;
-  output [79:0] RaccOut;
+  output reg [3:0] EventPending;
+  
+  input [63:0] RaccIn;
+  output [63:0] RaccOut;
 
-  reg [79:0] din;
-  reg [79:0] din_d1;
-  reg [79:0] dout;
+  reg [63:0] din;
+  reg [63:0] din_d1;
+  reg [63:0] dout;
   
   assign RaccOut = dout;
   
-  wire addr_match = din[79] && (din[77:76] == 2'b00) && ((din[31:0] & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
+  wire addr_match = (din[63:62] == 2'b11) && (({din[49:32], 2'b00} & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
   reg addr_match_d1;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
     begin
-      din <= 80'd0;
+      din <= 64'd0;
       addr_match_d1 <= 1'b0;
-      din_d1 <= 80'd0;
-      dout <= 80'd0;
+      din_d1 <= 64'd0;
+      dout <= 64'd0;
     end
     else
     begin
       din <= RaccIn;
       addr_match_d1 <= addr_match;
       din_d1 <= din;
-      dout <= (addr_match_d1) ? (din_d1[75:68] == 8'hFF) ? 80'd0 : {din_d1[79:78], 2'b10, din_d1[75:64], event_out[31:0], din_d1[31:0]} : din_d1[79:0];
+      dout <= (addr_match_d1) ? (din_d1[61:54] == 8'hFF) ? 64'd0 : {2'b10, din_d1[61:32], event_out} : din_d1[63:0];
     end
   
   reg [31:0] event_0;
@@ -82,13 +86,21 @@ module raccoon_event
   reg [31:0] event_2;
   reg [31:0] event_3;
   reg [31:0] event_out;
+  
+  reg [31:0] mask_0;
+  reg [31:0] mask_1;
+  reg [31:0] mask_2;
+  reg [31:0] mask_3;
   reg [31:0] bit_mask;
   
   always @ *
-    if (|din[63:37])
+    if (|din[31:6])
       bit_mask = 0;
     else
-      bit_mask = (1 << din[36:32]);
+      bit_mask = (1 << din[5:0]);
+
+  always @ (posedge CLK)
+    EventPending <= {|(event_3 & ~mask_3), |(event_2 & ~mask_2), |(event_1 & ~mask_1), |(event_0 & ~mask_0)};
     
   always @ (posedge CLK or posedge RST)
     if (RST)
@@ -98,32 +110,45 @@ module raccoon_event
       event_2 <= 32'd0;
       event_3 <= 32'd0;
       event_out <= 32'd0;
+      mask_0 <= 32'd0;
+      mask_1 <= 32'd0;
+      mask_2 <= 32'd0;
+      mask_3 <= 32'd0;
     end
-    else if (addr_match && &din[67:64])
+    else if (addr_match)
     begin 
-      case (din[3:2])
-      2'd0: event_out <= event_0;
-      2'd1: event_out <= event_1;
-      2'd2: event_out <= event_2;
-      default: event_out <= event_3;
+      case (din[34:32])
+      3'd0: event_out <= event_0;
+      3'd1: event_out <= event_1;
+      3'd2: event_out <= event_2;
+      3'd3: event_out <= event_3;
+      3'd4: event_out <= mask_0;
+      3'd5: event_out <= mask_1;
+      3'd6: event_out <= mask_2;
+      default: event_out <= mask_3;
       endcase
         
-      if (din[78])
+      if (din[53:50] == 4'b1111)
       begin
-        case (din[3:2])
-        2'd0: event_0 <= event_0 | bit_mask;
-        2'd1: event_1 <= event_1 | bit_mask;
-        2'd2: event_2 <= event_2 | bit_mask;
-        default: event_3 <= event_3 | bit_mask;
+        case (din[34:32])
+        3'd0: event_0 <= event_0 | bit_mask;
+        3'd1: event_1 <= event_1 | bit_mask;
+        3'd2: event_2 <= event_2 | bit_mask;
+        3'd3: event_3 <= event_3 | bit_mask;
+        3'd4: mask_0 <= din[31:0];
+        3'd5: mask_1 <= din[31:0];
+        3'd6: mask_2 <= din[31:0];
+        default: mask_3 <= din[31:0];
         endcase
       end
-      else
+      else if (din[53:50] == 4'b0000)
       begin
-        case (din[3:2])
-        2'd0: event_0 <= 32'd0;
-        2'd1: event_1 <= 32'd0;
-        2'd2: event_2 <= 32'd0;
-        default: event_3 <= 32'd0;
+        case (din[34:32])
+        3'd0: event_0 <= 32'd0;
+        3'd1: event_1 <= 32'd0;
+        3'd2: event_2 <= 32'd0;
+        3'd3: event_3 <= 32'd0;
+        default: ;
         endcase
       end
     end

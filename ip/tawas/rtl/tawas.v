@@ -44,8 +44,8 @@ module tawas
   output [31:0] DOUT,
   input [31:0] DIN,
   
-  output [79:0] RaccOut,
-  input [79:0] RaccIn
+  output [63:0] RaccOut,
+  input [63:0] RaccIn
 );
   
   wire pc_store;

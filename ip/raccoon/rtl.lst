@@ -4,3 +4,4 @@ raccoon2ram.v
 raccoon2ram_w.v
 raccoon_delay.v
 raccoon_event.v
+raccoon_testregs.v

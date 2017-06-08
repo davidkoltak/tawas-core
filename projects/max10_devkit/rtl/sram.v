@@ -35,14 +35,14 @@ module sram
   RaccIn,
   RaccOut
 );
-  parameter ADDR_MASK = 32'hFFFF0000;
-  parameter ADDR_BASE = 32'h00010000;
+  parameter ADDR_MASK = 20'hF0000;
+  parameter ADDR_BASE = 20'h10000;
   
   input CLK;
   input RST;
 
-  input [79:0] RaccIn;
-  output [79:0] RaccOut;
+  input [63:0] RaccIn;
+  output [63:0] RaccOut;
   
   wire [31:0] ADDR;
   wire CS;

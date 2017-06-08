@@ -50,8 +50,8 @@ module tawas_raccoon
   output reg [3:0] RACCOON_LOAD_SEL,
   output reg [31:0] RACCOON_LOAD,
   
-  output [79:0] RaccOut,
-  input [79:0] RaccIn
+  output [63:0] RaccOut,
+  input [63:0] RaccIn
 );
   parameter ID_UPPER = 6'd0;
   
@@ -59,12 +59,12 @@ module tawas_raccoon
   // Register Raccoon bus input/output
   //
   
-  reg [79:0] racc_in;
-  reg [79:0] racc_out;
+  reg [63:0] racc_in;
+  reg [63:0] racc_out;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
-      racc_in <= 80'd0;
+      racc_in <= 64'd0;
     else
       racc_in <= RaccIn;
   
@@ -77,16 +77,13 @@ module tawas_raccoon
   reg [3:0] bus_req;
   reg [3:0] thread_mask;
   reg [3:0] bus_ack;
-  reg [3:0] bus_error;
   reg [3:0] bus_retry;
   reg [3:0] bus_pending;
-  reg [3:0] bus_error_hang;
   
   always @ *
   begin
     bus_req = 4'd0;
     bus_ack = 4'd0;
-    bus_error = 4'd0;
     bus_retry = 4'd0;
     
     if (RACCOON_CS)
@@ -97,7 +94,7 @@ module tawas_raccoon
       default: bus_req = 4'b0010;
       endcase
     
-    case (racc_in[75:68])
+    case (racc_in[61:54])
     {ID_UPPER, 2'd0}: thread_mask = 4'b0001;
     {ID_UPPER, 2'd1}: thread_mask = 4'b0010;
     {ID_UPPER, 2'd2}: thread_mask = 4'b0100;
@@ -105,13 +102,10 @@ module tawas_raccoon
     default: thread_mask = 4'd0;
     endcase
     
-    if (racc_in[79] && racc_in[77])
+    if (racc_in[63] && !racc_in[62])
       bus_ack = thread_mask;
       
-    if (racc_in[79] && racc_in[76])
-      bus_error = thread_mask;
-      
-    if ((racc_in[79] && !racc_in[77]) && !racc_in[76])
+    if ((racc_in[63] && racc_in[62]))
       bus_retry = thread_mask;
       
   end
@@ -134,15 +128,10 @@ module tawas_raccoon
   // Transaction data
   //
   
-  reg wr_0;
-  reg wr_1;
-  reg wr_2;
-  reg wr_3;
-  
-  reg [31:0] addr_0;
-  reg [31:0] addr_1;
-  reg [31:0] addr_2;
-  reg [31:0] addr_3;
+  reg [19:2] addr_0;
+  reg [19:2] addr_1;
+  reg [19:2] addr_2;
+  reg [19:2] addr_3;
   
   reg [3:0] mask_0;
   reg [3:0] mask_1;
@@ -162,9 +151,8 @@ module tawas_raccoon
   always @ (posedge CLK)
     if (bus_req[0])
     begin
-      wr_0 <= DWR;
-      addr_0 <= DADDR;
-      mask_0 <= DMASK;
+      addr_0 <= DADDR[19:2];
+      mask_0 <= (DWR) ? DMASK : 4'd0;
       dout_0 <= DOUT;
       rc_0 <= WRITEBACK_REG;
     end
@@ -172,9 +160,8 @@ module tawas_raccoon
   always @ (posedge CLK)
     if (bus_req[1])
     begin
-      wr_1 <= DWR;
-      addr_1 <= DADDR;
-      mask_1 <= DMASK;
+      addr_1 <= DADDR[19:2];
+      mask_1 <= (DWR) ? DMASK : 4'd0;
       dout_1 <= DOUT;
       rc_1 <= WRITEBACK_REG;
     end
@@ -182,9 +169,8 @@ module tawas_raccoon
   always @ (posedge CLK)
     if (bus_req[2])
     begin
-      wr_2 <= DWR;
-      addr_2 <= DADDR;
-      mask_2 <= DMASK;
+      addr_2 <= DADDR[19:2];
+      mask_2 <= (DWR) ? DMASK : 4'd0;
       dout_2 <= DOUT;
       rc_2 <= WRITEBACK_REG;
     end
@@ -192,9 +178,8 @@ module tawas_raccoon
   always @ (posedge CLK)
     if (bus_req[3])
     begin
-      wr_3 <= DWR;
-      addr_3 <= DADDR;
-      mask_3 <= DMASK;
+      addr_3 <= DADDR[19:2];
+      mask_3 <= (DWR) ? DMASK : 4'd0;
       dout_3 <= DOUT;
       rc_3 <= WRITEBACK_REG;
     end
@@ -223,9 +208,9 @@ module tawas_raccoon
     begin
       bus_state <= 2'd0;
       bus_sent_mark <= 3'b000;
-      racc_out <= 80'd0;
+      racc_out <= 64'd0;
     end
-    else if (racc_in[79] && (racc_in[75:70] != ID_UPPER))
+    else if (racc_in[63] && (racc_in[61:56] != ID_UPPER))
     begin
       bus_sent_mark <= 3'b000;
       racc_out <= racc_in;
@@ -238,48 +223,48 @@ module tawas_raccoon
         if (bus_pending[0] && !bus_sent[0])
         begin
           bus_sent_mark <= 3'b100;
-          racc_out <= {1'b1, wr_0, 2'b00, ID_UPPER, 2'd0, mask_0, dout_0, addr_0};
+          racc_out <= {2'b11, ID_UPPER, 2'd0, mask_0, addr_0, dout_0};
         end
         else
         begin 
           bus_sent_mark <= 3'b000;
-          racc_out <= 80'd0;
+          racc_out <= 64'd0;
         end
         
       2'd1:
         if (bus_pending[1] && !bus_sent[1])
         begin
           bus_sent_mark <= 3'b101;
-          racc_out <= {1'b1, wr_1, 2'b00, ID_UPPER, 2'd1, mask_1, dout_1, addr_1};
+          racc_out <= {2'b11, ID_UPPER, 2'd0, mask_1, addr_1, dout_1};
         end
         else
         begin 
           bus_sent_mark <= 3'b000;
-          racc_out <= 80'd0;
+          racc_out <= 64'd0;
         end  
         
       2'd2:
         if (bus_pending[2] && !bus_sent[2])
         begin
           bus_sent_mark <= 3'b110;
-          racc_out <= {1'b1, wr_2, 2'b00, ID_UPPER, 2'd2, mask_2, dout_2, addr_2};
+          racc_out <= {2'b11, ID_UPPER, 2'd0, mask_2, addr_2, dout_2};
         end
         else
         begin 
           bus_sent_mark <= 3'b000;
-          racc_out <= 80'd0;
+          racc_out <= 64'd0;
         end     
       
       default:
         if (bus_pending[3] && !bus_sent[3])
         begin
           bus_sent_mark <= 3'b111;
-          racc_out <= {1'b1, wr_3, 2'b00, ID_UPPER, 2'd3, mask_3, dout_3, addr_3};
+          racc_out <= {2'b11, ID_UPPER, 2'd0, mask_3, addr_3, dout_3};
         end
         else
         begin 
           bus_sent_mark <= 3'b000;
-          racc_out <= 80'd0;
+          racc_out <= 64'd0;
         end
         
       endcase
@@ -298,23 +283,23 @@ module tawas_raccoon
   
   always @ *
   begin
-      store_pre = racc_in[63:32];
+      store_pre = racc_in[31:0];
 
-     case (racc_in[69:68])
-     2'd0: store_vld = !wr_0;
-     2'd1: store_vld = !wr_1;
-     2'd2: store_vld = !wr_2;
-     default: store_vld = !wr_3;
+     case (racc_in[55:54])
+     2'd0: store_vld = (mask_0 == 4'd0);
+     2'd1: store_vld = (mask_1 == 4'd0);
+     2'd2: store_vld = (mask_2 == 4'd0);
+     default: store_vld = (mask_3 == 4'd0);
      endcase 
            
-     case (racc_in[69:68])
+     case (racc_in[55:54])
      2'd0: store_mask = mask_0;
      2'd1: store_mask = mask_1;
      2'd2: store_mask = mask_2;
      default: store_mask = mask_3;
      endcase 
            
-     case (racc_in[69:68])
+     case (racc_in[55:54])
      2'd0: store_rc = rc_0;
      2'd1: store_rc = rc_1;
      2'd2: store_rc = rc_2;
@@ -340,7 +325,7 @@ module tawas_raccoon
   
   always @ (posedge CLK)
   begin    
-    RACCOON_LOAD_SLICE <= racc_in[69:68];
+    RACCOON_LOAD_SLICE <= racc_in[55:54];
     RACCOON_LOAD <= store_final;
     RACCOON_LOAD_SEL <= store_rc;
   end

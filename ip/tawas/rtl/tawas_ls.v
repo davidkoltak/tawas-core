@@ -103,7 +103,7 @@ module tawas_ls
   assign addr_next = LS_PTR + ((LS_OP[13]) ? addr_adj : addr_offset);
   assign addr_out = (LS_DIR_VLD) ? LS_DIR_ADDR : (LS_OP[13] && !addr_adj[31]) ? LS_PTR : addr_next;
   
-  assign raccoon_space = |addr_out[31:20];
+  assign raccoon_space = addr_out[31];
   
   assign wr_en = (LS_DIR_VLD && LS_DIR_STORE) || (LS_OP_VLD && LS_OP[14]);
   
