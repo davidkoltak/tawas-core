@@ -1,0 +1,130 @@
+
+.global _t0_reset
+.global _t1_reset
+.global _t2_reset
+.global _t3_reset
+
+_t0_reset:
+  .alloc stack_0_bot w 127
+  .data stack_0_top w 0xAAAAAAAA
+  ldi r15 stack_0_top 
+  
+  .string test_0_str "Testing thread 0 with a string"
+  .alloc test_0_buf b 50
+  .data test_0_result w 0
+  ldi r4 test_0_str
+  ldi r5 test_0_buf
+  call string_test
+  tstz r0
+  br eq t0_pass
+
+t0_fail:
+  ldi r0 3
+  std r0 test_0_result
+  br wait_for_t1
+  
+t0_pass:
+  ldi r0 2
+  std r0 test_0_result
+  br wait_for_t1
+  
+  
+_t1_reset:
+  .alloc stack_1_bot w 127
+  .data stack_1_top w 0xBBBBBBBB
+  ldi r15 stack_1_top
+  
+  .string test_1_str "This is thread 1 string"
+  .alloc test_1_buf b 40
+  ldi r4 test_1_str
+  ldi r5 test_1_buf
+  call string_test
+  tstz r0
+  br eq t1_pass
+
+t1_fail:
+  ldi r0 3
+  std r0 test_0_result
+  halt
+  
+t1_pass:
+  ldi r0 2
+  std r0 test_0_result
+  halt
+  
+  
+_t2_reset:
+  .alloc stack_2_bot w 127
+  .data stack_2_top w 0xCCCCCCCC
+  ldi r15 stack_2_top 
+  
+  .string test_2_str "Thread #2 is going to be the longest string in the test"
+  .alloc test_2_buf b 80
+  ldi r4 test_2_str
+  ldi r5 test_2_buf
+  call string_test
+  
+_t3_reset:
+  .alloc stack_3_bot w 127
+  .data stack_3_top w 0xDDDDDDDD
+  ldi r15 stack_3_top 
+  
+  .string test_3_str "The shortest"
+  .alloc test_3_buf b 16
+  ldi r4 test_3_str
+  ldi r5 test_3_buf
+  call string_test
+
+string_test:  
+  mv r8 r4
+  mv r9 t5
+  call strcpy  
+  cmpi r0 15 
+  skip eq
+  mvi r0 1
+  \ rtn
+
+  mv r8 r4
+  mv r9 t5
+  call strcmp  
+  cmpi r0 0
+  skip eq
+  mvi r0 1
+  \ rtn
+
+  mv r8 r4
+  mv r9 t5
+  mvi r2 0x39
+  st b r2 r9 [2] 
+  call strcmp  
+  cmpi r0 0
+  skip ne
+  mvi r0 1
+  \ rtn
+  mvi r0 0
+  \ rtn
+
+
+wait_for_t1:
+  ldd r1 test_1_reset
+  tstz r1
+  br eq wait_for_t1
+  
+wait_for_t2:
+  ldd r2 test_2_reset
+  tstz r2
+  br eq wait_for_t2
+  
+wait_for_t3:
+  ldd r3 test_3_reset
+  tstz r3
+  br eq wait_for_t3
+  
+  or r0 r1
+  \ or r0 r2
+  or r0 r3
+  btst r0 0
+  skip nz
+  call test_pass
+  call test_fail
+  

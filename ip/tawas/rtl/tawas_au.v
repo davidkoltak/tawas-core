@@ -206,7 +206,7 @@ module tawas_au
   // Send result back to register file
   //
   
-  wire au_result_vld = imm_vld_d2 | bitop_vld_d2 | tworeg_result_d2;
+  wire au_result_vld = imm_vld_d2 | bitop_vld_d2 | tworeg_vld_d2;
   wire [32:0] au_result = (imm_vld_d2) ? imm_result : 
                           (bitop_vld_d2) ? bitop_result : tworeg_result;
   

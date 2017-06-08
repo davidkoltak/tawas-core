@@ -1,17 +1,92 @@
 
-.equ test_reg_base 0xFFFFFFF0
+//
+// Test reporting code
+//
+//   Immediately signal pass/fail:
+//   - jmp test_pass_now
+//   - jmp test_fail_now
+//
+//   Delayed result until all threads finish
+//   - jmp test_pass_wait
+//   - jmp test_fail_wait
+//
 
+.equ test_pass 0
+.equ test_fail 1
+
+.equ test_reg_base 0xFFFFFFF0
 .equ test_reg_pass test_reg_base + 12
 .equ test_reg_fail test_reg_base + 8
 
-.global test_fail
-test_fail:
+.global test_fail_now
+test_fail_now:
   mvi r0 1
   std r0 test_reg_fail
   halt
 
-.global test_pass
-test_pass:
+.global test_pass_now
+test_pass_now:
   mvi r0 1
   std r0 test_reg_pass
   halt
+
+.global test_fail_wait
+test_fail_wait:
+
+.global test_pass_wait
+test_pass_wait:
+
+.global thread_0_done
+  .data thread_0_result w 0
+thread_0_done:
+  mvi r1 2
+  tstz r0
+  skip eq
+  mvi r1 3
+  std r1 thread_0_result
+  
+wait_thread_1:
+  ldd r2 thread_1_result
+  tstz r2
+  br eq wait_thread_1
+  
+wait_thread_2:
+  ldd r3 thread_2_result
+  tstz r3
+  br eq wait_thread_3
+  
+wait_thread_3:
+  ldd r4 thread_3_result
+  tstz r4
+  br eq wait_thread_3
+
+.global thread_1_done
+  .data thread_1_result w 0
+thread_1_done:
+  mvi r1 2
+  tstz r0
+  skip eq
+  mvi r1 3
+  std r1 thread_1_result
+  halt
+
+.global thread_2_done
+  .data thread_2_result w 0
+thread_2_done:
+  mvi r1 2
+  tstz r0
+  skip eq
+  mvi r1 3
+  std r1 thread_2_result
+  halt
+
+.global thread_3_done
+  .data thread_3_result w 0
+thread_3_done:
+  mvi r1 2
+  tstz r0
+  skip eq
+  mvi r1 3
+  std r1 thread_3_result
+  halt
+      

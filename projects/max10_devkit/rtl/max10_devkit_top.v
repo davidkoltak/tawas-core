@@ -100,7 +100,7 @@ module max10_devkit_top
     .RaccIn(RaccRam2Core)
   );
 
-  sram #(.ADDR_MASK(32'hFFFF0000), .ADDR_BASE(32'h00100000)) sram
+  sram #(.ADDR_MASK(32'hFFFF0000), .ADDR_BASE(32'hFFFF0000)) sram
   (
     .CLK(clk_50),
     .RST(!fpga_reset_n),

@@ -43,11 +43,7 @@ my @paths = ("../../../ip/", "../../../projects/");
 
 my @packages = ("tawas", "raccoon", "max10_devkit");
 
-#
-# Further setup
-#
-
-my $sim_args = "-DMAX_CLOCKS=500 -stestbench";
+my $testbench_top = "testbench";
 
 #
 # Generate rtl file list
@@ -144,8 +140,7 @@ my $testname = $ARGV[0];
 if (!(testname =~ /\.mk$/))
 { $testname .= ".mk"; }
 
-$testname = $script_dir."testcase/$testname";
-if (!(-e $testname))
+if (!(-e $script_dir."testcase/$testname"))
 { die "ERROR: No testcase '$testname'\n"; }
 
 system("rm $script_dir"."testcase/irom.hex 2> /dev/null");
@@ -166,11 +161,24 @@ print "RUNNING: $cmd\n";
 if (system($cmd))
 { die "ERROR: Command failed\n"; }
 
+open(_MKFILE_, "<$script_dir"."testcase/".$testname) ||
+  die "ERROR: Unable to open '$script_dir"."testcase/".$testname."'\n";
+
+my $sim_defs = '';
+while ($line = <_MKFILE_>)
+{
+  chomp $line;
+  if ($line =~ /^\s*SIM_DEFS\s*=\s*(.*)/)
+  { $sim_defs = $1; }
+}
+
+close(_MKFILE_);
+
 #
 # Run sim
 #
 
-$cmd = "iverilog $sim_args -fsim.cmd -o sim.vvp";
+$cmd = "iverilog $sim_defs -s$testbench_top -fsim.cmd -o sim.vvp";
 print "RUNNING: $cmd\n";
 if (system($cmd))
 { die "ERROR: Command failed\n"; }

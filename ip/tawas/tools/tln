@@ -301,7 +301,6 @@ for fixup in pfixup:
       print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
       exit(-1)
     prog[addr] = (prog[addr] & 0xFFC00000) | ((label & 0x00FFFFFF) >> 2)
-    print("WDPTR: %08X : %08X = %08X" % (addr, prog[addr], label))
     
   else:
     print("ERROR: Invalid fixup type @ %s:%s" % (f[3], f[4]))

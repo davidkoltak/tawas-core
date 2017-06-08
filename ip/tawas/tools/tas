@@ -99,6 +99,7 @@ prog = []
 pfixup = []
 
 dlabels = {}
+dsize = {}
 dc = 0
 data = []
 dfixup = []
@@ -123,6 +124,15 @@ ouid = '_' + str(hash(t) & 0xFFFFFF)
 local_equates = {}
 def run_equate(name, value):
   global local_equates
+  global dsize
+  
+  def size(label):
+    if label in dsize:
+      return dsize[label]
+    else
+      print("ERROR: Invalid data label '%s' used in size()" % (label))
+      exit(-1)
+
   try:
     local_equates[name] = eval(value, {}, local_equates)
   except:
@@ -176,6 +186,7 @@ for filename in infiles:
           exit(-1)
             
         if dctv[2] == 'w':
+          dsize[dctv[1]] = (4 * cnt)
           if dc & 3:
             dc = (dc & 0xFFFFFFFC) + 4
           dlabels[dctv[1]] = dc
@@ -183,6 +194,7 @@ for filename in infiles:
             data.append(0)
             dc += 4
         elif dctv[2] == 'h':
+          dsize[dctv[1]] = (2 * cnt)
           if dc & 1:
             dc = (dc & 0xFFFFFFFE) + 2
           dlabels[dctv[1]] = dc
@@ -191,6 +203,7 @@ for filename in infiles:
               data.append(0)
             dc += 2
         elif dctv[2] == 'b':
+          dsize[dctv[1]] = cnt
           dlabels[dctv[1]] = dc
           for x in range(cnt):
             if (dc & 3) == 0:
@@ -210,6 +223,7 @@ for filename in infiles:
           exit(-1)
           
         if dctv[2] == 'w':
+          dsize[dctv[1]] = (4 * cnt)
           if dc & 3:
             dc = (dc & 0xFFFFFFFC) + 4
           dlabels[dctv[1]] = dc
@@ -222,6 +236,7 @@ for filename in infiles:
               dfixup.append("%d:data32:%s" % (dc, x))
             dc += 4
         elif dctv[2] == 'h':
+          dsize[dctv[1]] = (2 * cnt)
           if dc & 1:
             dc = (dc & 0xFFFFFFFE) + 2
           dlabels[dctv[1]] = dc
@@ -241,6 +256,7 @@ for filename in infiles:
                 dfixup.append("%d:data16.1:%s" % (dc, x))
             dc += 2
         elif dctv[2] == 'b':
+          dsize[dctv[1]] = cnt
           dlabels[dctv[1]] = dc
           for x in dctv[3:]:
             try:
@@ -285,6 +301,7 @@ for filename in infiles:
         if s[0] == '"':
           s = s.strip('"')
           
+        dsize[dctv[1]] = len(s) + 1
         dlabels[dctv[1]] = dc
         for x in s:
           value = ord(x)
@@ -590,7 +607,6 @@ def decode_hw_op(pc, hw_op, upper):
     rtn = 0x4000
     reg = decode_reg(opcode[1])
     rtn |= reg
-    rtn |= (reg << 4)
     if reg < 0:
       print("ERROR: Bad register name: %s" % (hw_op))
       exit(-1)
