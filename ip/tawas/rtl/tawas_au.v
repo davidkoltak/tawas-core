@@ -133,7 +133,7 @@ module tawas_au
       tworeg_vld_d1 <= tworeg_vld;
       bitop_vld_d1 <= bitop_vld;
       imm_vld_d1 <= imm_vld;
-      writeback_vld_d1 <= (tworeg_vld && (tworeg_cmd != 4'hB)) || (bitop_vld && (bitop_cmd != 3'd2)) || (imm_vld_d1 && (imm_cmd != 2'd2));
+      writeback_vld_d1 <= (tworeg_vld && (tworeg_cmd != 4'hB)) || (bitop_vld && (bitop_cmd != 3'd2)) || (imm_vld && (imm_cmd != 2'd2));
       reg_c_sel_d1 <= reg_c_sel;
       
       tworeg_vld_d2 <= tworeg_vld_d1;

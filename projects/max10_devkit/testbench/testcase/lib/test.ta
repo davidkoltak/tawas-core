@@ -112,7 +112,7 @@ wait_for_t3:
   
   ldi r8 test_reg_fail_addr
   btst r4 0
-  skip z
+  skip nz
   ldi r8 test_reg_pass_addr
   st w r0 r8 [0] 
   

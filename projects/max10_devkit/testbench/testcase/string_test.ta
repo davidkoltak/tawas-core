@@ -119,7 +119,7 @@ string_test:
   \ mv r9 r5
   calls strcpy
   pop crp
-  \ cmpi r0 0
+  \ tstz r0
   skip ne
   mvi r0 1
   \ rtn
@@ -128,7 +128,7 @@ string_test:
   \ mv r9 r5
   calls strcmp
   pop crp
-  \ cmpi r0 0
+  \ tstz r0
   skip eq
   mvi r0 1
   \ rtn
@@ -136,14 +136,25 @@ string_test:
   mv r8 r4
   \ mv r9 r5
   mvi r2 0x39
+  ld b r3 r9 [2]
   st b r2 r9 [2] 
   calls strcmp
   pop crp  
-  \ cmpi r0 0
+  \ tstz r0
   skip ne
   mvi r0 1
   \ rtn
-  
+
+  mv r8 r4
+  \ mv r9 r5
+  st b r3 r9 [2] 
+  calls strcmp
+  pop crp  
+  \ tstz r0
+  skip eq
+  mvi r0 1
+  \ rtn
+    
   mvi r0 0
   \ rtn
   
