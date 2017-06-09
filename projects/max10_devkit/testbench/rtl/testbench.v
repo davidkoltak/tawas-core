@@ -65,12 +65,14 @@ module testbench();
   
   integer CLOCK_LIMIT;
   wire [4:0] user_leds;
-  reg [31:] test_progress;
+  reg [31:0] test_progress;
   
   always @ (posedge sim_clk or posedge sim_rst)
     if (sim_rst)
+    begin
       CLOCK_LIMIT <= 32'd0;
       test_progress <= max10_devkit_top.raccoon_testregs.TEST_PROGRESS;
+    end
     else
     begin
       CLOCK_LIMIT <= CLOCK_LIMIT + 32'd1;

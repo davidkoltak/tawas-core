@@ -129,7 +129,7 @@ def run_equate(name, value):
   def size(label):
     if label in dsize:
       return dsize[label]
-    else
+    else:
       print("ERROR: Invalid data label '%s' used in size()" % (label))
       exit(-1)
 
@@ -223,7 +223,7 @@ for filename in infiles:
           exit(-1)
           
         if dctv[2] == 'w':
-          dsize[dctv[1]] = (4 * cnt)
+          dsize[dctv[1]] = 0
           if dc & 3:
             dc = (dc & 0xFFFFFFFC) + 4
           dlabels[dctv[1]] = dc
@@ -235,8 +235,9 @@ for filename in infiles:
               data.append(0)
               dfixup.append("%d:data32:%s" % (dc, x))
             dc += 4
+            dsize[dctv[1]] += 4
         elif dctv[2] == 'h':
-          dsize[dctv[1]] = (2 * cnt)
+          dsize[dctv[1]] = 0
           if dc & 1:
             dc = (dc & 0xFFFFFFFE) + 2
           dlabels[dctv[1]] = dc
@@ -255,8 +256,9 @@ for filename in infiles:
                 data[dc >> 2] = (data[dc >> 2] & 0x0000FFFF)
                 dfixup.append("%d:data16.1:%s" % (dc, x))
             dc += 2
+            dsize[dctv[1]] += 2
         elif dctv[2] == 'b':
-          dsize[dctv[1]] = cnt
+          dsize[dctv[1]] = 0
           dlabels[dctv[1]] = dc
           for x in dctv[3:]:
             try:
@@ -279,7 +281,8 @@ for filename in infiles:
                 dfixup.append("%d:data8.2:%s" % (dc, x))
               else:
                 dfixup.append("%d:data8.3:%s" % (dc, x))
-            dc += 1          
+            dc += 1  
+            dsize[dctv[1]] += 1        
         else:
           print("ERROR: Invalid alloc data type '%s' @ %s:%d" % (dctv[1], filename, linenum))
           exit(-1)
@@ -361,9 +364,9 @@ fw_cmds = ['call', 'calls', 'jmp', 'jmps', 'halt', 'ldi', 'ldd', 'std']
 br_cmds = ['br', 'rtn', 'jmpi', 'calli', 'skip', 'br_nop']
 ls_cmds = ['ld', 'st', 'push', 'pop']
 au_cmds = ['or', 'xor', 'cmp', 'add', 'sub', 'and', 'clr', 'tstz',
-           'bset', 'bclr', 'inc', 'dec',
+           'bset', 'bclr', 'btst', 
            'lsl', 'lsr', 'asr', 'sx',
-           'mv', 'mvi', 'cmpi', 'nop', 'au_nop']
+           'mv', 'mvi', 'cmpi', 'addi', 'inc', 'dec', 'nop', 'au_nop']
 
 def decode_reg(reg):
   if len(reg) < 2:
@@ -536,6 +539,62 @@ def decode_hw_op(pc, hw_op, upper):
       print("ERROR: Invalid load/store address modifier: %s" % (hw_op))
       exit(-1)
 
+  elif (opcode[0] == 'bset') or (opcode[0] == 'bclr') or (opcode[0] == 'btst'):
+    if len(opcode) != 3:
+      print("ERROR: Bad opcode: %s" % (hw_op))
+      exit(-1)
+    rtn = 0x2000
+    if opcode[0] == 'bset':
+      rtn |= (0 << 9)
+    elif opcode[0] == 'bclr':
+      rtn |= (1 << 9)
+    elif opcode[0] == 'btst':
+      rtn |= (2 << 9)
+    reg = decode_reg(opcode[1])
+    rtn |= reg
+    if reg < 0:
+      print("ERROR: Bad register name: %s" % (hw_op))
+      exit(-1)
+    try:
+      value = int(opcode[2], 0)
+      if (value < 0) or (value > 31):
+        print("ERROR: Argument must be 0-31: %s" % (hw_op))
+        exit(-1)
+      rtn |= ((value & 0x0000001F) << 4)
+    except ValueError:
+      print("ERROR: Invalid immediate argument: %s" % (hw_op))
+      exit(-1)
+    return(rtn)
+  
+  elif (opcode[0] == 'lsl') or (opcode[0] == 'lsr') or (opcode[0] == 'asr') or (opcode[0] == 'sx'):
+    if len(opcode) != 3:
+      print("ERROR: Bad opcode: %s" % (hw_op))
+      exit(-1)
+    rtn = 0x2000
+    if opcode[0] == 'lsl':
+      rtn |= (4 << 9)
+    elif opcode[0] == 'lsr':
+      rtn |= (5 << 9)
+    elif opcode[0] == 'asr':
+      rtn |= (6 << 9)
+    elif opcode[0] == 'sx':
+      rtn |= (7 << 9)
+    reg = decode_reg(opcode[1])
+    rtn |= reg
+    if reg < 0:
+      print("ERROR: Bad register name: %s" % (hw_op))
+      exit(-1)
+    try:
+      value = int(opcode[2], 0)
+      if (value < 0) or (value > 31):
+        print("ERROR: Argument must be 0-31: %s" % (hw_op))
+        exit(-1)
+      rtn |= ((value & 0x0000001F) << 4)
+    except ValueError:
+      print("ERROR: Invalid immediate argument: %s" % (hw_op))
+      exit(-1)
+    return(rtn)
+  
   elif (opcode[0] == 'inc') or (opcode[0] == 'dec'):
     if len(opcode) != 2:
       print("ERROR: Bad opcode: %s" % (hw_op))
@@ -598,11 +657,11 @@ def decode_hw_op(pc, hw_op, upper):
       exit(-1)
     if opcode[0] == 'mv':
       rtn = 0x0800
-    if opcode[0] == 'not':
+    elif opcode[0] == 'not':
       rtn = 0x0900
-    if opcode[0] == 'neg':
+    elif opcode[0] == 'neg':
       rtn = 0x0A00
-    if opcode[0] == 'cmp':
+    elif opcode[0] == 'cmp':
       rtn = 0x0B00   
     reg = decode_reg(opcode[1])
     rtn |= reg

@@ -44,7 +44,7 @@ module sram
   input [63:0] RaccIn;
   output [63:0] RaccOut;
   
-  wire [31:0] ADDR;
+  wire [19:0] ADDR;
   wire CS;
   wire WE;
   wire [3:0] MASK;

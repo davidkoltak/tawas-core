@@ -66,7 +66,7 @@ _t3_reset:
 
 string_test:  
   mv r8 r4
-  mv r9 t5
+  mv r9 r5
   call strcpy  
   cmpi r0 15 
   skip eq
@@ -74,7 +74,7 @@ string_test:
   \ rtn
 
   mv r8 r4
-  mv r9 t5
+  mv r9 r5
   call strcmp  
   cmpi r0 0
   skip eq
@@ -82,7 +82,7 @@ string_test:
   \ rtn
 
   mv r8 r4
-  mv r9 t5
+  mv r9 r5
   mvi r2 0x39
   st b r2 r9 [2] 
   call strcmp  

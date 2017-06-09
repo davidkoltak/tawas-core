@@ -110,19 +110,13 @@ module tawas_raccoon
       
   end
   
-  assign RACCOON_STALL = bus_pending | bus_error_hang;
+  assign RACCOON_STALL = bus_pending;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
       bus_pending <= 4'd0;
     else
-      bus_pending <= (bus_pending & ~bus_ack & ~bus_error) | bus_req;
-
-  always @ (posedge CLK or posedge RST)
-    if (RST)
-      bus_error_hang <= 4'd0;
-    else
-      bus_error_hang <= bus_error_hang | bus_error;
+      bus_pending <= (bus_pending & ~bus_ack) | bus_req;
       
   //
   // Transaction data

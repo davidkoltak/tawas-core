@@ -85,7 +85,7 @@ module max10_devkit_top
   
   wire [63:0] RaccCore2Event;
   wire [63:0] RaccEvent2Test;
-  wire [63:0] RaccTest2Ram
+  wire [63:0] RaccTest2Ram;
   wire [63:0] RaccRam2Core;
   
   tawas tawas
@@ -137,7 +137,7 @@ module max10_devkit_top
     .CLK(clk_50),
     .RST(!fpga_reset_n),
 
-    .RaccIn(RaccEvent2Ram),
+    .RaccIn(RaccTest2Ram),
     .RaccOut(RaccRam2Core)
   );
   
