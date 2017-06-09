@@ -185,6 +185,7 @@ ASM Instructions
 .string label "string"
 .global label
 .equ label (expr)
+.reg name {rX}
 
 [opcodes]
 

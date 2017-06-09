@@ -106,6 +106,7 @@ dfixup = []
 
 elabels = {}
 glabels = []
+reg_rename = {}
 
 #
 # Make psuedo random id to used for localizing symbols
@@ -336,7 +337,7 @@ for filename in infiles:
       
       elif dctv[0] == '.equ':
         if len(dctv) < 3:
-          print("ERROR: fWrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
+          print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
           exit(-1)
         if run_equate(dctv[1], ' '.join(dctv[2:])) < 0:
           print("ERROR: Unable to evaluate directive '%s' @ %s:%d" % (line, filename, linenum))
@@ -345,6 +346,13 @@ for filename in infiles:
           print("ERROR: Redefined label in directive '%s' @ %s:%d" % (line, filename, linenum))
           exit(-1)
         elabels[dctv[1]] = local_equates[dctv[1]]
+        
+      elif dctv[0] == '.reg':
+        if len(dctv) != 3:
+          print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
+          exit(-1)
+        reg_rename[dctv[1]] = dctv[2]
+
       else:
         print("ERROR: Invalid directive '%s' @ %s:%d" % (line, filename, linenum))
         exit(-1)
@@ -369,18 +377,30 @@ au_cmds = ['or', 'xor', 'cmp', 'add', 'sub', 'and', 'clr', 'tstz',
            'mv', 'mvi', 'cmpi', 'addi', 'inc', 'dec', 'nop', 'au_nop']
 
 def decode_reg(reg):
+  global reg_rename
+  
+  if reg in reg_rename:
+    reg = reg_rename[reg]
+    
   if len(reg) < 2:
     return -1
+    
   if reg == 'sp':
     return 15
   if reg == 'crp':
     return 14
-  if reg[0] != 'r':
-    return -1
-  try:
-    r = int(reg[1:])
-  except ValueError:
-    return -1
+    
+  if reg[0] == 'r':
+    try:
+      r = int(reg[1:])
+    except ValueError:
+      return -1
+  elif reg[0] == 'p':
+    try:
+      r = int(reg[1:]) + 8
+    except ValueError:
+      return -1
+      
   if (r < 0) or (r > 15):
     return -1
   return r
@@ -784,6 +804,8 @@ def decode_fw_op(pc, fw_op):
     rtn = 0xE0000000 | (reg << 24)
     try:
       value = int(opcode[2], 0)
+      if ((value & 0xFF800000) != 0) and ((value & 0xFF800000) != 0xFF800000):
+        print("ERROR: Immediate 24-bit overflow: %s" % (hw_op))
       rtn |= (value & 0x00FFFFFF)
     except ValueError:
       pfixup.append("%d:imm24:%s" % (pc, opcode[2]))
@@ -802,6 +824,8 @@ def decode_fw_op(pc, fw_op):
       rtn |= (1 << 26)
     try:
       value = int(opcode[2], 0)
+      if (value & 0xFF000000) != 0:
+        print("ERROR: Address 24-bit overflow: %s" % (hw_op))
       rtn |= ((value & 0x00FFFFFF) >> 2)
     except ValueError:
       pfixup.append("%d:wordptr22:%s" % (pc, opcode[2]))

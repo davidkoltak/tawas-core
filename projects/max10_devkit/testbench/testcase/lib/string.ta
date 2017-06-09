@@ -1,38 +1,42 @@
 
 // basic string library
 
-
 .global strcpy
+.reg from_ptr r8
+.reg to_ptr r9
+.reg rtn r0
 strcpy:
-  push r1
-  \ mv r1 r9
-  ld b r0 r8 ++1 
+  push r7
+  \ mv r7 to_ptr
+  ld b rtn from_ptr ++1 
 strcpy_loop:
-  tstz r0
-  \ st b r0 r9 ++1 
-  br nz strcpy_loop
-  \ ld b r0 r8 ++1 
+  tstz rtn
+  \ st b rtn to_ptr ++1 
+  br ne strcpy_loop
+  \ ld b rtn from_ptr ++1 
 strcpy_done:
-  pop r1
-  \ sub r9 r1
-  mv r0 r9
-  \ rtn  
-  
+  pop r7
+  \ sub to_ptr r7
+  mv rtn to_ptr
+  \ rtn
   
 .global strcmp
+.reg str1_ptr r8
+.reg str2_ptr r9
+.reg rtn r0
 strcmp:
-  push r1
-  \ push r2 
-  ld b r1 r8 ++1
-  \ ld b r2 r9 ++1 
+  push r6
+  \ push r7 
+  ld b r6 str1_ptr ++1
+  \ ld b r7 str2_ptr ++1 
 strcmp_loop:
-  ld b r1 r8 ++1
-  \ sub r0 r1 r2 
+  ld b r6 str1_ptr ++1
+  \ sub rtn r6 r7 
   br nz strcmp_done
-  \ tstz r2
-  br nz strcmp_loop
-  \ ld b r2 r9 ++1 
+  \ tstz r7
+  br ne strcmp_loop
+  \ ld b r7 str2_ptr ++1 
 strcmp_done:
-  pop r2
-  pop r1
+  pop r7
+  pop r6
   \ rtn  
