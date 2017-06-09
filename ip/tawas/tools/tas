@@ -371,6 +371,10 @@ au_cmds = ['or', 'xor', 'cmp', 'add', 'sub', 'and', 'clr', 'tstz',
 def decode_reg(reg):
   if len(reg) < 2:
     return -1
+  if reg == 'sp':
+    return 15
+  if reg == 'crp':
+    return 14
   if reg[0] != 'r':
     return -1
   try:

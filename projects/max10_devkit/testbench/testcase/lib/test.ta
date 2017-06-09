@@ -2,8 +2,11 @@
 //
 // Test reporting code
 //
-//   Signal some test progress (resets to zero, increment per call)
-//   - call test_progress
+//   Signal some test progress
+//   - call test_progress_inc
+//
+//   - mvi r0 #
+//   - call test_progress_set
 //
 //   Immediately signal pass/fail:
 //   - jmp test_pass_now
@@ -27,7 +30,13 @@
 .equ test_reg_pass_addr        test_reg_base + (test_reg_pass * 4)
 
 
-.global test_progress
+.global test_progress_set
+test_progress_set:
+  std r0 test_reg_progress_addr
+  rtn
+
+.global test_progress_inc
+test_progress_inc:
   push r0
   ldd r0 test_reg_progress_addr
   inc r0

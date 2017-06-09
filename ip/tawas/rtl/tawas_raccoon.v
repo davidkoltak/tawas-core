@@ -229,7 +229,7 @@ module tawas_raccoon
         if (bus_pending[1] && !bus_sent[1])
         begin
           bus_sent_mark <= 3'b101;
-          racc_out <= {2'b11, ID_UPPER, 2'd0, mask_1, addr_1, dout_1};
+          racc_out <= {2'b11, ID_UPPER, 2'd1, mask_1, addr_1, dout_1};
         end
         else
         begin 
@@ -241,7 +241,7 @@ module tawas_raccoon
         if (bus_pending[2] && !bus_sent[2])
         begin
           bus_sent_mark <= 3'b110;
-          racc_out <= {2'b11, ID_UPPER, 2'd0, mask_2, addr_2, dout_2};
+          racc_out <= {2'b11, ID_UPPER, 2'd2, mask_2, addr_2, dout_2};
         end
         else
         begin 
@@ -253,7 +253,7 @@ module tawas_raccoon
         if (bus_pending[3] && !bus_sent[3])
         begin
           bus_sent_mark <= 3'b111;
-          racc_out <= {2'b11, ID_UPPER, 2'd0, mask_3, addr_3, dout_3};
+          racc_out <= {2'b11, ID_UPPER, 2'd3, mask_3, addr_3, dout_3};
         end
         else
         begin 

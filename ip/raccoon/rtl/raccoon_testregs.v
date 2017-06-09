@@ -99,7 +99,7 @@ module raccoon_testregs
       TEST_FAIL <= 32'd0;
       TEST_PASS <= 32'd0;
     end
-    else if (addr_match && &din[53:30])
+    else if (addr_match && &din[53:50])
       case (din[33:32])
       2'd0: ;
       2'd1: TEST_PROGRESS <= din[31:0];
