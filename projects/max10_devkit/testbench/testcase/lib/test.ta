@@ -42,7 +42,7 @@ test_progress_inc:
   inc r0
   std r0 test_reg_progress_addr
   pop r0
-  \ rtn
+  rtn
   
 .global test_fail_now
 test_fail_now:

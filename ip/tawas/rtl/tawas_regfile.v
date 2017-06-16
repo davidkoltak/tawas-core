@@ -40,8 +40,11 @@ module tawas_regfile
   
   input PC_STORE,
   input [23:0] PC,
+  input [7:0] AU_FLAGS,
+  
   output [23:0] PC_RTN,
-
+  output [7:0] AU_FLAGS_RTN,
+  
   input RF_IMM_VLD,
   input [3:0] RF_IMM_SEL,
   input [31:0] RF_IMM,
@@ -109,7 +112,7 @@ module tawas_regfile
     2'd0:
     begin
       if (PC_STORE)
-        regfile_3_nxt[14] = {8'd0, PC};
+        regfile_3_nxt[7] = {AU_FLAGS, PC};
         
       if (RF_IMM_VLD)
         regfile_3_nxt[RF_IMM_SEL] = RF_IMM;
@@ -126,7 +129,7 @@ module tawas_regfile
     2'd1:
     begin
       if (PC_STORE)
-        regfile_0_nxt[14] = {8'd0, PC};
+        regfile_0_nxt[7] = {AU_FLAGS, PC};
         
       if (RF_IMM_VLD)
         regfile_0_nxt[RF_IMM_SEL] = RF_IMM;
@@ -143,7 +146,7 @@ module tawas_regfile
     2'd2:
     begin
       if (PC_STORE)
-        regfile_1_nxt[14] = {8'd0, PC};
+        regfile_1_nxt[7] = {AU_FLAGS, PC};
         
       if (RF_IMM_VLD)
         regfile_1_nxt[RF_IMM_SEL] = RF_IMM;
@@ -160,7 +163,7 @@ module tawas_regfile
     default:
     begin
       if (PC_STORE)
-        regfile_2_nxt[14] = {8'd0, PC};
+        regfile_2_nxt[7] = {AU_FLAGS, PC};
         
       if (RF_IMM_VLD)
         regfile_2_nxt[RF_IMM_SEL] = RF_IMM;
@@ -205,7 +208,7 @@ module tawas_regfile
     case (SLICE[1:0])
     2'd0:
     begin
-      pc_out = regfile_3[14];
+      pc_out = regfile_3[7];
       ra_out = regfile_3[AU_RA_SEL];
       rb_out = regfile_3[AU_RB_SEL];
       ptr_out = regfile_3[LS_PTR_SEL + 8];
@@ -213,7 +216,7 @@ module tawas_regfile
     end
     2'd1:
     begin
-      pc_out = regfile_0[14];
+      pc_out = regfile_0[7];
       ra_out = regfile_0[AU_RA_SEL];
       rb_out = regfile_0[AU_RB_SEL];
       ptr_out = regfile_0[LS_PTR_SEL + 8];
@@ -221,7 +224,7 @@ module tawas_regfile
     end
     2'd2:
     begin
-      pc_out = regfile_1[14];
+      pc_out = regfile_1[7];
       ra_out = regfile_1[AU_RA_SEL];
       rb_out = regfile_1[AU_RB_SEL];
       ptr_out = regfile_1[LS_PTR_SEL + 8];
@@ -229,7 +232,7 @@ module tawas_regfile
     end
     default:
     begin
-      pc_out = regfile_2[14];
+      pc_out = regfile_2[7];
       ra_out = regfile_2[AU_RA_SEL];
       rb_out = regfile_2[AU_RB_SEL];
       ptr_out = regfile_2[LS_PTR_SEL + 8];
@@ -237,7 +240,8 @@ module tawas_regfile
     end
     endcase
   
-  assign PC_RTN = pc_out;
+  assign PC_RTN = pc_out[23:0];
+  assign AU_FLAGS_RTN = pc_out[31:24];
   assign AU_RA = ra_out;  
   assign AU_RB = rb_out;
   

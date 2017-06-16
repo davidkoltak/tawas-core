@@ -50,6 +50,7 @@ module tawas
   
   wire pc_store;
   wire [23:0] pc;
+  wire pc_restore;
   wire [23:0] pc_rtn;
   
   wire rf_imm_vld;
@@ -87,6 +88,7 @@ module tawas
     
     .PC_STORE(pc_store),
     .PC(pc),
+    .PC_RESTORE(pc_restore),
     .PC_RTN(pc_rtn),
 
     .RF_IMM_VLD(rf_imm_vld),
@@ -105,6 +107,8 @@ module tawas
     .LS_DIR_ADDR(ls_dir_addr)
   );
   
+  wire [7:0] au_flags_rtn;
+  
   wire [3:0] au_ra_sel;
   wire [31:0] au_ra;
   
@@ -122,6 +126,9 @@ module tawas
     
     .SLICE(slice),
     .AU_FLAGS(au_flags),
+    
+    .PC_RESTORE(pc_restore),
+    .AU_FLAGS_RTN(au_flags_rtn),
     
     .AU_OP_VLD(au_op_vld),
     .AU_OP(au_op),
@@ -238,7 +245,10 @@ module tawas
     
     .PC_STORE(pc_store),
     .PC(pc),
+    .AU_FLAGS(au_flags),
+    
     .PC_RTN(pc_rtn),
+    .AU_FLAGS_RTN(au_flags_rtn),
 
     .RF_IMM_VLD(rf_imm_vld),
     .RF_IMM_SEL(rf_imm_sel),

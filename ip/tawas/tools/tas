@@ -368,8 +368,8 @@ for filename in infiles:
 # Convert opcode strings to 32-bit instruction data
 # - NOTE: This is the heavy lift
 
-fw_cmds = ['call', 'calls', 'jmp', 'jmps', 'halt', 'ldi', 'ldd', 'std']
-br_cmds = ['br', 'rtn', 'jmpi', 'calli', 'skip', 'br_nop']
+fw_cmds = ['call', 'rtn', 'jmp', 'halt', 'ldi', 'ldd', 'std']
+br_cmds = ['br', 'jmpi', 'skip', 'br_nop']
 ls_cmds = ['ld', 'st', 'push', 'pop']
 au_cmds = ['or', 'xor', 'cmp', 'add', 'sub', 'and', 'clr', 'tstz',
            'bset', 'bclr', 'btst', 
@@ -388,7 +388,7 @@ def decode_reg(reg):
   if reg == 'sp':
     return 15
   if reg == 'crp':
-    return 14
+    return 7
     
   if reg[0] == 'r':
     try:
@@ -465,7 +465,7 @@ def decode_hw_op(pc, hw_op, upper):
       exit(-1)
   
 
-  elif (opcode[0] == 'rtn') | (opcode[0] == 'jmpi') | (opcode[0] == 'calli'):
+  elif (opcode[0] == 'jmpi'):
     rtn = 0x1001
   
   elif (opcode[0] == 'push') or (opcode[0] == 'pop'):
@@ -792,7 +792,14 @@ def decode_fw_op(pc, fw_op):
       exit(-1)
     rtn = 0xC0000000
     return(rtn)
-    
+
+  if opcode[0] == 'rtn':
+    if len(opcode) != 1:
+      print("ERROR: Bad opcode: %s" % (fw_op))
+      exit(-1)
+    rtn = 0xD800B07F
+    return(rtn)
+     
   if opcode[0] == 'ldi':
     if len(opcode) != 3:
       print("ERROR: Bad opcode: %s" % (fw_op))
@@ -836,33 +843,19 @@ def decode_fw_op(pc, fw_op):
     exit(-1)
       
   if opcode[0] == 'jmp':
-    rtn = 0xFC000000
-    try:
-      value = int(opcode[1], 0)
-      rtn |= (value & 0x00FFFFFF)
-    except ValueError:
-      pfixup.append("%d:abs24:%s" % (pc, opcode[1]))
-  elif opcode[0] == 'jmps':
     rtn = 0xFE000000
     try:
       value = int(opcode[1], 0)
       rtn |= (value & 0x00FFFFFF)
     except ValueError:
-      pfixup.append("%d:abs24:%s" % (pc, opcode[1]))  
+      pfixup.append("%d:abs24:%s" % (pc, opcode[1]))
   elif opcode[0] == 'call':
-    rtn = 0xFD000000
-    try:
-      value = int(opcode[1], 0)
-      rtn |= (value & 0x00FFFFFF)
-    except ValueError:
-      pfixup.append("%d:abs24:%s" % (pc, opcode[1]))  
-  elif opcode[0] == 'calls':
     rtn = 0xFF000000
     try:
       value = int(opcode[1], 0)
       rtn |= (value & 0x00FFFFFF)
     except ValueError:
-      pfixup.append("%d:abs24:%s" % (pc, opcode[1]))
+      pfixup.append("%d:abs24:%s" % (pc, opcode[1])) 
 
   return(rtn)
   

@@ -38,6 +38,9 @@ module tawas_au
   input [1:0] SLICE,
   output [7:0] AU_FLAGS,
 
+  input PC_RESTORE,
+  input [7:0] AU_FLAGS_RTN,
+    
   input AU_OP_VLD,
   input [14:0] AU_OP,
   
@@ -233,34 +236,43 @@ module tawas_au
     default: result_flags = s0_flags;
     endcase
     
-    result_flags[0] = (au_result == 32'd0);                               // zero
-    result_flags[1] = au_result[31];                                      // neg
-    result_flags[2] = au_result[32] ^ au_result[31];                      // ovfl
+    result_flags[0] = (au_result == 32'd0);                             // zero
+    result_flags[1] = au_result[31];                                    // neg
+    result_flags[2] = au_result[32] ^ au_result[31];                    // ovfl
+      
   end
   
   always @ (posedge CLK or posedge RST)
     if (RST)
-      s0_flags <= 8'd0;
+      s0_flags <= {3'b100, 5'd0};
     else if (au_result_vld && (SLICE == 2'd3))
       s0_flags <= result_flags;
+    else if (PC_RESTORE && (SLICE == 2'd1))
+      s0_flags <= AU_FLAGS_RTN;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
-      s1_flags <= 8'd0;
+      s1_flags <= {3'b101, 5'd0};
     else if (au_result_vld && (SLICE == 2'd0))
       s1_flags <= result_flags;
+    else if (PC_RESTORE && (SLICE == 2'd2))
+      s1_flags <= AU_FLAGS_RTN;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
-      s2_flags <= 8'd0;
+      s2_flags <= {3'b110, 5'd0};
     else if (au_result_vld && (SLICE == 2'd1))
       s2_flags <= result_flags;
+    else if (PC_RESTORE && (SLICE == 2'd3))
+      s2_flags <= AU_FLAGS_RTN;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
-      s3_flags <= 8'd0;
+      s3_flags <= {3'b111, 5'd0};
     else if (au_result_vld && (SLICE == 2'd2))
       s3_flags <= result_flags;
+    else if (PC_RESTORE && (SLICE == 2'd0))
+      s3_flags <= AU_FLAGS_RTN;
       
   assign AU_FLAGS = (SLICE == 2'd3) ? s2_flags :
                     (SLICE == 2'd2) ? s1_flags :
