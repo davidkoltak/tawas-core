@@ -369,7 +369,7 @@ for filename in infiles:
 # - NOTE: This is the heavy lift
 
 fw_cmds = ['call', 'rtn', 'jmp', 'halt', 'ldi', 'ldd', 'std']
-br_cmds = ['br', 'jmpi', 'skip', 'br_nop']
+br_cmds = ['br', 'jmpi', 'skip', 'skip2', 'br_nop']
 ls_cmds = ['ld', 'st', 'push', 'pop']
 au_cmds = ['or', 'xor', 'cmp', 'add', 'sub', 'and', 'clr', 'tstz',
            'bset', 'bclr', 'btst', 
@@ -443,27 +443,30 @@ def decode_hw_op(pc, hw_op, upper):
       print("ERROR: Bad opcode: %s" % (hw_op))
       exit(-1)
   
-  elif (opcode[0] == 'skip'):
+  elif (opcode[0] == 'skip') or (opcode[0] == 'skip2'):
+    if (opcode[0] == 'skip2'):
+      rtn = 3
+    else:
+      rtn = 2
     if len(opcode) == 2:
       if (opcode[1] == 'z') or (opcode[1] == 'eq'):
-        rtn = 0x1002
+        rtn |= 0x1000
       elif (opcode[1] == 'nz') or (opcode[1] == 'ne'):
-        rtn = 0x1802
+        rtn |= 0x1800
       elif opcode[1] == 'neg':
-        rtn = 0x1102
+        rtn |= 0x1100
       elif opcode[1] == 'pos':
-        rtn = 0x1902
+        rtn |= 0x1900
       elif opcode[1] == 'ovfl':
-        rtn = 0x1202
+        rtn |= 0x1200
       elif opcode[1] == 'not-ovfl':
-        rtn = 0x1A02
+        rtn |= 0x1A00
       else:
         print("ERROR: Bad condition code: %s" % (hw_op))
         exit(-1)
     else:
       print("ERROR: Bad opcode: %s" % (hw_op))
       exit(-1)
-  
 
   elif (opcode[0] == 'jmpi'):
     rtn = 0x1001

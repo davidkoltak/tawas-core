@@ -12,21 +12,18 @@ _t0_reset:
   .string test_0_str "Testing thread 0 with a string"
   .alloc test_0_buf b 50
   
-  push r0
   ldi r0 0x10001
   call test_progress_set
-  pop r0
   
   ldi r8 test_0_str
   ldi r9 test_0_buf
   call string_test
+  mv r1 r0
   
-  push r0
   ldi r0 0x10002
   call test_progress_set
-  pop r0
   
-  tstz r0
+  tstz r1
   skip eq
   jmp test_fail_wait
   jmp test_pass_wait
@@ -39,21 +36,18 @@ _t1_reset:
   .string test_1_str "This is thread 1 string"
   .alloc test_1_buf b 40
   
-  push r0
   ldi r0 0x20001
   call test_progress_set
-  pop r0
   
   ldi r8 test_1_str
   ldi r9 test_1_buf
   call string_test
+  mv r1 r0
   
-  push r0
   ldi r0 0x20002
   call test_progress_set
-  pop r0
   
-  tstz r0
+  tstz r1
   skip eq
   jmp test_fail_wait
   jmp test_pass_wait
@@ -66,21 +60,18 @@ _t2_reset:
   .string test_2_str "Thread #2 is going to be the longest string in the test"
   .alloc test_2_buf b 80
   
-  push r0
   ldi r0 0x30001
   call test_progress_set
-  pop r0
   
   ldi r8 test_2_str
   ldi r9 test_2_buf
   call string_test
+  mv r1 r0
   
-  push r0
   ldi r0 0x30002
   call test_progress_set
-  pop r0
   
-  tstz r0
+  tstz r1
   skip eq
   jmp test_fail_wait
   jmp test_pass_wait
@@ -93,21 +84,18 @@ _t3_reset:
   .string test_3_str "The shortest"
   .alloc test_3_buf b 16
   
-  push r0
   ldi r0 0x40001
   call test_progress_set
-  pop r0
   
   ldi r8 test_3_str
   ldi r9 test_3_buf
   call string_test
+  mv r1 r0
   
-  push r0
   ldi r0 0x40002
   call test_progress_set
-  pop r0
   
-  tstz r0
+  tstz r1
   skip eq
   jmp test_fail_wait
   jmp test_pass_wait
