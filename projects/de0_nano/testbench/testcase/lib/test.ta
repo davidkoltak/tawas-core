@@ -1,0 +1,118 @@
+
+//
+// Test reporting code
+//
+//   Signal some test progress
+//   - call test_progress_inc
+//
+//   - mvi r0 #
+//   - call test_progress_set
+//
+//   Immediately signal pass/fail:
+//   - jmp test_pass_now
+//   - jmp test_fail_now
+//
+//   Delayed result until all threads finish
+//   - jmp test_pass_wait
+//   - jmp test_fail_wait
+//
+
+.equ test_reg_base 0xFFFFFFF0
+
+#define test_reg_thread_id  0
+#define test_reg_progress   1
+#define test_reg_fail       2
+#define test_reg_pass       3
+
+.equ test_reg_thread_id_addr   test_reg_base + (test_reg_thread_id * 4)
+.equ test_reg_progress_addr    test_reg_base + (test_reg_progress * 4)
+.equ test_reg_fail_addr        test_reg_base + (test_reg_fail * 4)
+.equ test_reg_pass_addr        test_reg_base + (test_reg_pass * 4)
+
+
+.global test_progress_set
+test_progress_set:
+  std r0 test_reg_progress_addr
+  rtn
+
+.global test_progress_inc
+test_progress_inc:
+  push r0
+  ldd r0 test_reg_progress_addr
+  inc r0
+  std r0 test_reg_progress_addr
+  pop r0
+  rtn
+  
+.global test_fail_now
+test_fail_now:
+  ldd r0 test_reg_thread_id_addr
+  bset r0 8
+  std r0 test_reg_fail
+  halt
+
+.global test_pass_now
+test_pass_now:
+  ldd r0 test_reg_thread_id_addr
+  bset r0 8
+  std r0 test_reg_pass
+  halt
+
+  .data thread_results w 0 0 0 0
+  
+.global test_fail_wait
+test_fail_wait:
+  mvi r0 3
+  \ br test_store_results
+
+.global test_pass_wait
+test_pass_wait:
+  mvi r0 2
+  \ br test_store_results
+
+test_store_results:
+  ldd r1 test_reg_thread_id_addr
+  ldi r8 thread_results
+  lsl r1 2
+  \ add r8 r1
+  st w r0 r8 [0]
+  tstz r1
+  skip eq
+  halt
+  ldi r8 thread_results
+wait_for_t0:
+  ld w r0 r8 [0]
+  tstz r0
+  br eq wait_for_t0
+wait_for_t1:
+  ld w r1 r8 [1]
+  tstz r1
+  br eq wait_for_t1
+wait_for_t2:
+  ld w r2 r8 [2]
+  tstz r2
+  br eq wait_for_t2
+wait_for_t3:
+  ld w r3 r8 [3]
+  tstz r3
+  br eq wait_for_t3
+  
+  clr r4
+  or r4 r0
+  \ or r4 r1
+  or r4 r2
+  \ or r4 r3
+  
+  lsl r1 2
+  \ lsl r2 4
+  lsl r3 6
+  \ or r0 r1
+  or r0 r2
+  \ or r0 r3
+  
+  ldi r8 test_reg_fail_addr
+  btst r4 0
+  skip nz
+  ldi r8 test_reg_pass_addr
+  st w r0 r8 [0] 
+  
