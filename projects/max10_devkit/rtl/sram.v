@@ -32,8 +32,8 @@ module sram
   CLK,
   RST,
 
-  RaccIn,
-  RaccOut
+  RCN_IN,
+  RCN_OUT
 );
   parameter ADDR_MASK = 20'hF0000;
   parameter ADDR_BASE = 20'h10000;
@@ -41,8 +41,8 @@ module sram
   input CLK;
   input RST;
 
-  input [63:0] RaccIn;
-  output [63:0] RaccOut;
+  input [63:0] RCN_IN;
+  output [63:0] RCN_OUT;
   
   wire [19:0] ADDR;
   wire CS;
@@ -51,13 +51,13 @@ module sram
   wire [31:0] DIN;
   wire [31:0] DOUT;
   
-  raccoon2ram #(.ADDR_MASK(ADDR_MASK), .ADDR_BASE(ADDR_BASE)) raccoon2ram
+  rcn_slave_ram #(.ADDR_MASK(ADDR_MASK), .ADDR_BASE(ADDR_BASE)) rcn_slave_ram
   (
     .CLK(CLK),
     .RST(RST),
 
-    .RaccIn(RaccIn),
-    .RaccOut(RaccOut),
+    .RCN_IN(RCN_IN),
+    .RCN_OUT(RCN_OUT),
 
     .CS(CS),
     .WE(WE),

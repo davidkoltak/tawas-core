@@ -1,5 +1,5 @@
 //
-// Raccoon bus module to handle event flag processing.
+// RCN bus module to handle event flag processing.
 //
 // by
 //     David Koltak  11/22/2016
@@ -35,15 +35,15 @@
 // SOFTWARE.
 // 
 
-module raccoon_event
+module rcn_event
 (
   CLK,
   RST,
 
   EventPending,
   
-  RaccIn,
-  RaccOut
+  RCN_IN,
+  RCN_OUT
 );
   parameter ADDR_MASK = 20'hFFFE0;
   parameter ADDR_BASE = 20'hFFFE0;
@@ -53,14 +53,14 @@ module raccoon_event
 
   output reg [3:0] EventPending;
   
-  input [63:0] RaccIn;
-  output [63:0] RaccOut;
+  input [63:0] RCN_IN;
+  output [63:0] RCN_OUT;
 
   reg [63:0] din;
   reg [63:0] din_d1;
   reg [63:0] dout;
   
-  assign RaccOut = dout;
+  assign RCN_OUT = dout;
   
   wire addr_match = (din[63:62] == 2'b11) && (({din[49:32], 2'b00} & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
   reg addr_match_d1;
@@ -75,7 +75,7 @@ module raccoon_event
     end
     else
     begin
-      din <= RaccIn;
+      din <= RCN_IN;
       addr_match_d1 <= addr_match;
       din_d1 <= din;
       dout <= (addr_match_d1) ? (din_d1[61:54] == 8'hFF) ? 64'd0 : {2'b10, din_d1[61:32], event_out} : din_d1[63:0];

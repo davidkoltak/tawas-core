@@ -47,7 +47,7 @@ module tawas_fetch
 
   output [1:0] SLICE,
   input [7:0] AU_FLAGS,
-  input [3:0] RACCOON_STALL,
+  input [3:0] RCN_STALL,
   
   output PC_STORE,
   output [23:0] PC,
@@ -139,10 +139,10 @@ module tawas_fetch
     endcase
     
     case (pc_sel[1:0])
-    2'd0: pc_stall = RACCOON_STALL[1] || pc_1_nop_loop;
-    2'd1: pc_stall = RACCOON_STALL[2] || pc_2_nop_loop;
-    2'd2: pc_stall = RACCOON_STALL[3] || pc_3_nop_loop;
-    default: pc_stall = RACCOON_STALL[0] || pc_0_nop_loop;
+    2'd0: pc_stall = RCN_STALL[1] || pc_1_nop_loop;
+    2'd1: pc_stall = RCN_STALL[2] || pc_2_nop_loop;
+    2'd2: pc_stall = RCN_STALL[3] || pc_3_nop_loop;
+    default: pc_stall = RCN_STALL[0] || pc_0_nop_loop;
     endcase
     
     pc_inc = pc_next + 24'd1;

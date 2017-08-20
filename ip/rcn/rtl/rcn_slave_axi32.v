@@ -1,5 +1,5 @@
 //
-// Raccoon bus interface to 32-bit AXI style interface.
+// RCN bus interface to 32-bit AXI style interface.
 //
 // by
 //     David Koltak  11/01/2016
@@ -27,13 +27,13 @@
 // SOFTWARE.
 // 
 
-module raccoon2axi32
+module rcn_slave_axi32
 (
   CLK,
   RST,
 
-  RaccIn,
-  RaccOut,
+  RCN_IN,
+  RCN_OUT,
 
   AWID,
   AWADDR,
@@ -83,8 +83,8 @@ module raccoon2axi32
   input CLK;
   input RST;
 
-  input [63:0] RaccIn;
-  output [63:0] RaccOut;
+  input [63:0] RCN_IN;
+  output [63:0] RCN_OUT;
 
   output [7:0] AWID;
   output [31:0] AWADDR;
@@ -130,7 +130,7 @@ module raccoon2axi32
   reg [63:0] din;
   reg [63:0] dout;
   
-  assign RaccOut = dout;
+  assign RCN_OUT = dout;
   
   reg pending_ar;
   reg [7:0] pending_ar_id;
@@ -166,7 +166,7 @@ module raccoon2axi32
     end
     else
     begin
-      din <= RaccIn;
+      din <= RCN_IN;
       dout <= (send_read_req || send_write_req) ? 64'd0 : 
               (send_read_rsp) ? {2'b10, RID, 22'd0, RDATA} :
               (send_write_rsp) ? {2'b10, BID, 22'd0, 32'd0} : din;

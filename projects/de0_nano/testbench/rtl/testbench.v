@@ -71,7 +71,7 @@ module testbench();
     if (sim_rst)
     begin
       CLOCK_LIMIT <= 32'd0;
-      test_progress <= de0_nano_top.raccoon_testregs.TEST_PROGRESS;
+      test_progress <= de0_nano_top.rcn_testregs.TEST_PROGRESS;
     end
     else
     begin
@@ -83,25 +83,25 @@ module testbench();
         $finish();
       end
       
-      if (de0_nano_top.raccoon_testregs.TEST_PROGRESS != test_progress)
+      if (de0_nano_top.rcn_testregs.TEST_PROGRESS != test_progress)
       begin
-        test_progress <= de0_nano_top.raccoon_testregs.TEST_PROGRESS;
+        test_progress <= de0_nano_top.rcn_testregs.TEST_PROGRESS;
         $display(" ****** TEST PROGRESS %X *****", 
-                 de0_nano_top.raccoon_testregs.TEST_PROGRESS);
+                 de0_nano_top.rcn_testregs.TEST_PROGRESS);
       end
-      if (de0_nano_top.raccoon_testregs.TEST_FAIL != 32'd0)
+      if (de0_nano_top.rcn_testregs.TEST_FAIL != 32'd0)
       begin
         #20;
         $display(" ****** TEST FAILED  %08X *****" ,
-                 de0_nano_top.raccoon_testregs.TEST_FAIL);
+                 de0_nano_top.rcn_testregs.TEST_FAIL);
         $finish();
       end
 
-      if (de0_nano_top.raccoon_testregs.TEST_PASS != 32'd0)
+      if (de0_nano_top.rcn_testregs.TEST_PASS != 32'd0)
       begin
         #20;
         $display(" ****** TEST PASSED  %08X *****" ,
-                 de0_nano_top.raccoon_testregs.TEST_PASS);
+                 de0_nano_top.rcn_testregs.TEST_PASS);
         $finish();
       end
     end

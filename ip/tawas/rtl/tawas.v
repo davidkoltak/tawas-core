@@ -44,8 +44,8 @@ module tawas
   output [31:0] DOUT,
   input [31:0] DIN,
   
-  output [63:0] RaccOut,
-  input [63:0] RaccIn
+  output [63:0] RCN_OUT,
+  input [63:0] RCN_IN
 );
   
   wire pc_store;
@@ -71,7 +71,7 @@ module tawas
   wire [3:0] ls_dir_sel;
   wire [31:0] ls_dir_addr;
   
-  wire [3:0] raccoon_stall;
+  wire [3:0] rcn_stall;
   
   tawas_fetch tawas_fetch
   (
@@ -84,7 +84,7 @@ module tawas
     
     .SLICE(slice),
     .AU_FLAGS(au_flags),
-    .RACCOON_STALL(raccoon_stall),
+    .RCN_STALL(rcn_stall),
     
     .PC_STORE(pc_store),
     .PC(pc),
@@ -145,7 +145,7 @@ module tawas
   );
   
   wire [31:0] daddr_out;
-  wire raccoon_cs;
+  wire rcn_cs;
   wire [3:0] writeback_reg;
   wire dwr_out;
   wire [3:0] dmask_out;
@@ -177,7 +177,7 @@ module tawas
     
     .DADDR(daddr_out),
     .DCS(DCS),
-    .RACCOON_CS(raccoon_cs),
+    .RCN_CS(rcn_cs),
     .WRITEBACK_REG(writeback_reg),
     .DWR(dwr_out),
     .DMASK(dmask_out),
@@ -207,33 +207,33 @@ module tawas
     .LS_LOAD(ls_load)
   );
   
-  wire raccoon_load_vld;
-  wire [1:0] raccoon_load_slice;
-  wire [3:0] raccoon_load_sel;
-  wire [31:0] raccoon_load;
+  wire rcn_load_vld;
+  wire [1:0] rcn_load_slice;
+  wire [3:0] rcn_load_sel;
+  wire [31:0] rcn_load;
 
-  tawas_raccoon tawas_raccoon
+  tawas_rcn tawas_rcn
   (
     .CLK(CLK),
     .RST(RST),
 
     .SLICE(slice),
-    .RACCOON_STALL(raccoon_stall),
+    .RCN_STALL(rcn_stall),
 
     .DADDR(daddr_out),
-    .RACCOON_CS(raccoon_cs),
+    .RCN_CS(rcn_cs),
     .WRITEBACK_REG(writeback_reg),
     .DWR(dwr_out),
     .DMASK(dmask_out),
     .DOUT(dout_out),
 
-    .RACCOON_LOAD_VLD(raccoon_load_vld),
-    .RACCOON_LOAD_SLICE(raccoon_load_slice),
-    .RACCOON_LOAD_SEL(raccoon_load_sel),
-    .RACCOON_LOAD(raccoon_load),
+    .RCN_LOAD_VLD(rcn_load_vld),
+    .RCN_LOAD_SLICE(rcn_load_slice),
+    .RCN_LOAD_SEL(rcn_load_sel),
+    .RCN_LOAD(rcn_load),
 
-    .RaccOut(RaccOut),
-    .RaccIn(RaccIn)
+    .RCN_OUT(RCN_OUT),
+    .RCN_IN(RCN_IN)
   );
     
   tawas_regfile tawas_regfile
@@ -278,10 +278,10 @@ module tawas
     .LS_LOAD_SEL(ls_load_sel),
     .LS_LOAD(ls_load),
     
-    .RACCOON_LOAD_VLD(raccoon_load_vld),
-    .RACCOON_LOAD_SLICE(raccoon_load_slice),
-    .RACCOON_LOAD_SEL(raccoon_load_sel),
-    .RACCOON_LOAD(raccoon_load)
+    .RCN_LOAD_VLD(rcn_load_vld),
+    .RCN_LOAD_SLICE(rcn_load_slice),
+    .RCN_LOAD_SEL(rcn_load_sel),
+    .RCN_LOAD(rcn_load)
   );
   
 endmodule

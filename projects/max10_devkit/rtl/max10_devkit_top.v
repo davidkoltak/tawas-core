@@ -83,10 +83,10 @@ module max10_devkit_top
   wire [31:0] TEST_FAIL;
   wire [31:0] TEST_PASS;
   
-  wire [63:0] RaccCore2Event;
-  wire [63:0] RaccEvent2Test;
-  wire [63:0] RaccTest2Ram;
-  wire [63:0] RaccRam2Core;
+  wire [63:0] RcnCore2Event;
+  wire [63:0] RcnEvent2Test;
+  wire [63:0] RcnTest2Ram;
+  wire [63:0] RcnRam2Core;
   
   tawas tawas
   (
@@ -104,22 +104,22 @@ module max10_devkit_top
     .DOUT(dram_din),
     .DIN(dram_dout),
     
-    .RaccOut(RaccCore2Event),
-    .RaccIn(RaccRam2Core)
+    .RCN_OUT(RcnCore2Event),
+    .RCN_IN(RcnRam2Core)
   );
 
-  raccoon_event #(.ADDR_MASK(20'hFFFE0), .ADDR_BASE(20'hE0000)) raccoon_event
+  rcn_event #(.ADDR_MASK(20'hFFFE0), .ADDR_BASE(20'hE0000)) rcn_event
   (
     .CLK(clk_50),
     .RST(!fpga_reset_n),
 
     .EventPending(EventPending),
   
-    .RaccIn(RaccCore2Event),
-    .RaccOut(RaccEvent2Test)
+    .RCN_IN(RcnCore2Event),
+    .RCN_OUT(RcnEvent2Test)
   );
 
-  raccoon_testregs #(.ADDR_MASK(20'hFFFF0), .ADDR_BASE(20'hFFFF0)) raccoon_testregs
+  rcn_testregs #(.ADDR_MASK(20'hFFFF0), .ADDR_BASE(20'hFFFF0)) rcn_testregs
   (
     .CLK(clk_50),
     .RST(!fpga_reset_n),
@@ -128,8 +128,8 @@ module max10_devkit_top
     .TEST_FAIL(),
     .TEST_PASS(),
   
-    .RaccIn(RaccEvent2Test),
-    .RaccOut(RaccTest2Ram)
+    .RCN_IN(RcnEvent2Test),
+    .RCN_OUT(RcnTest2Ram)
   );
 
   sram #(.ADDR_MASK(20'hF0000), .ADDR_BASE(20'h00000)) sram
@@ -137,8 +137,8 @@ module max10_devkit_top
     .CLK(clk_50),
     .RST(!fpga_reset_n),
 
-    .RaccIn(RaccTest2Ram),
-    .RaccOut(RaccRam2Core)
+    .RCN_IN(RcnTest2Ram),
+    .RCN_OUT(RcnRam2Core)
   );
   
 endmodule

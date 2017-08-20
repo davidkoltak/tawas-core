@@ -1,12 +1,16 @@
 //
-// Raccoon bus interface to generic RAM style interface.
+// Test register module for RCN Bus
+//   0x00 : Thread ID
+//   0x04 : Test Progress Mark
+//   0x08 : Test Fail
+//   0x0C : Test Pass
 //
 // by
-//     David Koltak  11/01/2016
+//     David Koltak  06/08/2017
 //
 // The MIT License (MIT)
 // 
-// Copyright (c) 2016 David M. Koltak
+// Copyright (c) 2017 David M. Koltak
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,45 +31,41 @@
 // SOFTWARE.
 // 
 
-module raccoon2ram
+module rcn_testregs
 (
   CLK,
   RST,
 
-  RaccIn,
-  RaccOut,
-
-  CS,
-  WE,
-  ADDR,
-  MASK,
-  WR_DATA,
-  RD_DATA
+  TEST_PROGRESS,
+  TEST_FAIL,
+  TEST_PASS,
+  
+  RCN_IN,
+  RCN_OUT
 );
-  parameter ADDR_MASK = 20'hF0000;
-  parameter ADDR_BASE = 20'h10000;
+  parameter ADDR_MASK = 20'hFFFF0;
+  parameter ADDR_BASE = 20'hFFFF0;
   
   input CLK;
   input RST;
 
-  input [63:0] RaccIn;
-  output [63:0] RaccOut;
+  output reg [31:0] TEST_PROGRESS;
+  output reg [31:0] TEST_FAIL;
+  output reg [31:0] TEST_PASS;
   
-  output CS;
-  output WE;
-  output [19:0] ADDR;
-  output [3:0] MASK;
-  output [31:0] WR_DATA;
-  input [31:0] RD_DATA;
+  input [63:0] RCN_IN;
+  output [63:0] RCN_OUT;
   
   reg [63:0] din;
   reg [63:0] din_d1;
   reg [63:0] dout;
   
-  assign RaccOut = dout;
+  assign RCN_OUT = dout;
   
   wire addr_match = (din[63:62] == 2'b11) && (({din[49:32], 2'b00} & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
   reg addr_match_d1;
+  
+  reg [31:0] reg_out;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
@@ -77,16 +77,34 @@ module raccoon2ram
     end
     else
     begin
-      din <= RaccIn;
+      din <= RCN_IN;
       addr_match_d1 <= addr_match;
       din_d1 <= din;
-      dout <= (addr_match_d1) ? {2'b10, din_d1[61:32], RD_DATA} : din_d1[63:0];
+      dout <= (addr_match_d1) ? {2'b10, din_d1[61:32], reg_out} : din_d1[63:0];
     end
-   
-  assign CS = addr_match;
-  assign WE = |din[53:50];
-  assign ADDR = {din[49:32], 2'b00};
-  assign MASK = din[53:50];
-  assign WR_DATA = din[31:0];
   
+  always @ (posedge CLK)
+    if (addr_match)
+      case (din[33:32])
+      2'd0: reg_out <= {24'd0, din[61:54]};
+      2'd1: reg_out <= TEST_PROGRESS;
+      2'd2: reg_out <= TEST_FAIL;
+      default: reg_out <= TEST_PASS;
+      endcase
+    
+  always @ (posedge CLK or posedge RST)
+    if (RST)
+    begin
+      TEST_PROGRESS <= 32'd0;
+      TEST_FAIL <= 32'd0;
+      TEST_PASS <= 32'd0;
+    end
+    else if (addr_match && &din[53:50])
+      case (din[33:32])
+      2'd0: ;
+      2'd1: TEST_PROGRESS <= din[31:0];
+      2'd2: TEST_FAIL <= din[31:0];
+      default: TEST_PASS <= din[31:0];
+      endcase
+      
 endmodule

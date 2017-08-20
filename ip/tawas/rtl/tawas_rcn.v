@@ -1,8 +1,8 @@
 
 //
-// Tawas Raccoon bus interface:
+// Tawas RCN bus interface:
 //
-// Perform load/store operations over Raccoon. Stall issueing thread while transaction is pending.
+// Perform load/store operations over RCN. Stall issueing thread while transaction is pending.
 //
 // by
 //   David M. Koltak  11/01/2016
@@ -30,33 +30,33 @@
 // SOFTWARE.
 // 
 
-module tawas_raccoon
+module tawas_rcn
 (
   input CLK,
   input RST,
 
   input [1:0] SLICE,
-  output [3:0] RACCOON_STALL,
+  output [3:0] RCN_STALL,
   
   input [31:0] DADDR,
-  input RACCOON_CS,
+  input RCN_CS,
   input [3:0] WRITEBACK_REG,
   input DWR,
   input [3:0] DMASK,
   input [31:0] DOUT,
       
-  output reg RACCOON_LOAD_VLD,
-  output reg [1:0] RACCOON_LOAD_SLICE,
-  output reg [3:0] RACCOON_LOAD_SEL,
-  output reg [31:0] RACCOON_LOAD,
+  output reg RCN_LOAD_VLD,
+  output reg [1:0] RCN_LOAD_SLICE,
+  output reg [3:0] RCN_LOAD_SEL,
+  output reg [31:0] RCN_LOAD,
   
-  output [63:0] RaccOut,
-  input [63:0] RaccIn
+  output [63:0] RCN_OUT,
+  input [63:0] RCN_IN
 );
   parameter ID_UPPER = 6'd0;
   
   //
-  // Register Raccoon bus input/output
+  // Register RCN bus input/output
   //
   
   reg [63:0] racc_in;
@@ -66,9 +66,9 @@ module tawas_raccoon
     if (RST)
       racc_in <= 64'd0;
     else
-      racc_in <= RaccIn;
+      racc_in <= RCN_IN;
   
-  assign RaccOut = racc_out;
+  assign RCN_OUT = racc_out;
   
   //
   // Pending transactions... one per thread
@@ -86,7 +86,7 @@ module tawas_raccoon
     bus_ack = 4'd0;
     bus_retry = 4'd0;
     
-    if (RACCOON_CS)
+    if (RCN_CS)
       case (SLICE[1:0])
       2'd0: bus_req = 4'b0100;
       2'd1: bus_req = 4'b1000;
@@ -110,7 +110,7 @@ module tawas_raccoon
       
   end
   
-  assign RACCOON_STALL = bus_pending;
+  assign RCN_STALL = bus_pending;
   
   always @ (posedge CLK or posedge RST)
     if (RST)
@@ -313,15 +313,15 @@ module tawas_raccoon
   
   always @ (posedge CLK or posedge RST)
     if (RST)
-      RACCOON_LOAD_VLD <= 1'b0;
+      RCN_LOAD_VLD <= 1'b0;
     else
-      RACCOON_LOAD_VLD <= (|bus_ack[3:0]) && store_vld;
+      RCN_LOAD_VLD <= (|bus_ack[3:0]) && store_vld;
   
   always @ (posedge CLK)
   begin    
-    RACCOON_LOAD_SLICE <= racc_in[55:54];
-    RACCOON_LOAD <= store_final;
-    RACCOON_LOAD_SEL <= store_rc;
+    RCN_LOAD_SLICE <= racc_in[55:54];
+    RCN_LOAD <= store_final;
+    RCN_LOAD_SEL <= store_rc;
   end
                
 endmodule

@@ -41,7 +41,7 @@ my $script_dir = dirname(abs_path($0))."/";
 
 my @paths = ("../../../ip/", "../../../projects/");
 
-my @packages = ("tawas", "raccoon", "max10_devkit");
+my @packages = ("tawas", "rcn", "de0_nano");
 
 my $testbench_top = "testbench";
 

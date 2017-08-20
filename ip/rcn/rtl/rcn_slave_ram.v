@@ -1,5 +1,5 @@
 //
-// Raccoon bus interface to generic RAM style interface with wait feature.
+// RCN bus interface to generic RAM style interface.
 //
 // by
 //     David Koltak  11/01/2016
@@ -27,16 +27,15 @@
 // SOFTWARE.
 // 
 
-module raccoon2ram_w
+module rcn_slave_ram
 (
   CLK,
   RST,
 
-  RaccIn,
-  RaccOut,
+  RCN_IN,
+  RCN_OUT,
 
   CS,
-  WAIT,
   WE,
   ADDR,
   MASK,
@@ -49,49 +48,45 @@ module raccoon2ram_w
   input CLK;
   input RST;
 
-  input [63:0] RaccIn;
-  output [63:0] RaccOut;
-
+  input [63:0] RCN_IN;
+  output [63:0] RCN_OUT;
+  
   output CS;
-  input WAIT;
   output WE;
   output [19:0] ADDR;
   output [3:0] MASK;
   output [31:0] WR_DATA;
   input [31:0] RD_DATA;
-
+  
   reg [63:0] din;
-  reg [63:0] din_req;
-  reg [63:0] din_rsp;
+  reg [63:0] din_d1;
   reg [63:0] dout;
   
-  assign RaccOut = dout;
+  assign RCN_OUT = dout;
   
-  wire rsp_pend = din_rsp[63] && (din[63] && !addr_match);
-  wire req_pend = rsp_pend || (din_req[63] && WAIT);
-  wire addr_match = (din[63:62] == 2'b11) && !req_pend && (({din[49:32], 2'b00} & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
-
+  wire addr_match = (din[63:62] == 2'b11) && (({din[49:32], 2'b00} & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
+  reg addr_match_d1;
+  
   always @ (posedge CLK or posedge RST)
     if (RST)
     begin
-      din <= 63'd0;
-      din_req <= 63'd0;
-      din_rsp <= 63'd0;
-      dout <= 63'd0;
+      din <= 64'd0;
+      addr_match_d1 <= 1'b0;
+      din_d1 <= 64'd0;
+      dout <= 64'd0;
     end
     else
     begin
-      din <= RaccIn;
-      din_req <= (addr_match) ? din : (!WAIT) ? 64'd0 : din_req;
-      din_rsp <= (din_req[63] && !WAIT && !rsp_pend) ? {2'b10, din_req[61:32], RD_DATA} 
-                                                     : (!dout[63]) ? 64'd0 : din_rsp;
-      dout <= (addr_match) ? 64'd0 : (!din_rsp || din[63]) ? din : din_rsp;
+      din <= RCN_IN;
+      addr_match_d1 <= addr_match;
+      din_d1 <= din;
+      dout <= (addr_match_d1) ? {2'b10, din_d1[61:32], RD_DATA} : din_d1[63:0];
     end
    
-  assign CS = din_req[63] && !rsp_pend;
-  assign WE = |din_req[53:50];
-  assign ADDR = {din_req[49:32], 2'b00};
-  assign MASK = din_req[53:50];
-  assign WR_DATA = din_req[31:0];
+  assign CS = addr_match;
+  assign WE = |din[53:50];
+  assign ADDR = {din[49:32], 2'b00};
+  assign MASK = din[53:50];
+  assign WR_DATA = din[31:0];
   
 endmodule

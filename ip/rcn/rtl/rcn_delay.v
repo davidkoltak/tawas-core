@@ -1,5 +1,5 @@
 //
-// Raccoon bus sync delay
+// RCN bus sync delay
 //
 // by
 //     David Koltak  11/01/2016
@@ -27,21 +27,21 @@
 // SOFTWARE.
 // 
 
-module raccoon_delay
+module rcn_delay
 (
   CLK,
   RST,
 
-  RaccIn,
-  RaccOut
+  RCN_IN,
+  RCN_OUT
 );
   parameter DELAY_CYCLES = 7;
 
   input CLK;
   input RST;
   
-  input [63:0] RaccIn;
-  output [63:0] RaccOut;
+  input [63:0] RCN_IN;
+  output [63:0] RCN_OUT;
   
   reg [63:0] bus_delay[(DELAY_CYCLES-1):0];
   
@@ -55,11 +55,11 @@ module raccoon_delay
     end
     else
     begin
-      bus_delay[(DELAY_CYCLES-1)] <= RaccIn;
+      bus_delay[(DELAY_CYCLES-1)] <= RCN_IN;
       for (x = 1; x < DELAY_CYCLES; x = x + 1)
         bus_delay[x-1] <= bus_delay[x];
     end
   
-  assign RaccOut = bus_delay[0];
+  assign RCN_OUT = bus_delay[0];
     
 endmodule
