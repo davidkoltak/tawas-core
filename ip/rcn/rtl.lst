@@ -1,10 +1,7 @@
 rcn_delay.v
 rcn_event.v
-rcn_fifo.v
-rcn_master.v
 rcn_slave_axi32.v
 rcn_slave_axi64.v
 rcn_slave_ram.v
 rcn_slave_ram_w.v
-rcn_slave.v
 rcn_testregs.v
