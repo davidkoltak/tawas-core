@@ -61,5 +61,5 @@ module rcn_delay
     end
   
   assign RCN_OUT = bus_delay[0];
-    
+  // add a comment from working copy
 endmodule
