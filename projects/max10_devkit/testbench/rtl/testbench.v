@@ -71,7 +71,7 @@ module testbench();
     if (sim_rst)
     begin
       CLOCK_LIMIT <= 32'd0;
-      test_progress <= max10_devkit_top.rcn_testregs.TEST_PROGRESS;
+      test_progress <= max10_devkit_top.rcn_testregs.test_progress;
     end
     else
     begin
@@ -83,25 +83,25 @@ module testbench();
         $finish();
       end
       
-      if (max10_devkit_top.rcn_testregs.TEST_PROGRESS != test_progress)
+      if (max10_devkit_top.rcn_testregs.test_progress != test_progress)
       begin
-        test_progress <= max10_devkit_top.rcn_testregs.TEST_PROGRESS;
+        test_progress <= max10_devkit_top.rcn_testregs.test_progress;
         $display(" ****** TEST PROGRESS %X *****", 
-                 max10_devkit_top.rcn_testregs.TEST_PROGRESS);
+                 max10_devkit_top.rcn_testregs.test_progress);
       end
-      if (max10_devkit_top.rcn_testregs.TEST_FAIL != 32'd0)
+      if (max10_devkit_top.rcn_testregs.test_fail != 32'd0)
       begin
         #20;
         $display(" ****** TEST FAILED  %08X *****" ,
-                 max10_devkit_top.rcn_testregs.TEST_FAIL);
+                 max10_devkit_top.rcn_testregs.test_fail);
         $finish();
       end
 
-      if (max10_devkit_top.rcn_testregs.TEST_PASS != 32'd0)
+      if (max10_devkit_top.rcn_testregs.test_pass != 32'd0)
       begin
         #20;
         $display(" ****** TEST PASSED  %08X *****" ,
-                 max10_devkit_top.rcn_testregs.TEST_PASS);
+                 max10_devkit_top.rcn_testregs.test_pass);
         $finish();
       end
     end

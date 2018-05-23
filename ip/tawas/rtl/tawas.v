@@ -44,8 +44,8 @@ module tawas
   output [31:0] DOUT,
   input [31:0] DIN,
   
-  output [63:0] RCN_OUT,
-  input [63:0] RCN_IN
+  input [66:0] RCN_IN,
+  output [66:0] RCN_OUT
 );
   
   wire pc_store;
@@ -232,8 +232,8 @@ module tawas
     .RCN_LOAD_SEL(rcn_load_sel),
     .RCN_LOAD(rcn_load),
 
-    .RCN_OUT(RCN_OUT),
-    .RCN_IN(RCN_IN)
+    .RCN_IN(RCN_IN),
+    .RCN_OUT(RCN_OUT)
   );
     
   tawas_regfile tawas_regfile

@@ -1,110 +1,89 @@
+/* SPDX-License-Identifier: MIT */
+/* (c) Copyright 2018 David M. Koltak, all rights reserved. */
+
 //
 // Test register module for RCN Bus
 //   0x00 : Thread ID
 //   0x04 : Test Progress Mark
 //   0x08 : Test Fail
 //   0x0C : Test Pass
-//
-// by
-//     David Koltak  06/08/2017
-//
-// The MIT License (MIT)
-// 
-// Copyright (c) 2017 David M. Koltak
-// 
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-// 
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
 // 
 
 module rcn_testregs
 (
-  CLK,
-  RST,
+    input clk,
+    input rst,
 
-  TEST_PROGRESS,
-  TEST_FAIL,
-  TEST_PASS,
-  
-  RCN_IN,
-  RCN_OUT
-);
-  parameter ADDR_MASK = 20'hFFFF0;
-  parameter ADDR_BASE = 20'hFFFF0;
-  
-  input CLK;
-  input RST;
-
-  output reg [31:0] TEST_PROGRESS;
-  output reg [31:0] TEST_FAIL;
-  output reg [31:0] TEST_PASS;
-  
-  input [63:0] RCN_IN;
-  output [63:0] RCN_OUT;
-  
-  reg [63:0] din;
-  reg [63:0] din_d1;
-  reg [63:0] dout;
-  
-  assign RCN_OUT = dout;
-  
-  wire addr_match = (din[63:62] == 2'b11) && (({din[49:32], 2'b00} & ADDR_MASK) == (ADDR_BASE & ADDR_MASK));
-  reg addr_match_d1;
-  
-  reg [31:0] reg_out;
-  
-  always @ (posedge CLK or posedge RST)
-    if (RST)
-    begin
-      din <= 64'd0;
-      addr_match_d1 <= 1'b0;
-      din_d1 <= 64'd0;
-      dout <= 64'd0;
-    end
-    else
-    begin
-      din <= RCN_IN;
-      addr_match_d1 <= addr_match;
-      din_d1 <= din;
-      dout <= (addr_match_d1) ? {2'b10, din_d1[61:32], reg_out} : din_d1[63:0];
-    end
-  
-  always @ (posedge CLK)
-    if (addr_match)
-      case (din[33:32])
-      2'd0: reg_out <= {24'd0, din[61:54]};
-      2'd1: reg_out <= TEST_PROGRESS;
-      2'd2: reg_out <= TEST_FAIL;
-      default: reg_out <= TEST_PASS;
-      endcase
+    input [66:0] rcn_in;
+    output [66:0] rcn_out;
     
-  always @ (posedge CLK or posedge RST)
-    if (RST)
+    output [31:0] test_progress,
+    output [31:0] test_fail,
+    output [31:0] test_pass
+);
+    parameter ADDR_BASE = 0;
+  
+    wire cs;
+    wire wr;
+    wire [21:0] addr;
+    wire [31:0] wdata;
+    reg [31:0] rdata;
+    
+    rcn_slave #(.ADDR_MASK(32'hFFFFFFF0), .ADDR_BASE(ADDR_BASE)) rcn_slave
+    (
+        .rst(rst),
+        .clk(clk),
+        
+        .rcn_in(rcn_in),
+        .rcn_out(rcn_out),
+        
+        .cs(cs),
+        .wr(wr),
+        .mask(),
+        .addr(addr),
+        .wdata(wdata),
+        .rdata(rdata)
+    );
+  
+    reg [7:0] id_seq;
+    reg [7:0] id_seq_d1;
+
+    always @ (posedge clk)
     begin
-      TEST_PROGRESS <= 32'd0;
-      TEST_FAIL <= 32'd0;
-      TEST_PASS <= 32'd0;
+        id_seq <= rcn_in[63:56];
+        id_seq_d1 <= id_seq;
     end
-    else if (addr_match && &din[53:50])
-      case (din[33:32])
-      2'd0: ;
-      2'd1: TEST_PROGRESS <= din[31:0];
-      2'd2: TEST_FAIL <= din[31:0];
-      default: TEST_PASS <= din[31:0];
-      endcase
+    
+    reg [31:0] test_progress_reg;
+    reg [31:0] test_fail_reg;
+    reg [31:0] test_pass_reg;
+    
+    assign test_progress = test_progress_reg;
+    assign test_fail = test_fail_reg;
+    assign test_pass = test_pass_reg;
+    
+    always @ (posedge clk)
+        if (cs && !wr)
+            case (addr[3:0])
+            4'h0: rdata <= {24'd0, id_seq_d1};
+            4'h4: rdata <= test_progress_reg;
+            4'h8: rdata <= test_fail_reg;
+            default: rdata <= test_pass_reg;
+            endcase
+    
+    always @ (posedge CLK or posedge RST)
+        if (RST)
+        begin
+            test_progress_reg <= 32'd0;
+            test_fail_reg <= 32'd0;
+            test_pass_reg <= 32'd0;
+        end
+        else if (cs && wr)
+            case (addr[3:0])
+            4'h0: ;
+            4'h4: test_progress_reg <= wdata;
+            4'h8: test_fail_reg <= wdata;
+            default: test_pass_reg <= wdata;
+            endcase
       
 endmodule
