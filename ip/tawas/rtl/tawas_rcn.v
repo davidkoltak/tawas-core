@@ -35,6 +35,7 @@ module tawas_rcn
 );
     parameter MASTER_ID = 0;
     
+    wire [1:0] seq = SLICE + 2'd2;
     wire rdone;
     wire wdone;
     wire [1:0] rsp_seq;
@@ -50,7 +51,7 @@ module tawas_rcn
         .rcn_out(RCN_OUT),
         
         .cs(RCN_CS),
-        .seq(SLICE),
+        .seq(seq),
         .busy(),
         .wr(DWR),
         .mask(DMASK),
@@ -69,7 +70,7 @@ module tawas_rcn
     // Core thread stalls
     //
     
-    wire [3:0] set_stall = (RCN_CS) ? (4'd1 << SLICE) : 4'd0;
+    wire [3:0] set_stall = (RCN_CS) ? (4'd1 << seq) : 4'd0;
     wire [3:0] clr_stall = (rdone || wdone) ? (4'd1 << rsp_seq) : 4'd0;
     
     always @ (posedge CLK or posedge RST)
@@ -86,14 +87,14 @@ module tawas_rcn
     
     always @ (posedge CLK)
         if (RCN_CS)
-            wb_reg[SLICE] <= WRITEBACK_REG;
+            wb_reg[seq] <= WRITEBACK_REG;
 
     wire [31:0] rsp_data_adj = (rsp_mask[3:0] == 4'b1111) ? rsp_data[31:0] :
-                               (rsp_mask[3:2] == 2'b11) ? {16'd0 : rsp_data[31:16]} :
-                               (rsp_mask[1:0] == 2'b11) ? {16'd0 : rsp_data[15:0]} :
-                               (rsp_mask[3]) {24'd0, rsp_data[31:24]} :
-                               (rsp_mask[2]) {24'd0, rsp_data[23:16]} :
-                               (rsp_mask[1]) {24'd0, rsp_data[15:8]} : {24'd0, rsp_data[7:0]};
+                               (rsp_mask[3:2] == 2'b11) ? {16'd0, rsp_data[31:16]} :
+                               (rsp_mask[1:0] == 2'b11) ? {16'd0, rsp_data[15:0]} :
+                               (rsp_mask[3]) ? {24'd0, rsp_data[31:24]} :
+                               (rsp_mask[2]) ? {24'd0, rsp_data[23:16]} :
+                               (rsp_mask[1]) ? {24'd0, rsp_data[15:8]} : {24'd0, rsp_data[7:0]};
 
     always @ (posedge CLK)
     begin

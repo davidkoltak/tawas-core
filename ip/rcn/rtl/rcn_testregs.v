@@ -14,8 +14,8 @@ module rcn_testregs
     input clk,
     input rst,
 
-    input [66:0] rcn_in;
-    output [66:0] rcn_out;
+    input [66:0] rcn_in,
+    output [66:0] rcn_out,
     
     output [31:0] test_progress,
     output [31:0] test_fail,
@@ -46,13 +46,9 @@ module rcn_testregs
     );
   
     reg [7:0] id_seq;
-    reg [7:0] id_seq_d1;
 
     always @ (posedge clk)
-    begin
         id_seq <= rcn_in[63:56];
-        id_seq_d1 <= id_seq;
-    end
     
     reg [31:0] test_progress_reg;
     reg [31:0] test_fail_reg;
@@ -65,14 +61,14 @@ module rcn_testregs
     always @ (posedge clk)
         if (cs && !wr)
             case (addr[3:0])
-            4'h0: rdata <= {24'd0, id_seq_d1};
+            4'h0: rdata <= {24'd0, id_seq};
             4'h4: rdata <= test_progress_reg;
             4'h8: rdata <= test_fail_reg;
             default: rdata <= test_pass_reg;
             endcase
     
-    always @ (posedge CLK or posedge RST)
-        if (RST)
+    always @ (posedge clk or posedge rst)
+        if (rst)
         begin
             test_progress_reg <= 32'd0;
             test_fail_reg <= 32'd0;

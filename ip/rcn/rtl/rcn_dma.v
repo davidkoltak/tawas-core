@@ -247,7 +247,6 @@ module rcn_dma
             
             default: slave_rdata <= 32'd0;
             endcase
-        end
 
     reg master_cs;
     reg [1:0] master_seq;
@@ -295,9 +294,9 @@ module rcn_dma
     wire [31:0] rsp_data_adj = (rsp_mask[3:0] == 4'b1111) ? rsp_data[31:0] :
                                (rsp_mask[3:2] == 2'b11) ? {2{rsp_data[31:16]}} :
                                (rsp_mask[1:0] == 2'b11) ? {2{rsp_data[15:0]}} :
-                               (rsp_mask[3]) {4{rsp_data[31:24]}} :
-                               (rsp_mask[2]) {4{rsp_data[23:16]}} :
-                               (rsp_mask[1]) {4{rsp_data[15:8]}} : {4{rsp_data[7:0]}};
+                               (rsp_mask[3]) ? {4{rsp_data[31:24]}} :
+                               (rsp_mask[2]) ? {4{rsp_data[23:16]}} :
+                               (rsp_mask[1]) ? {4{rsp_data[15:8]}} : {4{rsp_data[7:0]}};
 
     always @ (posedge clk)
         if (rdone && (rsp_seq == 2'd0))

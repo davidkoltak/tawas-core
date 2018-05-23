@@ -64,6 +64,7 @@ module rcn_master
     assign rdone = my_resp && !rin[64];
     assign wdone = my_resp && rin[64];
     assign rsp_seq = rin[57:56];
+    assign rsp_mask = rin[55:52];
     assign rsp_addr = {rin[51:32], 2'd0};
     assign rsp_data = rin[31:0];
     

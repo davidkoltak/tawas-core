@@ -41,8 +41,8 @@ module rcn_master_buf
     wire req_push = cs && !req_cnt[2];
     wire req_pop;
     
-    always @ (posedge CLK or posedge RST)
-        if (RST)
+    always @ (posedge clk or posedge rst)
+        if (rst)
             req_cnt <= 3'd0;
         else
             case ({req_push, req_pop})
@@ -51,25 +51,25 @@ module rcn_master_buf
             default: ;
             endcase
   
-    always @ (posedge CLK or posedge RST)
-        if (RST)
+    always @ (posedge clk or posedge clk)
+        if (rst)
             write_ptr <= 2'd0;
         else if (req_push)
             write_ptr <= write_ptr + 2'd1;
   
-    always @ (posedge CLK or posedge RST)
-        if (RST)
+    always @ (posedge clk or posedge rst)
+        if (rst)
             read_ptr <= 2'd0;
         else if (req_pop)
             read_ptr <= read_ptr + 2'd1;
   
 
-    always @ (posedge CLK)
+    always @ (posedge clk)
         if (req_push)
             req_buf[write_ptr] <= {seq, wr, mask[3:0], addr[21:2], wdata[31:0]};
   
   wire req_vld = (req_cnt[2:0] != 3'd0);
-  wire [57:0] req = req_buf[read_ptr][57:0];
+  wire [58:0] req = req_buf[read_ptr][58:0];
   wire req_busy;
 
   assign req_pop = req_vld && !req_busy;

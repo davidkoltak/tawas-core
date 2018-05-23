@@ -65,10 +65,10 @@ module rcn_bridge
         else
         begin
             main_rin <= main_rcn_in;
-            main_rout <= (sub_2_main && !no_cross) ? sub_rin ? main_rin;
+            main_rout <= (sub_2_main && !no_cross) ? sub_rin : main_rin;
             
             sub_rin <= sub_rcn_in;
-            sub_rout <= (main_2_sub && !no_cross) ? main_rin ? sub_rin;
+            sub_rout <= (main_2_sub && !no_cross) ? main_rin : sub_rin;
         end
         
 endmodule
