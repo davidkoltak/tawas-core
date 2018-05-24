@@ -65,22 +65,21 @@ module max10_devkit_top
   
     tawas tawas
     (
-        .CLK(clk_50),
-        .RST(!fpga_reset_n),
+        .clk(clk_50),
+        .rst(!fpga_reset_n),
+        .ics(irom_cs),
+        .iaddr(irom_addr),
+        .idata(irom_data),
 
-        .ICS(irom_cs),
-        .IADDR(irom_addr),
-        .IDATA(irom_data),
+        .daddr(dram_addr),
+        .dcs(dram_cs),
+        .dwr(dram_wr),
+        .dmask(dram_mask),
+        .dout(dram_din),
+        .din(dram_dout),
 
-        .DADDR(dram_addr),
-        .DCS(dram_cs),
-        .DWR(dram_wr),
-        .DMASK(dram_mask),
-        .DOUT(dram_din),
-        .DIN(dram_dout),
-
-        .RCN_IN(rcn_0),
-        .RCN_OUT(rcn_1)
+        .rcn_in(rcn_0),
+        .rcn_out(rcn_1)
     );
 
     rcn_testregs #(.ADDR_BASE(32'hFFFFFFF0)) rcn_testregs

@@ -6,36 +6,33 @@
 //
 // Perform load/store operations over RCN. Stall issueing thread while transaction is pending.
 //
-// by
-//   David M. Koltak  5/22/2018
-//
 
 module tawas_rcn
 (
-    input CLK,
-    input RST,
+    input clk,
+    input rst,
     
-    input [1:0] SLICE,
-    output reg [3:0] RCN_STALL,
+    input [1:0] slice,
+    output reg [3:0] rcn_stall,
     
-    input [31:0] DADDR,
-    input RCN_CS,
-    input [3:0] WRITEBACK_REG,
-    input DWR,
-    input [3:0] DMASK,
-    input [31:0] DOUT,
+    input [31:0] daddr,
+    input rcn_cs,
+    input [3:0] writeback_reg,
+    input dwr,
+    input [3:0] dmask,
+    input [31:0] dout,
       
-    output reg RCN_LOAD_VLD,
-    output reg [1:0] RCN_LOAD_SLICE,
-    output reg [3:0] RCN_LOAD_SEL,
-    output reg [31:0] RCN_LOAD,
+    output reg rcn_load_vld,
+    output reg [1:0] rcn_load_slice,
+    output reg [3:0] rcn_load_sel,
+    output reg [31:0] rcn_load,
     
-    input [66:0] RCN_IN,
-    output [66:0] RCN_OUT
+    input [66:0] rcn_in,
+    output [66:0] rcn_out
 );
     parameter MASTER_ID = 0;
     
-    wire [1:0] seq = SLICE + 2'd2;
+    wire [1:0] seq = slice + 2'd2;
     wire rdone;
     wire wdone;
     wire [1:0] rsp_seq;
@@ -44,19 +41,19 @@ module tawas_rcn
 
     rcn_master_buf #(.MASTER_ID(MASTER_ID)) rcn_master
     (
-        .rst(RST),
-        .clk(CLK),
+        .rst(rst),
+        .clk(clk),
         
-        .rcn_in(RCN_IN),
-        .rcn_out(RCN_OUT),
+        .rcn_in(rcn_in),
+        .rcn_out(rcn_out),
         
-        .cs(RCN_CS),
+        .cs(rcn_cs),
         .seq(seq),
         .busy(),
-        .wr(DWR),
-        .mask(DMASK),
-        .addr(DADDR[21:0]),
-        .wdata(DOUT),
+        .wr(dwr),
+        .mask(dmask),
+        .addr(daddr[21:0]),
+        .wdata(dout),
         
         .rdone(rdone),
         .wdone(wdone),
@@ -70,14 +67,14 @@ module tawas_rcn
     // Core thread stalls
     //
     
-    wire [3:0] set_stall = (RCN_CS) ? (4'd1 << seq) : 4'd0;
+    wire [3:0] set_stall = (rcn_cs) ? (4'd1 << seq) : 4'd0;
     wire [3:0] clr_stall = (rdone || wdone) ? (4'd1 << rsp_seq) : 4'd0;
     
-    always @ (posedge CLK or posedge RST)
-        if (RST)
-            RCN_STALL <= 4'd0;
+    always @ (posedge clk or posedge rst)
+        if (rst)
+            rcn_stall <= 4'd0;
         else
-            RCN_STALL <= (RCN_STALL | set_stall) & ~clr_stall;
+            rcn_stall <= (rcn_stall | set_stall) & ~clr_stall;
 
     //
     // Read retire
@@ -85,9 +82,9 @@ module tawas_rcn
     
     reg [3:0] wb_reg[3:0];
     
-    always @ (posedge CLK)
-        if (RCN_CS)
-            wb_reg[seq] <= WRITEBACK_REG;
+    always @ (posedge clk)
+        if (rcn_cs)
+            wb_reg[seq] <= writeback_reg;
 
     wire [31:0] rsp_data_adj = (rsp_mask[3:0] == 4'b1111) ? rsp_data[31:0] :
                                (rsp_mask[3:2] == 2'b11) ? {16'd0, rsp_data[31:16]} :
@@ -96,12 +93,12 @@ module tawas_rcn
                                (rsp_mask[2]) ? {24'd0, rsp_data[23:16]} :
                                (rsp_mask[1]) ? {24'd0, rsp_data[15:8]} : {24'd0, rsp_data[7:0]};
 
-    always @ (posedge CLK)
+    always @ (posedge clk)
     begin
-        RCN_LOAD_VLD <= rdone;
-        RCN_LOAD_SLICE <= rsp_seq;
-        RCN_LOAD_SEL <= wb_reg[rsp_seq];
-        RCN_LOAD <= rsp_data_adj;
+        rcn_load_vld <= rdone;
+        rcn_load_slice <= rsp_seq;
+        rcn_load_sel <= wb_reg[rsp_seq];
+        rcn_load <= rsp_data_adj;
     end
   
 endmodule
