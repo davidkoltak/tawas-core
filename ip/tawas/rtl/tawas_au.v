@@ -21,14 +21,14 @@ module tawas_au
     input au_op_vld,
     input [14:0] au_op,
 
-    output [3:0] au_ra_sel,
+    output [2:0] au_ra_sel,
     input [31:0] au_ra,
 
-    output [3:0] au_rb_sel,
+    output [2:0] au_rb_sel,
     input [31:0] au_rb,
 
     output au_rc_vld,
-    output [3:0] au_rc_sel,
+    output [2:0] au_rc_sel,
     output [31:0] au_rc
 );
 

@@ -1,34 +1,11 @@
+/* SPDX-License-Identifier: MIT */
+/* (c) Copyright 2018 David M. Koltak, all rights reserved. */
 
 //
 // Tawas Instruction Set Architecture (ISA)
 //
 // - Notes on instruction set and machine instruction binary format
 //
-// by
-//   David M. Koltak  02/27/2016
-//
-// The MIT License (MIT)
-// 
-// Copyright (c) 2016 David M. Koltak
-// 
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-// 
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-// 
 
 Symetrical Quad-threaded (25% clocks each)
  - Hides IROM fetch latency and pipeline delays
@@ -38,19 +15,15 @@ Symetrical Quad-threaded (25% clocks each)
  - Also provides natural TX/RX, Read/Write, or Consumer/Producer thread separation
  - All threads share same IROM, but start at different offsets
 
-Each thread has 16 x 32-bit registers. With four threads, a core contains 64 x 32-bit
+Each thread has 8 x 32-bit registers. With four threads, a core contains 32 x 32-bit
 registers. All registers can be used in AU operations, but there are limitation 
 for bus load/store commands.
 
-Load/store instruction address registers are limited to register r8-r15.  Registers 
-r7-r15 can only be used as a data source/sink register when 32-bit word loads are 
-used. Only registers r0-r7 can be loaded/store in smaller sizes (half/byte).
-
-The r7 register is used as call/rtn link, and r15 is inferred as the stack
+The r7 register is used as call/rtn link, and r6 is inferred as the stack
 pointer for all push/pop insructions.
 
-Connects to "Raccoon Bus", a 32-bit ring style bus with Ack/Err/Retry signalling.  Each thread
-will individually stall waiting for bus transactions to complete.
+Dedicated Instruction and Local Data busses.  Connects to system through 
+an "RCN Bus", a 32-bit ring style multi-master bus.
 
 32-bit instruction words formated as follows...
 ___________________________________________
@@ -60,8 +33,8 @@ ___________________________________________
 10    [LS_OP]    [AU_OP]    - Parallel LS/AU Ops
 1100  [BR_OP]    [AU_OP]    - Parallel BR/AU Ops
 1101  [BR_OP]    [LS_OP]    - Parallel BR/LS Ops
-1110       [IMM_LD]         - Load 24-bit signed extended immediate to register
-11110      [DIR_LD]         - Load/store a 32-bit register using 24-bit address
+1110       [IMM_LD]         - Load 25-bit signed extended immediate to register
+11110      [DIR_LD]         - Load/store a 32-bit register using 25-bit address
 1111100 - RSVD 25 BIT -
 1111101 - RSVD 25 BIT -
 1111110 - RSVD 25 BIT -
@@ -71,38 +44,38 @@ ___________________________________________
 AU Opcodes: 15-bits
 ------------------------------------------
 
-000 iiii bbbb aaaa :
+00 iii ccc bbb aaa
 
-  0 : Or       (a | b) -> a  (aka nop) (aka mv a, a)
-  1 : And      (a & b) -> a
-  2 : Xor      (a ^ b) -> a  (aka clr a)
-  3 : Add      (a + b) -> a
-  4 : Sub      (a - b) -> a
-  5 :
-  6 :
-  7 :
-
-  8 : Mv        b -> a
-  9 : Not      ~b -> a
-  A : Neg      -b -> a
-  B : Cmp      (a - b)
-  C : 
-  D :
-  E :
-  F :
-
-001 iii ccc bbb aaa : i.op c, a, b    (c = a *i* b)
-
-  0 : Or       (a | b) -> c
+  0 : Or       (a | b) -> c  (aka nop, mv)
   1 : And      (a & b) -> c
-  2 : Xor      (a ^ b) -> c
+  2 : Xor      (a ^ b) -> c  (aka clr a)
   3 : Add      (a + b) -> c
   4 : Sub      (a - b) -> c
+  5 : 
+  6 : 
+  7 : 
+
+01000 iiii aaa bbb
+
+  0 : Not      (~b) -> a
+  1 : Neg      (-b) -> a
+  2 : Cmp      (a - b)
+  3 :
+  4 :
   5 :
   6 :
-  7 :
-      
-010 iii vvvvv aaaa : i.op a, v     (a = f[a,v])
+  7 : 
+  
+  8 :
+  9 :
+  A :
+  B :
+  C :
+  D : version  (version) -> a
+  E : thread   (thread) -> a
+  F : tick     (tick) -> a
+  
+0101 iii vvvvv aaa
 
   0 : bset     (a | (1 << #v) -> a
   1 : bclr     (a & ~(1 << #v) -> a
@@ -112,10 +85,10 @@ AU Opcodes: 15-bits
   5 : lsr      (a >> #v) -> a
   6 : asr      (a >> #v) -> a
   7 : sx       sign-extend(a, bit(v)) -> a
-
-011 iiiiiiii  aaaa : addi a, [-128, 127]
-10 iiiiiiiii  aaaa : cmpi a, [-256, 255]
-11 iiiiiiiii  aaaa : mvi a, [-256, 255]
+  
+011 iiiiiiiii  aaa : cmpi a, [-256, 255]
+10 iiiiiiiiii  aaa : addi a, [-512, 511]
+11 iiiiiiiiii  aaa : mvi a, [-512, 511]
 
 LS Opcodes: 15-bits
 ------------------------------------------
@@ -126,20 +99,17 @@ LS Opcodes: 15-bits
 10 tt iiiii ppp ddd  : Store (type) d -> p[i]  (st.t rx, p[i])
 11 tt iiiii ppp ddd                            (st.t rx, p++/--i)
 
- NOTE: p 0-7 uses r8-r15
-       d 0-7 uses r0-r7, unless type is 3, when r8-r15 are selected
-
  TYPE
  -----------
  00 : 8-bit
  01 : 16-bit
  10 : 32-bit
- 11 : 32-bit (load/store 32-bit value to/from r8-r15 instead of r0-r7)
+ 11 : 32-bit (posted)
 
 NOTE: Pre-decrement, Post-increment
 
-st.w rx, r15--1  == push rx
-ld.w rx, r15++1  == pop rx
+st.w rx, r6--1  == push rx
+ld.w rx, r6++1  == pop rx
 
 
 BR Opcodes: 13-bits
@@ -157,14 +127,14 @@ NOTE: 'rtn' implemented as parallel 'jmpi' and 'pop r7'
 Imm Load: 28-bits (ldi)
 ------------------------------------------
 
-rrrr eeeeeeee eeeeeeee eeeeeeee : Store signed extended 24-bit value
+rrr e eeeeeeee eeeeeeee eeeeeeee : Store signed extended 25-bit value
                                   into Rx
                                  
 Direct Load: 27-bits (ldd/std)
 ------------------------------------------
 
-0 rrrr aaaaaaaa aaaaaaaa aaaaaa : Load Rx with 32-bit value at sx{a{21:0}, 2'b00}
-1 rrrr aaaaaaaa aaaaaaaa aaaaaa : Store Rx 32-bit value to sx{a{21:0}, 2'b00}
+0 rrr a aaaaaaaa aaaaaaaa aaaaaa : Load Rx with 32-bit value at sx{a{22:0}, 2'b00}
+1 rrr a aaaaaaaa aaaaaaaa aaaaaa : Store Rx 32-bit value to sx{a{22:0}, 2'b00}
 
 
 Call Opcodes: 26-bits
@@ -193,7 +163,7 @@ call label
 rtn
 jmpi
 
-ldi imm24
+ldi imm25
 ldd rx label
 std rx label
 
@@ -201,17 +171,17 @@ br label
 br cond label
 skip cond
 
-ld {b|h|w} rx ry #
-ld {b|h|w} rx ry ++/--#
-st {b|h|w} rx ry #
-st {b|h|w} rx ry ++/--#
+ld {b|h|w|post} rx ry #
+ld {b|h|w|post} rx ry ++/--#
+st {b|h|w|post} rx ry #
+st {b|h|w|post} rx ry ++/--#
 
 push rx
 pop rx
 
-mvi ra imm9
+mvi ra imm10
 cmpi ra imm9
-addi ra imm8
+addi ra imm10
 inc ra
 dec ra
 
@@ -247,41 +217,50 @@ EXAMPLE CODE:
   // COMMENT          (NOTE: Since we use CPP, we get C style comments for free)
   /* COMMENT */
   
-  // R8 = from ptr
-  // R9 = to ptr
-  // R0 = RTN number of bytes copied
-  .global strcpy
-  strcpy:            (NOTE: Labels cannot be on same line as an opcode)
-    push r1
-    \ mv r8 r0       (NOTE: '\' means this opcode combined with previous)
-    ld b r1 r8 ++1 
-  strcpy_loop:
-    testz r1
-    \ st b r1 r9 ++1 
+// R0 = from ptr
+// R1 = to ptr
+// R0 = RTN number of bytes copied
+.global strcpy
+strcpy:            (NOTE: Labels cannot be on same line as an opcode)
+    push r2
+    \ mv r2 r0       (NOTE: '\' means this opcode combined with previous)
+    push r3
+    \ ld b r3 r0 ++1
+strcpy_loop:
+    testz r3
+    \ st b r3 r1 ++1 
     br nz strcpy_loop
-    \ ld b r1 r8 ++1 
-  strcpy_done:
-    pop r1
-    \ sub r0 r8 
+    \ ld b r3 r0 ++1 
+strcpy_done:
+    pop r3
+    \ sub r0 r2
+    pop r2 
     rtn  
 
-  // R8 = ptr
-  // R9 = ptr
-  // R0 = RTN 0 if same 
-  .global strcmp
-  strcmp:
-    push r1
-    \ push r2
-    ld b r1 r8 ++1
-    \ ld b r2 r9 ++1 
-  strcmp_loop:
-    ld b r1 r8 ++1
-    \ sub r0 r1 r2 
+// R0 = ptr
+// R1 = ptr
+// R0 = RTN 0 if same 
+.global strcmp
+strcmp:
+    push r2
+    \ push r3
+    ld b r2 r0 ++1
+    \ ld b r3 r1 ++1 
+strcmp_loop:
+    ld b r2 r0 ++1
+    \ sub r3 r2 r3 
     br nz strcmp_not_equal
     \ testz r2
     br nz strcmp_loop
-    \ ld b r2 r8 ++1 
-  strcmp_done:
-    pop r1
-    \ pop r2
+    \ ld b r3 r1 ++1 
+strcmp_done:
+    pop r2
+    \ mvi r0 0
+    pop r3
     rtn
+strcmp_not_equal:
+    pop r2
+    \ mv r0 r3
+    pop r3
+    rtn
+

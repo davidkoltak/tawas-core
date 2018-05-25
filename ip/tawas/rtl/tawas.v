@@ -32,7 +32,7 @@ module tawas
     wire [23:0] pc_rtn;
 
     wire rf_imm_vld;
-    wire [3:0] rf_imm_sel;
+    wire [2:0] rf_imm_sel;
     wire [31:0] rf_imm;
 
     wire [1:0] slice;
@@ -46,7 +46,7 @@ module tawas
 
     wire ls_dir_vld;
     wire ls_dir_store;
-    wire [3:0] ls_dir_sel;
+    wire [2:0] ls_dir_sel;
     wire [31:0] ls_dir_addr;
 
     wire [3:0] rcn_stall;
@@ -87,14 +87,14 @@ module tawas
   
     wire [7:0] au_flags_rtn;
 
-    wire [3:0] au_ra_sel;
+    wire [2:0] au_ra_sel;
     wire [31:0] au_ra;
 
-    wire [3:0] au_rb_sel;
+    wire [2:0] au_rb_sel;
     wire [31:0] au_rb;
 
     wire au_rc_vld;
-    wire [3:0] au_rc_sel;
+    wire [2:0] au_rc_sel;
     wire [31:0] au_rc;
   
     tawas_au tawas_au
@@ -124,7 +124,8 @@ module tawas
   
     wire [31:0] daddr_out;
     wire rcn_cs;
-    wire [3:0] writeback_reg;
+    wire rcn_post;
+    wire [2:0] writeback_reg;
     wire dwr_out;
     wire [3:0] dmask_out;
     wire [31:0] dout_out;
@@ -137,7 +138,7 @@ module tawas
     wire [2:0] ls_ptr_sel;
     wire [31:0] ls_ptr;
 
-    wire [3:0] ls_store_sel;
+    wire [2:0] ls_store_sel;
     wire [31:0] ls_store;
 
     wire ls_ptr_upd_vld;
@@ -145,7 +146,7 @@ module tawas
     wire [31:0] ls_ptr_upd;
 
     wire ls_load_vld;
-    wire [3:0] ls_load_sel;
+    wire [2:0] ls_load_sel;
     wire [31:0] ls_load;
   
     tawas_ls tawas_ls
@@ -156,6 +157,7 @@ module tawas
         .daddr(daddr_out),
         .dcs(dcs),
         .rcn_cs(rcn_cs),
+        .rcn_post(rcn_post),
         .writeback_reg(writeback_reg),
         .dwr(dwr_out),
         .dmask(dmask_out),
@@ -187,7 +189,7 @@ module tawas
   
     wire rcn_load_vld;
     wire [1:0] rcn_load_slice;
-    wire [3:0] rcn_load_sel;
+    wire [2:0] rcn_load_sel;
     wire [31:0] rcn_load;
 
     tawas_rcn tawas_rcn
@@ -200,6 +202,7 @@ module tawas
 
         .daddr(daddr_out),
         .rcn_cs(rcn_cs),
+        .rcn_post(rcn_post),
         .writeback_reg(writeback_reg),
         .dwr(dwr_out),
         .dmask(dmask_out),

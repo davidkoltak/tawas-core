@@ -15,7 +15,8 @@ module tawas_ls
     output reg [31:0] daddr,
     output reg dcs,
     output reg rcn_cs,
-    output reg [3:0] writeback_reg,
+    output reg rcn_post,
+    output reg [2:0] writeback_reg,
     output reg dwr,
     output reg [3:0] dmask,
     output reg [31:0] dout,
@@ -26,13 +27,13 @@ module tawas_ls
 
     input ls_dir_vld,
     input ls_dir_store,
-    input [3:0] ls_dir_sel,
+    input [2:0] ls_dir_sel,
     input [31:0] ls_dir_addr,
 
     output [2:0] ls_ptr_sel,
     input [31:0] ls_ptr,
 
-    output [3:0] ls_store_sel,
+    output [2:0] ls_store_sel,
     input [31:0] ls_store,
 
     output reg ls_ptr_upd_vld,
@@ -40,7 +41,7 @@ module tawas_ls
     output reg [31:0] ls_ptr_upd,
 
     output ls_load_vld,
-    output [3:0] ls_load_sel,
+    output [2:0] ls_load_sel,
     output [31:0] ls_load
 );
 
@@ -48,9 +49,9 @@ module tawas_ls
     // Instruction decode
     //
 
-    reg [8:0] ld_d1;
-    reg [8:0] ld_d2;
-    reg [8:0] ld_d3;
+    reg [7:0] ld_d1;
+    reg [7:0] ld_d2;
+    reg [7:0] ld_d3;
 
     wire rcn_space;
     wire [31:0] addr_offset;
@@ -58,13 +59,13 @@ module tawas_ls
     wire [31:0] addr_next;
     wire [31:0] addr_out;
 
-    wire [3:0] data_reg;
+    wire [2:0] data_reg;
 
     wire wr_en;
     wire [31:0] wr_data;
     wire [3:0] data_mask;
 
-    assign data_reg = (ls_dir_vld) ? ls_dir_sel : {&ls_op[12:11], ls_op[2:0]};
+    assign data_reg = (ls_dir_vld) ? ls_dir_sel : ls_op[2:0];
 
     assign ls_ptr_sel = ls_op[5:3];
     assign ls_store_sel = data_reg;
@@ -120,15 +121,15 @@ module tawas_ls
 
     always @ (posedge clk or posedge rst)
         if (rst)
-            ld_d1 <= 9'd0;
+            ld_d1 <= 8'd0;
         else if (ls_op_vld || ls_dir_vld)
             ld_d1 <= {!wr_en && !rcn_space, ls_op[12:11], addr_out[1:0], data_reg};
         else
-            ld_d1 <= 9'd0;
+            ld_d1 <= 8'd0;
 
     always @ (posedge clk or posedge rst)
         if (rst)
-            {ld_d3, ld_d2} <= {9'd0, 9'd0};
+            {ld_d3, ld_d2} <= {8'd0, 8'd0};
         else
             {ld_d3, ld_d2} <= {ld_d2, ld_d1};
     
@@ -138,6 +139,7 @@ module tawas_ls
             daddr <= {addr_out[31:2], 2'b00};
             dcs <=  !rcn_space;
             rcn_cs <= rcn_space;
+            rcn_post <= &ls_op[12:11];
             writeback_reg <= data_reg;
             dwr <= wr_en;
             dmask <= data_mask;
@@ -148,7 +150,8 @@ module tawas_ls
             daddr <= 32'd0;
             dcs <= 1'b0;
             rcn_cs <= 1'b0;
-            writeback_reg <= 4'd0;
+            rcn_post <= 1'b0;
+            writeback_reg <= 3'd0;
             dwr <= 1'b0;
             dmask <= 4'b0000;
             dout <= 32'd0;
@@ -162,19 +165,19 @@ module tawas_ls
     wire [31:0] rd_data_final;
 
     always @ (posedge clk)
-        if (ld_d2[8])
+        if (ld_d2[7])
             rd_data <= din;
 
-    assign rd_data_final = (ld_d3[7]) ? rd_data :
-                     (ld_d3[6]) ? (ld_d3[5]) ? {16'd0, rd_data[31:16]}
+    assign rd_data_final = (ld_d3[6]) ? rd_data :
+                     (ld_d3[5]) ? (ld_d3[4]) ? {16'd0, rd_data[31:16]}
                                              : {16'd0, rd_data[15:0]}
-                                : (ld_d3[5] && ld_d3[4]) ? {24'd0, rd_data[31:24]} :
-                                  (ld_d3[5]            ) ? {24'd0, rd_data[23:16]} :
-                                  (            ld_d3[4]) ? {24'd0, rd_data[15:8]}
+                                : (ld_d3[4] && ld_d3[3]) ? {24'd0, rd_data[31:24]} :
+                                  (ld_d3[4]            ) ? {24'd0, rd_data[23:16]} :
+                                  (            ld_d3[3]) ? {24'd0, rd_data[15:8]}
                                                          : {24'd0, rd_data[7:0]};        
 
-    assign ls_load_vld = ld_d3[8];
-    assign ls_load_sel = ld_d3[3:0];
+    assign ls_load_vld = ld_d3[7];
+    assign ls_load_sel = ld_d3[2:0];
     assign ls_load = rd_data_final;
   
 endmodule

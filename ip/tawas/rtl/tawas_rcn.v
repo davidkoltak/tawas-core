@@ -17,14 +17,15 @@ module tawas_rcn
     
     input [31:0] daddr,
     input rcn_cs,
-    input [3:0] writeback_reg,
+    input rcn_post,
+    input [2:0] writeback_reg,
     input dwr,
     input [3:0] dmask,
     input [31:0] dout,
       
     output reg rcn_load_vld,
     output reg [1:0] rcn_load_slice,
-    output reg [3:0] rcn_load_sel,
+    output reg [2:0] rcn_load_sel,
     output reg [31:0] rcn_load,
     
     input [66:0] rcn_in,
@@ -80,7 +81,7 @@ module tawas_rcn
     // Read retire
     //
     
-    reg [3:0] wb_reg[3:0];
+    reg [2:0] wb_reg[3:0];
     
     always @ (posedge clk)
         if (rcn_cs)
