@@ -16,13 +16,13 @@ Symetrical Quad-threaded (25% clocks each)
  - All threads share same IROM, but start at different offsets
 
 Each thread has 8 x 32-bit registers. With four threads, a core contains 32 x 32-bit
-registers. All registers can be used in AU operations, but there are limitation 
+registers. All registers can be used in AU operations, but there are limitation
 for bus load/store commands.
 
 The r7 register is used as call/rtn link, and r6 is inferred as the stack
 pointer for all push/pop insructions.
 
-Dedicated Instruction and Local Data busses.  Connects to system through 
+Dedicated Instruction and Local Data busses.  Connects to system through
 an "RCN Bus", a 32-bit ring style multi-master bus.
 
 32-bit instruction words formated as follows...
@@ -51,9 +51,9 @@ AU Opcodes: 15-bits
   2 : Xor      (a ^ b) -> c  (aka clr a)
   3 : Add      (a + b) -> c
   4 : Sub      (a - b) -> c
-  5 : 
-  6 : 
-  7 : 
+  5 :
+  6 :
+  7 :
 
   8 :
  ...
@@ -116,7 +116,7 @@ LS Opcodes: 15-bits
  00 : 8-bit
  01 : 16-bit
  10 : 32-bit
- 11 : 32-bit (posted)
+ 11 : 32-bit (prefetch on load, exchange on store)
 
 NOTE: Pre-decrement, Post-increment
 
@@ -141,7 +141,7 @@ Imm Load: 28-bits (ldi)
 
 rrr e eeeeeeee eeeeeeee eeeeeeee : Store signed extended 25-bit value
                                   into Rx
-                                 
+
 Direct Load: 27-bits (ldd/std)
 ------------------------------------------
 
@@ -160,7 +160,7 @@ ASM Instructions
 ------------------------------------------
 
 [directives]
-   
+
 .alloc label {b|h|w} {count}
 .data label {b|h|w} {data} ...
 .string label "string"
@@ -228,7 +228,7 @@ EXAMPLE CODE:
 
   // COMMENT          (NOTE: Since we use CPP, we get C style comments for free)
   /* COMMENT */
-  
+
 // R0 = from ptr
 // R1 = to ptr
 // R0 = RTN number of bytes copied
@@ -240,31 +240,31 @@ strcpy:            (NOTE: Labels cannot be on same line as an opcode)
     \ ld b r3 r0 ++1
 strcpy_loop:
     testz r3
-    \ st b r3 r1 ++1 
+    \ st b r3 r1 ++1
     br nz strcpy_loop
-    \ ld b r3 r0 ++1 
+    \ ld b r3 r0 ++1
 strcpy_done:
     pop r3
     \ sub r0 r2
-    pop r2 
-    rtn  
+    pop r2
+    rtn
 
 // R0 = ptr
 // R1 = ptr
-// R0 = RTN 0 if same 
+// R0 = RTN 0 if same
 .global strcmp
 strcmp:
     push r2
     \ push r3
     ld b r2 r0 ++1
-    \ ld b r3 r1 ++1 
+    \ ld b r3 r1 ++1
 strcmp_loop:
     ld b r2 r0 ++1
-    \ sub r3 r2 r3 
+    \ sub r3 r2 r3
     br nz strcmp_not_equal
     \ testz r2
     br nz strcmp_loop
-    \ ld b r3 r1 ++1 
+    \ ld b r3 r1 ++1
 strcmp_done:
     pop r2
     \ mvi r0 0

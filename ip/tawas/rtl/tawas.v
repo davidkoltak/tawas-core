@@ -86,7 +86,7 @@ module tawas
         .ls_dir_sel(ls_dir_sel),
         .ls_dir_addr(ls_dir_addr)
     );
-  
+
     wire [7:0] au_flags_rtn;
 
     wire [2:0] au_ra_sel;
@@ -98,7 +98,7 @@ module tawas
     wire au_rc_vld;
     wire [2:0] au_rc_sel;
     wire [31:0] au_rc;
-  
+
     tawas_au #(.RTL_VERSION(`RTL_VERSION)) tawas_au
     (
         .clk(clk),
@@ -123,10 +123,10 @@ module tawas
         .au_rc_sel(au_rc_sel),
         .au_rc(au_rc)
     );
-  
+
     wire [31:0] daddr_out;
     wire rcn_cs;
-    wire rcn_post;
+    wire rcn_pfch_xch;
     wire [2:0] writeback_reg;
     wire dwr_out;
     wire [3:0] dmask_out;
@@ -150,7 +150,7 @@ module tawas
     wire ls_load_vld;
     wire [2:0] ls_load_sel;
     wire [31:0] ls_load;
-  
+
     tawas_ls tawas_ls
     (
         .clk(clk),
@@ -159,7 +159,7 @@ module tawas
         .daddr(daddr_out),
         .dcs(dcs),
         .rcn_cs(rcn_cs),
-        .rcn_post(rcn_post),
+        .rcn_pfch_xch(rcn_pfch_xch),
         .writeback_reg(writeback_reg),
         .dwr(dwr_out),
         .dmask(dmask_out),
@@ -188,7 +188,7 @@ module tawas
         .ls_load_sel(ls_load_sel),
         .ls_load(ls_load)
     );
-  
+
     wire rcn_load_vld;
     wire [1:0] rcn_load_slice;
     wire [2:0] rcn_load_sel;
@@ -204,7 +204,7 @@ module tawas
 
         .daddr(daddr_out),
         .rcn_cs(rcn_cs),
-        .rcn_post(rcn_post),
+        .rcn_pfch_xch(rcn_pfch_xch),
         .writeback_reg(writeback_reg),
         .dwr(dwr_out),
         .dmask(dmask_out),
@@ -218,7 +218,7 @@ module tawas
         .rcn_in(rcn_in),
         .rcn_out(rcn_out)
     );
-    
+
     tawas_regfile tawas_regfile
     (
         .clk(clk),

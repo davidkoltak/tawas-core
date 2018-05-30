@@ -7,7 +7,7 @@
 _t0_reset:
 .alloc stack_0_bot w 127
 .data stack_0_top w 0xAAAAAAAA
-    ldi sp stack_0_top 
+    ldi sp stack_0_top
 
 .string test_0_str "Testing thread 0 with a string"
 .alloc test_0_buf b 50
@@ -27,7 +27,7 @@ _t0_reset:
     skip eq
     jmp test_fail_wait
     jmp test_pass_wait
-  
+
 _t1_reset:
 .alloc stack_1_bot w 127
 .data stack_1_top w 0xBBBBBBBB
@@ -55,7 +55,7 @@ _t1_reset:
 _t2_reset:
 .alloc stack_2_bot w 127
 .data stack_2_top w 0xCCCCCCCC
-    ldi sp stack_2_top 
+    ldi sp stack_2_top
 
 .string test_2_str "Thread #2 is going to be the longest string in the test"
 .alloc test_2_buf b 80
@@ -75,11 +75,11 @@ _t2_reset:
     skip eq
     jmp test_fail_wait
     jmp test_pass_wait
-  
+
 _t3_reset:
 .alloc stack_3_bot w 127
 .data stack_3_top w 0xDDDDDDDD
-    ldi sp stack_3_top 
+    ldi sp stack_3_top
 
 .string test_3_str "The shortest"
 .alloc test_3_buf b 16
@@ -120,14 +120,14 @@ string_test:
     tstz rtn
     br ne string_test_done
     \ mvi r2 1
-    
+
     ld w ptr1 sp [0]
     \ ld w ptr2 sp [1]
-    
+
     ld b r2 ptr1 [7]
     addi r2 3
-    st b r2 ptr1 [7] 
-    
+    st b r2 ptr1 [7]
+
     call strcmp
     tstz rtn
     br eq string_test_done
@@ -135,11 +135,11 @@ string_test:
 
     ld w ptr1 sp [0]
     \ ld w ptr2 sp [1]
-    
+
     ld b r2 ptr1 [7]
     addi r2 -3
-    st b r2 ptr1 [7] 
-    
+    st b r2 ptr1 [7]
+
     call strcmp
     tstz rtn
     br ne string_test_done
@@ -151,4 +151,4 @@ string_test_done:
     \ pop ptr2
     pop r2
     \ mv rtn r2
-    rtn 
+    rtn

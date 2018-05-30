@@ -9,12 +9,12 @@ strcpy:
     push r2
     \ mv r2 from_ptr
     push r3
-    \ ld b r3 from_ptr ++1 
+    \ ld b r3 from_ptr ++1
 strcpy_loop:
     tstz r3
-    \ st b r3 to_ptr ++1 
+    \ st b r3 to_ptr ++1
     br ne strcpy_loop
-    \ ld b r3 from_ptr ++1 
+    \ ld b r3 from_ptr ++1
 strcpy_done:
     pop r3
     \ dec from_ptr
@@ -31,7 +31,7 @@ strcmp:
     \ push r3
     push r4
     ld b r2 str1_ptr ++1
-    \ ld b r3 str2_ptr ++1 
+    \ ld b r3 str2_ptr ++1
 strcmp_loop:
     ld b r2 str1_ptr ++1
     \ sub r4 r3 r2
@@ -45,4 +45,4 @@ strcmp_done:
     \ mv rtn r4
     pop r3
     \ pop r2
-    rtn  
+    rtn

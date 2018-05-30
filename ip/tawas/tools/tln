@@ -6,19 +6,19 @@
 # by David M. Koltak    06/02/2017
 #
 # The MIT License (MIT)
-# 
+#
 # Copyright (c) 2017 David M. Koltak
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-# 
+#
 
 import sys
 
@@ -42,7 +42,7 @@ def print_help():
 
 if len(sys.argv) < 2:
     print_help()
-    
+
 #
 # Parse argv
 #
@@ -66,7 +66,7 @@ for arg in sys.argv[1:]:
         print_help()
     else:
         infiles.append(arg)
-        
+
 if len(infiles) == 0:
     print("ERROR: No input files specified")
     exit(-1)
@@ -90,7 +90,7 @@ if dram_out == '':
         dram_out = obj_out[:-1] + 'ds'
     else:
         dram_out = 'dram.hex'
-                
+
 #
 # Initialize database scructures
 #     NOTE: Program segment is initialized with 4 x jumps to entry points
@@ -99,7 +99,7 @@ if dram_out == '':
 plabels = {}
 pc = 4
 prog = [0xFE000000, 0xFE000000, 0xFE000000, 0xFE000000]
-pfixup = ['0:abs24:_t0_reset:builtin:0', '1:abs24:_t1_reset:builtin:0', 
+pfixup = ['0:abs24:_t0_reset:builtin:0', '1:abs24:_t1_reset:builtin:0',
                     '2:abs24:_t2_reset:builtin:0', '3:abs24:_t3_reset:builtin:0']
 
 dlabels = {}
@@ -117,12 +117,12 @@ for filename in infiles:
     except IOError:
         print("ERROR: File '%s' not found" % filename)
         exit(-1)
-    
+
     linenum = 0
     section = ''
     pc_start = pc
     dc_start = dc
-    
+
     for line in fin:
         linenum += 1
         line = line.strip()
@@ -132,7 +132,7 @@ for filename in infiles:
             continue
         if line[0:2] == '//':
             continue
-        
+
         if line == '<program>':
             section = 'p'
         elif line == '<data>':
@@ -141,21 +141,21 @@ for filename in infiles:
             l = line.split('+=')
             l[0] = l[0].strip()
             l[1] = l[1].strip()
-            
+
             if l[0] in plabels:
                 print("ERROR: Redefined program label '%s' @ %s:%d" % (l[0], filename, linenum))
                 exit(-1)
-                
+
             if l[0] in dlabels:
                 print("ERROR: Redefined data label '%s' @ %s:%d" % (l[0], filename, linenum))
                 exit(-1)
-                
+
             try:
                 offset = int(l[1], 0)
             except ValueError:
                 print("ERROR: Invalid label offset '%s' @ %s:%d" % (l[1], filename, linenum))
                 exit(-1)
-            
+
             if section == 'p':
                 plabels[l[0]] = pc_start + offset
             elif section == 'd':
@@ -164,21 +164,21 @@ for filename in infiles:
             l = line.split('==')
             l[0] = l[0].strip()
             l[1] = l[1].strip()
-            
+
             if l[0] in plabels:
                 print("ERROR: Redefined program label '%s' @ %s:%d" % (l[0], filename, linenum))
                 exit(-1)
-                
+
             if l[0] in dlabels:
                 print("ERROR: Redefined data label '%s' @ %s:%d" % (l[0], filename, linenum))
                 exit(-1)
-                
+
             try:
                 value = int(l[1], 0)
             except ValueError:
                 print("ERROR: Invalid label offset '%s' @ %s:%d" % (l[1], filename, linenum))
                 exit(-1)
-            
+
             if section == 'p':
                 plabels[l[0]] = value
             elif section == 'd':
@@ -195,26 +195,26 @@ for filename in infiles:
                 exit(-1)
         else:
             d = line.split(':')
-            
+
             try:
                 n = int(d[0], 16)
             except ValueError:
                 print("ERROR: Invalid data value '%s' @ %s:%d" % (line, filename, linenum))
                 exit(-1)
-            
+
             if len(d) == 3:
                 if section == 'p':
                     pfixup.append('%d:%s:%s:%s:%d' % (pc, d[1].strip(), d[2].strip(), filename, linenum));
                 elif section == 'd':
                     dfixup.append('%d:%s:%s:%s:%d' % (dc, d[1].strip(), d[2].strip(), filename, linenum));
-                    
+
             if section == 'p':
                 prog.append(n)
                 pc += 1
             elif section == 'd':
                 data.append(n)
                 dc += 4
-                
+
     fin.close()
 
 #
@@ -226,7 +226,7 @@ for fixup in pfixup:
     addr = int(f[0])
     ftype = f[1]
     label = f[2]
-    
+
     if label in plabels:
         label = plabels[label]
         ltype = 'p'
@@ -236,13 +236,13 @@ for fixup in pfixup:
     else:
         print("ERROR: Unable to resolve label '%s' @ %s:%s" % (label, f[3], f[4]))
         exit(-1)
-    
+
     if ftype == 'abs24':
         if ltype == 'd':
             print("ERROR: Cannot use data label '%s' for jmp/call @ %s:%s" % (label, f[3], f[4]))
             exit(-1)
         prog[addr] = (prog[addr] & 0xFF000000) | (label & 0x00FFFFFF)
-    
+
     elif ftype == 'rel12':
         if ltype == 'd':
             print("ERROR: Cannot use data label '%s' for br @ %s:%s" % (label, f[3], f[4]))
@@ -252,7 +252,7 @@ for fixup in pfixup:
             print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
             exit(-1)
         prog[addr] = (prog[addr] & 0xF8007FFF) | ((offset << 15) & 0x07FF8000)
-        
+
     elif ftype == 'rel8':
         if ltype == 'd':
             print("ERROR: Cannot use data label '%s' for br @ %s:%s" % (label, f[3], f[4]))
@@ -262,31 +262,31 @@ for fixup in pfixup:
             print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
             exit(-1)
         prog[addr] = (prog[addr] & 0xFF807FFF) | ((offset << 15) & 0x007F8000)
-        
+
     elif ftype == 'imm25':
         if ((label & 0xFF000000) != 0) and ((label & 0xFF000000) != 0xFF000000):
             print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
             exit(-1)
         prog[addr] = (prog[addr] & 0xFE000000) | (label & 0x01FFFFFF)
-        
+
     elif ftype == 'imm10.h':
         if ((label & 0xFFFFFE00) != 0) and ((label & 0xFFFFFE00) != 0xFFFFFE00):
             print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
             exit(-1)
         prog[addr] = (prog[addr] & 0xF003FFFF) | ((label << 18) & 0x0FFC0000)
-        
+
     elif ftype == 'imm10.l':
         if ((label & 0xFFFFFE00) != 0) and ((label & 0xFFFFFE00) != 0xFFFFFE00):
             print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
             exit(-1)
         prog[addr] = (prog[addr] & 0xFFFFE007) | ((label << 3) & 0x00001FF8)
-        
+
     elif ftype == 'imm9.h':
         if ((label & 0xFFFFFF00) != 0) and ((label & 0xFFFFFF00) != 0xFFFFFF00):
             print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
             exit(-1)
         prog[addr] = (prog[addr] & 0xF803FFFF) | ((label << 18) & 0x07FC0000)
-        
+
     elif ftype == 'imm9.l':
         if ((label & 0xFFFFFF00) != 0) and ((label & 0xFFFFFF00) != 0xFFFFFF00):
             print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
@@ -301,7 +301,7 @@ for fixup in pfixup:
             print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
             exit(-1)
         prog[addr] = (prog[addr] & 0xFF800000) | ((label & 0x01FFFFFF) >> 2)
-        
+
     else:
         print("ERROR: Invalid fixup type @ %s:%s" % (f[3], f[4]))
         exit(-1)
@@ -315,7 +315,7 @@ for fixup in dfixup:
     addr = int(f[0])
     ftype = f[1]
     label = f[2]
-    
+
     if label in plabels:
         label = plabels[label]
     elif label in dlabels:
@@ -323,7 +323,7 @@ for fixup in dfixup:
     else:
         print("ERROR: Unable to resolve label '%s' @ %s:%s" % (label, f[3], f[4]))
         exit(-1)
-    
+
     if ftype == 'data32':
         data[addr >> 2] = label & 0xffffffff
     elif ftype == 'data16.0':
@@ -359,7 +359,7 @@ for fixup in dfixup:
     else:
         print("ERROR: Invalid fixup type @ %s:%s" % (f[3], f[4]))
         exit(-1)
-                
+
 #
 # Dump instruction/data segments to output files
 #
@@ -406,9 +406,9 @@ if verbose != 0:
     print("\nData Fixups:")
     for fixup in dfixup:
         print("    %s" % (fixup))
-    
+
     print("\nWrote %d words of instructions to '%s'" % (len(prog), irom_out))
     print("\nWrote %d bytes of data to '%s'" % (len(data) * 4, dram_out))
     print("")
-    
+
 exit(0)

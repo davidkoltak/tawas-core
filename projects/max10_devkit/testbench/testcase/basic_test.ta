@@ -4,36 +4,70 @@
 .global _t2_reset
 .global _t3_reset
 
-_t1_reset:
-_t2_reset:
-_t3_reset:
-    halt
-
-_t0_reset:
 .alloc stack_0_bot w 127
 .data stack_0_top w 0xAAAAAAAA
-    ldi sp stack_0_top 
+.alloc stack_1_bot w 127
+.data stack_1_top w 0xAAAAAAAA
+.alloc stack_2_bot w 127
+.data stack_2_top w 0xAAAAAAAA
+.alloc stack_3_bot w 127
+.data stack_3_top w 0xAAAAAAAA
+
+_t1_reset:
+    ldi sp stack_1_top
+    jmp stub
+
+_t2_reset:
+    ldi sp stack_2_top
+    jmp stub
+
+_t3_reset:
+    ldi sp stack_3_top
+    jmp stub
+
+stub:
+    rdcsr r0 thread
+    call test_progress_inc
+    jmp test_pass_wait
+
+_t0_reset:
+    ldi sp stack_0_top
 
     ldi r0 0x123456
     cmpi r0 0
     skip ne
     jmp test_fail_now
-    
+
     ldi r1 0x54
     cmpi r1 0x54
     skip eq
     jmp test_fail_now
-    
+
     ldi r2 0xFF123456
     cmp r0 r2
     skip ne
     jmp test_fail_now
-    
+
     ldi r3 0xffffff
     and r2 r3
     cmp r0 r2
     skip eq
     jmp test_fail_now
-    
-    jmp test_pass_now
-    
+
+    ldi r5 0x7755
+    wrcsr r5 scratch
+    rdcsr r4 scratch
+    cmp r4 r5
+    skip eq
+    jmp test_fail_now
+
+    rdcsr r5 ticks
+    rdcsr r5 ticks
+    rdcsr r5 ticks
+
+    ldi r3 stack_0_top
+    xch w r5 r3
+    xch w r5 r3
+
+    jmp test_pass_wait
+

@@ -64,7 +64,7 @@ module tawas_regfile
     reg [31:0] regfile_2_nxt[7:0];
     reg [31:0] regfile_3[7:0];
     reg [31:0] regfile_3_nxt[7:0];
-  
+
     integer x;
 
     always @ *
@@ -84,7 +84,7 @@ module tawas_regfile
             2'd2: regfile_2_nxt[rcn_load_sel] = rcn_load;
             default: regfile_3_nxt[rcn_load_sel] = rcn_load;
             endcase
-                
+
         case (slice[1:0])
         2'd0:
         begin
@@ -156,7 +156,7 @@ module tawas_regfile
         end
         endcase
     end
-  
+
     always @ (posedge clk or posedge rst)
         if (rst)
             for (x = 0; x < 8; x = x + 1)
@@ -180,7 +180,7 @@ module tawas_regfile
     reg [31:0] rb_out;
     reg [31:0] ptr_out;
     reg [31:0] st_out;
-  
+
     always @ *
         case (slice[1:0])
         2'd0:
@@ -216,17 +216,17 @@ module tawas_regfile
             st_out = regfile_2[ls_store_sel];
         end
         endcase
-      
+
     assign pc_rtn = pc_out[23:0];
     assign au_flags_rtn = pc_out[31:24];
-    assign au_ra = ra_out;  
+    assign au_ra = ra_out;
     assign au_rb = rb_out;
 
-    assign ls_ptr = ptr_out; 
-    assign ls_store = st_out; 
+    assign ls_ptr = ptr_out;
+    assign ls_store = st_out;
 
     //
-    // wires for simulation only... provides visibility with waveform 
+    // wires for simulation only... provides visibility with waveform
     // viewers that cannot read arrays
     //
 
@@ -267,4 +267,4 @@ module tawas_regfile
     wire [31:0] s3_r7 = regfile_3[7];
 
 endmodule
- 
+

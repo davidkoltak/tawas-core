@@ -15,7 +15,7 @@ module tawas_ls
     output reg [31:0] daddr,
     output reg dcs,
     output reg rcn_cs,
-    output reg rcn_post,
+    output reg rcn_pfch_xch,
     output reg [2:0] writeback_reg,
     output reg dwr,
     output reg [3:0] dmask,
@@ -62,6 +62,7 @@ module tawas_ls
     wire [2:0] data_reg;
 
     wire wr_en;
+    wire xch_en;
     wire [31:0] wr_data;
     wire [3:0] data_mask;
 
@@ -71,13 +72,13 @@ module tawas_ls
     assign ls_store_sel = data_reg;
 
     assign addr_offset = (ls_op[12]) ? {{25{1'b0}}, ls_op[10:6], 2'd0} :
-                         (ls_op[11]) ? {{26{1'b0}}, ls_op[10:6], 1'd0} 
+                         (ls_op[11]) ? {{26{1'b0}}, ls_op[10:6], 1'd0}
                                      : {{27{1'b0}}, ls_op[10:6]};
-                    
+
     assign addr_adj = (ls_op[12]) ? {{25{ls_op[10]}}, ls_op[10:6], 2'd0} :
-                      (ls_op[11]) ? {{26{ls_op[10]}}, ls_op[10:6], 1'd0} 
+                      (ls_op[11]) ? {{26{ls_op[10]}}, ls_op[10:6], 1'd0}
                                   : {{27{ls_op[10]}}, ls_op[10:6]};
-  
+
     assign addr_next = ls_ptr + ((ls_op[13]) ? addr_adj : addr_offset);
     assign addr_out = (ls_dir_vld) ? ls_dir_addr :
                       (ls_op[13] && !addr_adj[31]) ? ls_ptr : addr_next;
@@ -85,6 +86,7 @@ module tawas_ls
     assign rcn_space = addr_out[31];
 
     assign wr_en = (ls_dir_vld && ls_dir_store) || (ls_op_vld && ls_op[14]);
+    assign xch_en = ls_op_vld && ls_op[14] && (ls_op[12:11] == 2'b11);
 
     assign wr_data = (ls_op[12] || ls_dir_vld) ? ls_store[31:0] :
                      (ls_op[11]) ? {ls_store[15:0], ls_store[15:0]}
@@ -96,7 +98,7 @@ module tawas_ls
                                      (addr_out[1]               ) ? 4'b0100 :
                                      (               addr_out[0]) ? 4'b0010
                                                                   : 4'b0001;
-      
+
     //
     // Update pointers
     //
@@ -109,12 +111,12 @@ module tawas_ls
             ls_ptr_upd <= addr_next;
         end
         else
-        begin     
+        begin
             ls_ptr_upd_vld <= 1'b0;
             ls_ptr_upd_sel <= 3'b0;
             ls_ptr_upd <= 32'd0;
         end
-      
+
     //
     // Send no-wait bus request
     //
@@ -123,7 +125,7 @@ module tawas_ls
         if (rst)
             ld_d1 <= 8'd0;
         else if (ls_op_vld || ls_dir_vld)
-            ld_d1 <= {!wr_en && !rcn_space, ls_op[12:11], addr_out[1:0], data_reg};
+            ld_d1 <= {(!wr_en || xch_en) && !rcn_space, ls_op[12:11], addr_out[1:0], data_reg};
         else
             ld_d1 <= 8'd0;
 
@@ -132,14 +134,14 @@ module tawas_ls
             {ld_d3, ld_d2} <= {8'd0, 8'd0};
         else
             {ld_d3, ld_d2} <= {ld_d2, ld_d1};
-    
+
     always @ (posedge clk)
         if (ls_op_vld || ls_dir_vld)
         begin
             daddr <= {addr_out[31:2], 2'b00};
             dcs <=  !rcn_space;
             rcn_cs <= rcn_space;
-            rcn_post <= &ls_op[12:11];
+            rcn_pfch_xch <= &ls_op[12:11];
             writeback_reg <= data_reg;
             dwr <= wr_en;
             dmask <= data_mask;
@@ -150,13 +152,13 @@ module tawas_ls
             daddr <= 32'd0;
             dcs <= 1'b0;
             rcn_cs <= 1'b0;
-            rcn_post <= 1'b0;
+            rcn_pfch_xch <= 1'b0;
             writeback_reg <= 3'd0;
             dwr <= 1'b0;
             dmask <= 4'b0000;
             dout <= 32'd0;
         end
-    
+
     //
     // Register no-wait read data (D BUS) and send to regfile
     //
@@ -174,11 +176,11 @@ module tawas_ls
                                 : (ld_d3[4] && ld_d3[3]) ? {24'd0, rd_data[31:24]} :
                                   (ld_d3[4]            ) ? {24'd0, rd_data[23:16]} :
                                   (            ld_d3[3]) ? {24'd0, rd_data[15:8]}
-                                                         : {24'd0, rd_data[7:0]};        
+                                                         : {24'd0, rd_data[7:0]};
 
     assign ls_load_vld = ld_d3[7];
     assign ls_load_sel = ld_d3[2:0];
     assign ls_load = rd_data_final;
-  
+
 endmodule
-  
+

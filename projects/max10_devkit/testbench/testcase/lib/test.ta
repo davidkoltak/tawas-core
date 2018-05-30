@@ -19,16 +19,42 @@
 
 .equ test_reg_base 0xFFFFFFF0
 
-#define test_reg_thread_id  0
+#define test_reg_bus_id     0
 #define test_reg_progress   1
 #define test_reg_fail       2
 #define test_reg_pass       3
 
-.equ test_reg_thread_id_addr   test_reg_base + (test_reg_thread_id * 4)
+.equ test_reg_bus_id_addr      test_reg_base + (test_reg_bus_id * 4)
 .equ test_reg_progress_addr    test_reg_base + (test_reg_progress * 4)
 .equ test_reg_fail_addr        test_reg_base + (test_reg_fail * 4)
 .equ test_reg_pass_addr        test_reg_base + (test_reg_pass * 4)
 
+
+.data test_sema w 1
+sema_get:
+    push r0
+    \ mvi r0 0
+    push r1
+    ldi r1 test_sema
+get_loop:
+    xch w r0 r1
+    cmpi r0 0
+    br eq get_loop
+    pop r1
+    \ pop r0
+    rtn
+
+sema_put:
+    push r0
+    \ mvi r0 1
+    std r0 test_sema
+    pop r0
+    rtn
+
+.global test_get_bus_id
+test_get_bus_id:
+    ldd r0 test_reg_bus_id_addr
+    rtn
 
 .global test_progress_set
 test_progress_set:
@@ -37,24 +63,30 @@ test_progress_set:
 
 .global test_progress_inc
 test_progress_inc:
+    call sema_get
     push r0
+    \ clr r0
+    push r1
+    xch w r0 r1
+
     ldd r0 test_reg_progress_addr
     inc r0
     std r0 test_reg_progress_addr
     pop r0
+    call sema_put
     rtn
 
 .global test_fail_now
 test_fail_now:
-    ldd r0 test_reg_thread_id_addr
-    bset r0 8
+    rdcsr r0 thread
+    \ bset r0 8
     std r0 test_reg_fail_addr
     halt
 
 .global test_pass_now
 test_pass_now:
-    ldd r0 test_reg_thread_id_addr
-    bset r0 8
+    rdcsr r0 thread
+    \ bset r0 8
     std r0 test_reg_pass_addr
     halt
 
@@ -71,11 +103,11 @@ test_pass_wait:
     \ br test_store_results
 
 test_store_results:
-    ldd r1 test_reg_thread_id_addr
     ldi r4 thread_results
+    rdcsr r1 thread
     lsl r1 2
     \ add r4 r1
-    st w r0 r4 [0]
+    st w r0 r4
     tstz r1
     skip eq
     halt
@@ -114,5 +146,5 @@ wait_for_t3:
     btst r4 0
     skip nz
     ldi r1 test_reg_pass_addr
-    st w r0 r1 [0] 
+    st w r0 r1
     halt
