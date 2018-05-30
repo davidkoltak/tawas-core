@@ -104,50 +104,51 @@ _t3_reset:
 .reg ptr2 r1
 .reg rtn r0
 string_test:
-    push r3
-    \ push r4
-    push r5
-
-    mv r3 ptr1
-    \ mv r4 ptr2
+    push r2
+    push ptr2
+    \ push ptr1
 
     call strcpy
     tstz rtn
     br eq string_test_done
-    \ mvi rtn 1
+    \ mvi r2 1
 
-    mv ptr1 r3
-    \ mv ptr2 r4
+    ld w ptr1 sp [0]
+    \ ld w ptr2 sp [1]
+
     call strcmp
     tstz rtn
     br ne string_test_done
-    \ mvi rtn 1
+    \ mvi r2 1
     
-    ld b r0 r4 [2]
-    push r0
-    mvi r0 0x87
-    st b r0 r4 [2] 
+    ld w ptr1 sp [0]
+    \ ld w ptr2 sp [1]
     
-    mv ptr1 r3
-    \ mv ptr2 r4
+    ld b r2 ptr1 [7]
+    addi r2 3
+    st b r2 ptr1 [7] 
+    
     call strcmp
     tstz rtn
     br eq string_test_done
-    \ mvi rtn 1
+    \ mvi r2 1
 
-    pop r0
-    st b r0 r4 [2] 
+    ld w ptr1 sp [0]
+    \ ld w ptr2 sp [1]
     
-    mv ptr1 r3
-    \ mv ptr2 r4
+    ld b r2 ptr1 [7]
+    addi r2 -3
+    st b r2 ptr1 [7] 
+    
     call strcmp
     tstz rtn
     br ne string_test_done
-    \ mvi rtn 1
-    mvi rtn 0
+    \ mvi r2 1
+    mvi r2 0
 
-string_test_done:   
-    pop r5
-    pop r4
-    \ pop r3
+string_test_done:
+    pop ptr1
+    \ pop ptr2
+    pop r2
+    \ mv rtn r2
     rtn 

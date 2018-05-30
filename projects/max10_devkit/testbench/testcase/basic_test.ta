@@ -1,0 +1,39 @@
+
+.global _t0_reset
+.global _t1_reset
+.global _t2_reset
+.global _t3_reset
+
+_t1_reset:
+_t2_reset:
+_t3_reset:
+    halt
+
+_t0_reset:
+.alloc stack_0_bot w 127
+.data stack_0_top w 0xAAAAAAAA
+    ldi sp stack_0_top 
+
+    ldi r0 0x123456
+    cmpi r0 0
+    skip ne
+    jmp test_fail_now
+    
+    ldi r1 0x54
+    cmpi r1 0x54
+    skip eq
+    jmp test_fail_now
+    
+    ldi r2 0xFF123456
+    cmp r0 r2
+    skip ne
+    jmp test_fail_now
+    
+    ldi r3 0xffffff
+    and r2 r3
+    cmp r0 r2
+    skip eq
+    jmp test_fail_now
+    
+    jmp test_pass_now
+    

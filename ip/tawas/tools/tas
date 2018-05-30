@@ -608,9 +608,9 @@ def decode_hw_op(pc, hw_op, upper):
             print("ERROR: Bad opcode: %s" % (hw_op))
             exit(-1)
         if opcode[0] == 'inc':
-            reg = 0x4008
+            rtn = 0x4008
         else:
-            reg = 0x5FF8
+            rtn = 0x5FF8
         reg = decode_reg(opcode[1])
         rtn |= reg
         if reg < 0:
@@ -636,7 +636,7 @@ def decode_hw_op(pc, hw_op, upper):
         if opcode[0] == 'cmpi':
             try:
                 value = int(opcode[2], 0)
-                if ((value & 0xFFFFFE00) != 0) and ((value & 0xFFFFFE00) != 0xFFFFFE00):
+                if ((value & 0xFFFFFF00) != 0) and ((value & 0xFFFFFF00) != 0xFFFFFF00):
                     print("ERROR: Immediate 9-bit overflow: %s" % (hw_op))
                     exit(-1)
                 rtn |= ((value & 0x000001FF) << 3)
@@ -648,7 +648,7 @@ def decode_hw_op(pc, hw_op, upper):
         else:
             try:
                 value = int(opcode[2], 0)
-                if ((value & 0xFFFFFC00) != 0) and ((value & 0xFFFFFC00) != 0xFFFFFC00):
+                if ((value & 0xFFFFFE00) != 0) and ((value & 0xFFFFFE00) != 0xFFFFFE00):
                     print("ERROR: Immediate 10-bit overflow: %s" % (hw_op))
                     exit(-1)
                 rtn |= ((value & 0x000003FF) << 3)
@@ -670,7 +670,7 @@ def decode_hw_op(pc, hw_op, upper):
         elif opcode[0] == 'sxh':
             rtn = 0x20C0
         elif opcode[0] == 'cmp':
-            rtn = 0x27C0
+            rtn = 0x2780
         if len(opcode) == 3:
                 reg = decode_reg(opcode[1])
                 rtn |= reg
@@ -822,7 +822,7 @@ def decode_fw_op(pc, fw_op):
         try:
             value = int(opcode[2], 0)
             if ((value & 0xFF000000) != 0) and ((value & 0xFF000000) != 0xFF000000):
-                print("ERROR: Immediate 25-bit overflow: %s" % (hw_op))
+                print("ERROR: Immediate 25-bit overflow: %s" % (fw_op))
             rtn |= (value & 0x01FFFFFF)
         except ValueError:
             pfixup.append("%d:imm25:%s" % (pc, opcode[2]))
@@ -841,8 +841,8 @@ def decode_fw_op(pc, fw_op):
             rtn |= (1 << 26)
         try:
             value = int(opcode[2], 0)
-            if (value & 0xFE000000) != 0:
-                print("ERROR: Address 25-bit overflow: %s" % (hw_op))
+            if ((value & 0xFF000000) != 0) and ((value & 0xFF000000) != 0xFF000000):
+                print("ERROR: Address 25-bit overflow: %s" % (fw_op))
             rtn |= ((value & 0x01FFFFFF) >> 2)
         except ValueError:
             pfixup.append("%d:wordptr23:%s" % (pc, opcode[2]))

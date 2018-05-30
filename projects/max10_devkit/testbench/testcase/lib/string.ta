@@ -17,8 +17,9 @@ strcpy_loop:
     \ ld b r3 from_ptr ++1 
 strcpy_done:
     pop r3
-    \ sub rtn from_ptr r3
+    \ dec from_ptr
     pop r2
+    \ sub rtn from_ptr r2
     rtn
 
 .global strcmp
@@ -28,17 +29,20 @@ strcpy_done:
 strcmp:
     push r2
     \ push r3
+    push r4
     ld b r2 str1_ptr ++1
     \ ld b r3 str2_ptr ++1 
 strcmp_loop:
     ld b r2 str1_ptr ++1
-    \ cmp r3 r2
-    br ne strcmp_done
+    \ sub r4 r3 r2
+    br nz strcmp_done
     \ cmpi r3 0
     br ne strcmp_loop
     \ ld b r3 str2_ptr ++1
+    mvi r4 0
 strcmp_done:
-    pop r2
-    \ sub rtn r3 r2
+    pop r4
+    \ mv rtn r4
     pop r3
+    \ pop r2
     rtn  

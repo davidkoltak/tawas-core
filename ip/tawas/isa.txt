@@ -93,10 +93,14 @@ CSR
   5 : lsr      (a >> #v) -> a
   6 : asr      (a >> #v) -> a
   7 :
-  
+
 011 iiiiiiiii  aaa : cmpi a, [-256, 255]
 10 iiiiiiiiii  aaa : addi a, [-512, 511]
 11 iiiiiiiiii  aaa : mvi a, [-512, 511]
+
+tstz: 011 0000 0000 0xxx
+inc: 100 0000 0000 1xxx (0x4008 | x)
+dec: 101 1111 1111 1xxx (0x5FF8 | x)
 
 LS Opcodes: 15-bits
 ------------------------------------------

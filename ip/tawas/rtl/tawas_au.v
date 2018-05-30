@@ -45,7 +45,7 @@ module tawas_au
         else
         begin
             op_d1 <= {au_op_vld, au_op};
-            op_d2 <= op_d1;
+            op_d2 <= (op_d1[14:0] == 15'd0) ? 16'd0 : op_d1;
         end
     
     assign au_ra_sel = au_op[2:0];
@@ -108,7 +108,7 @@ module tawas_au
             2'b01:
             begin
                 if (op_d1[12])
-                    result <= a_d1 - {{14{op_d1[11]}}, op_d1[11:3]};
+                    result <= a_d1 - {{24{op_d1[11]}}, op_d1[11:3]};
                 else if (op_d1[11])
                 begin
                     case (op_d1[10:8])
@@ -155,8 +155,8 @@ module tawas_au
                 end
             end
             
-            2'b10: result <= a_d1 + {{13{op_d1[12]}}, op_d1[12:3]};
-            default: result <= {{13{op_d1[12]}}, op_d1[12:3]};
+            2'b10: result <= a_d1 + {{23{op_d1[12]}}, op_d1[12:3]};
+            default: result <= {{23{op_d1[12]}}, op_d1[12:3]};
             endcase
 
     reg [7:0] result_flags;

@@ -300,7 +300,7 @@ for fixup in pfixup:
         if ((label & 0xFF000000) != 0) and ((label & 0xFF000000) != 0xFF000000):
             print("ERROR: Fixup value overflow @ %s:%s" % (f[3], f[4]))
             exit(-1)
-        prog[addr] = (prog[addr] & 0xFE00000) | ((label & 0x01FFFFFF) >> 2)
+        prog[addr] = (prog[addr] & 0xFF800000) | ((label & 0x01FFFFFF) >> 2)
         
     else:
         print("ERROR: Invalid fixup type @ %s:%s" % (f[3], f[4]))

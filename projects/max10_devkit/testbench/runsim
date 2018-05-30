@@ -146,7 +146,7 @@ if (!(-e $script_dir."testcase/$testname"))
 system("rm '$script_dir"."testcase/irom.hex' 2> /dev/null");
 system("rm '$script_dir"."testcase/dram.hex' 2> /dev/null");
 
-$cmd = "cd '$script_dir"."testcase/' && make -f ".$testname;
+$cmd = "cd '$script_dir"."testcase/' && make clean all -f ".$testname;
 print "RUNNING: $cmd\n";
 if (system($cmd))
 { die "ERROR: Command failed\n"; }
