@@ -5,6 +5,8 @@
 // Tawas Module Toplevel: A simple multi-threaded RISC core.
 //
 
+`define RTL_VERSION 32'hA0010001
+
 module tawas
 (
     input clk,
@@ -97,7 +99,7 @@ module tawas
     wire [2:0] au_rc_sel;
     wire [31:0] au_rc;
   
-    tawas_au tawas_au
+    tawas_au #(.RTL_VERSION(`RTL_VERSION)) tawas_au
     (
         .clk(clk),
         .rst(rst),

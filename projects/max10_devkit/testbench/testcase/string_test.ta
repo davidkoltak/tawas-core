@@ -87,8 +87,8 @@ _t3_reset:
     ldi r0 0x40001
     call test_progress_set
 
-    ldi r8 test_3_str
-    ldi r9 test_3_buf
+    ldi r0 test_3_str
+    ldi r1 test_3_buf
     call string_test
     mv r1 r0
 

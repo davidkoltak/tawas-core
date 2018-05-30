@@ -44,7 +44,7 @@ ___________________________________________
 AU Opcodes: 15-bits
 ------------------------------------------
 
-00 iii ccc bbb aaa
+00 iiii ccc bbb aaa
 
   0 : Or       (a | b) -> c  (aka nop, mv)
   1 : And      (a & b) -> c
@@ -55,36 +55,44 @@ AU Opcodes: 15-bits
   6 : 
   7 : 
 
-01000 iiii aaa bbb
+  8 :
+ ...
+  F :
 
-  0 : Not      (~b) -> a
-  1 : Neg      (-b) -> a
-  2 : Cmp      (a - b)
-  3 :
+0100 iiiii bbb aaa
+
+  00 : Not      (~b) -> a
+  01 : Neg      (-b) -> a
+  02 : sxb     sign-extend(b, byte) -> a
+  03 : sxh     sign-extend(b, half) -> a
+ ...
+  0F : RdCsr    CSR(b) -> a
+
+  10 :
+ ...
+  1E : Cmp      (a - b)
+  1F : WrCsr    b -> CSR(a)
+
+CSR
+  0 : version
+  1 : thread
+  2 : interrupt
+  3 : tick
   4 :
   5 :
   6 :
-  7 : 
-  
-  8 :
-  9 :
-  A :
-  B :
-  C :
-  D : version  (version) -> a
-  E : thread   (thread) -> a
-  F : tick     (tick) -> a
-  
+  7 : scratch
+
 0101 iii vvvvv aaa
 
-  0 : bset     (a | (1 << #v) -> a
+  0 : btst     (a & (1 << #v)
   1 : bclr     (a & ~(1 << #v) -> a
-  2 : btst     (a & (1 << #v)
+  2 : bset     (a | (1 << #v) -> a
   3 :
   4 : lsl      (a << #v) -> a
   5 : lsr      (a >> #v) -> a
   6 : asr      (a >> #v) -> a
-  7 : sx       sign-extend(a, bit(v)) -> a
+  7 :
   
 011 iiiiiiiii  aaa : cmpi a, [-256, 255]
 10 iiiiiiiiii  aaa : addi a, [-512, 511]
@@ -108,8 +116,8 @@ LS Opcodes: 15-bits
 
 NOTE: Pre-decrement, Post-increment
 
-st.w rx, r6--1  == push rx
-ld.w rx, r6++1  == pop rx
+st.w rx, r6--1  == push rx (111 0111 1111 0xxx) 0x77Fx
+ld.w rx, r6++1  == pop rx  (011 0000 0111 0xxx) 0x307x
 
 
 BR Opcodes: 13-bits

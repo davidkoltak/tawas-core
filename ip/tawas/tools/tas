@@ -3,7 +3,7 @@
 #
 # Tawas Assembler: A very basic assembler for the 'tawas' processor core
 #
-# by David M. Koltak  06/02/2017
+# by David M. Koltak    06/02/2017
 #
 # The MIT License (MIT)
 # 
@@ -33,19 +33,19 @@ import time
 import subprocess
 
 def print_help():
-  print("\nUSAGE: %s [-Ooutput] [-Idir] [-Dm[=v]] {input} ..." % (sys.argv[0]))
-  print("  -O   output object file")
-  print("  -I   cpp include directories")
-  print("  -D   cpp macro definitions")
-  print("  -v   verbose output")
-  print("  -V   version output")
-  print("  -h   this message")
-  exit(-1)
+    print("\nUSAGE: %s [-Ooutput] [-Idir] [-Dm[=v]] {input} ..." % (sys.argv[0]))
+    print("    -O     output object file")
+    print("    -I     cpp include directories")
+    print("    -D     cpp macro definitions")
+    print("    -v     verbose output")
+    print("    -V     version output")
+    print("    -h     this message")
+    exit(-1)
 
 
 if len(sys.argv) < 2:
-  print_help()
-  
+    print_help()
+    
 #
 # Parse argv
 #
@@ -58,37 +58,37 @@ obj_out = ''
 dram_out = 'dram.hex'
 
 for arg in sys.argv[1:]:
-  if arg[0:2] == '-O':
-    obj_out = arg[2:]
-  elif arg[0:2] == '-I':
-    inc_dirs += ' ' + arg
-  elif arg[0:2] == '-D':
-    macro_defs += ' ' + arg
-  elif arg == '-v':
-    verbose = 1
-    print("WARNING: Verbose output is currently unimplemented")
-  elif arg == '-V':
-    print("VERSION: 0.1 (ALPHA)")
-    exit(-1)
-  elif arg[0:2] == '-h':
-    print_help()
-  else:
-    infiles.append(arg)
+    if arg[0:2] == '-O':
+        obj_out = arg[2:]
+    elif arg[0:2] == '-I':
+        inc_dirs += ' ' + arg
+    elif arg[0:2] == '-D':
+        macro_defs += ' ' + arg
+    elif arg == '-v':
+        verbose = 1
+        print("WARNING: Verbose output is currently unimplemented")
+    elif arg == '-V':
+        print("VERSION: 0.1 (ALPHA)")
+        exit(-1)
+    elif arg[0:2] == '-h':
+        print_help()
+    else:
+        infiles.append(arg)
 
 if len(infiles) == 0:
-  print("ERROR: No input files specified")
-  exit(-1)
-  
+    print("ERROR: No input files specified")
+    exit(-1)
+    
 if obj_out == '':
-  if infiles[0].endswith('.ta'):
-    obj_out = infiles[0]
-    obj_out = obj_out[:-2] + 'to'
-  elif infiles[0].endswith('.a'):
-    obj_out = infiles[0]
-    obj_out = obj_out[:-1] + 'to'
-  else:
-    obj_out = 'a.to'
-   
+    if infiles[0].endswith('.ta'):
+        obj_out = infiles[0]
+        obj_out = obj_out[:-2] + 'to'
+    elif infiles[0].endswith('.a'):
+        obj_out = infiles[0]
+        obj_out = obj_out[:-1] + 'to'
+    else:
+        obj_out = 'a.to'
+     
 #
 # Initialize database scructures
 #
@@ -114,7 +114,7 @@ reg_rename = {}
 
 t = str(time.clock())
 for x in sys.argv:
-  t += x
+    t += x
 
 ouid = '_' + str(hash(t) & 0xFFFFFF)
 
@@ -124,245 +124,245 @@ ouid = '_' + str(hash(t) & 0xFFFFFF)
 
 local_equates = {}
 def run_equate(name, value):
-  global local_equates
-  global dsize
-  
-  def size(label):
-    if label in dsize:
-      return dsize[label]
-    else:
-      print("ERROR: Invalid data label '%s' used in size()" % (label))
-      exit(-1)
+    global local_equates
+    global dsize
+    
+    def size(label):
+        if label in dsize:
+            return dsize[label]
+        else:
+            print("ERROR: Invalid data label '%s' used in size()" % (label))
+            exit(-1)
 
-  try:
-    local_equates[name] = eval(value, {}, local_equates)
-  except:
-    return -1
-  return 0
+    try:
+        local_equates[name] = eval(value, {}, local_equates)
+    except:
+        return -1
+    return 0
 
 for filename in infiles:
-  try:
-    cmd = 'cpp %s %s %s' % (inc_dirs, macro_defs, filename)
-    cpp_out = subprocess.check_output(cmd, shell=True)
-    fin = cpp_out.splitlines()
-  except subprocess.CalledProcessError:
-    print("ERROR: Unable to run CPP on '%s'" % filename)
-    exit(-1)
-  
-  linenum = 0
-  
-  for line in fin:
-    linenum += 1
-    line = line.strip()
-    if line == '':
-      continue
-    if line[0] == '#':
-      continue
-    if line[0:2] == '//':
-      continue
+    try:
+        cmd = 'cpp %s %s %s' % (inc_dirs, macro_defs, filename)
+        cpp_out = subprocess.check_output(cmd, shell=True)
+        fin = cpp_out.splitlines()
+    except subprocess.CalledProcessError:
+        print("ERROR: Unable to run CPP on '%s'" % filename)
+        exit(-1)
     
-    if line[-1] == ':':
-      label = line[:-1]
-      if (label in plabels) or (label in dlabels) or (label in elabels):
-        print("ERROR: Redefined label '%s' @ %s:%d" % (label, filename, linenum))
-        exit(-1)
-      plabels[label] = pc
-      continue
-      
-    if line[0] == '.':
-      dctv = line.split()
-      if dctv[0] == '.alloc':
-        if len(dctv) != 4:
-          print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
-          exit(-1)
-          
-        try:
-          cnt = int(dctv[3], 0)
-        except ValueError:
-          print("ERROR: Alloc count field is not a number '%s' @ %s:%d" % (line, filename, linenum))
-          exit(-1)
-          
-        if (dctv[1] in plabels) or (dctv[1] in dlabels) or (dctv[1] in elabels):
-          print("ERROR: Redefined label '%s' @ %s:%d" % (dctv[1], filename, linenum))
-          exit(-1)
-            
-        if dctv[2] == 'w':
-          dsize[dctv[1]] = (4 * cnt)
-          if dc & 3:
-            dc = (dc & 0xFFFFFFFC) + 4
-          dlabels[dctv[1]] = dc
-          for x in range(cnt):
-            data.append(0)
-            dc += 4
-        elif dctv[2] == 'h':
-          dsize[dctv[1]] = (2 * cnt)
-          if dc & 1:
-            dc = (dc & 0xFFFFFFFE) + 2
-          dlabels[dctv[1]] = dc
-          for x in range(cnt):
-            if (dc & 2) == 0:
-              data.append(0)
-            dc += 2
-        elif dctv[2] == 'b':
-          dsize[dctv[1]] = cnt
-          dlabels[dctv[1]] = dc
-          for x in range(cnt):
-            if (dc & 3) == 0:
-              data.append(0)
-            dc += 1          
-        else:
-          print("ERROR: Invalid alloc data type '%s' @ %s:%d" % (dctv[1], filename, linenum))
-          exit(-1)
-          
-      elif dctv[0] == '.data':
-        if len(dctv) < 4:
-          print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
-          exit(-1)
+    linenum = 0
+    
+    for line in fin:
+        linenum += 1
+        line = line.strip()
+        if line == '':
+            continue
+        if line[0] == '#':
+            continue
+        if line[0:2] == '//':
+            continue
         
-        if (dctv[1] in plabels) or (dctv[1] in dlabels) or (dctv[1] in elabels):
-          print("ERROR: Redefined label '%s' @ %s:%d" % (dctv[1], filename, linenum))
-          exit(-1)
-          
-        if dctv[2] == 'w':
-          dsize[dctv[1]] = 0
-          if dc & 3:
-            dc = (dc & 0xFFFFFFFC) + 4
-          dlabels[dctv[1]] = dc
-          for x in dctv[3:]:
-            try:
-              value = int(x, 0)
-              data.append(value)
-            except ValueError:
-              data.append(0)
-              dfixup.append("%d:data32:%s" % (dc, x))
-            dc += 4
-            dsize[dctv[1]] += 4
-        elif dctv[2] == 'h':
-          dsize[dctv[1]] = 0
-          if dc & 1:
-            dc = (dc & 0xFFFFFFFE) + 2
-          dlabels[dctv[1]] = dc
-          for x in dctv[3:]:
-            try:
-              value = int(x, 0)
-              if (dc & 2) == 0:
-                data.append(value & 0xFFFF)
-              else:
-                data[dc >> 2] = (data[dc >> 2] & 0x0000FFFF) | ((value << 16) & 0xFFFF0000)
-            except ValueError:
-              if (dc & 2) == 0:
-                data.append(0)
-                dfixup.append("%d:data16.0:%s" % (dc, x))
-              else:
-                data[dc >> 2] = (data[dc >> 2] & 0x0000FFFF)
-                dfixup.append("%d:data16.1:%s" % (dc, x))
-            dc += 2
-            dsize[dctv[1]] += 2
-        elif dctv[2] == 'b':
-          dsize[dctv[1]] = 0
-          dlabels[dctv[1]] = dc
-          for x in dctv[3:]:
-            try:
-              value = int(x, 0)
-              if (dc & 3) == 0:
-                data.append(value & 0x000000FF)
-              elif (dc & 3) == 1:
-                data[dc >> 2] = (data[dc >> 2] & 0xFFFF00FF) | ((value << 8) & 0x0000FF00)
-              elif (dc & 3) == 2:
-                data[dc >> 2] = (data[dc >> 2] & 0xFF00FFFF) | ((value << 16) & 0x00FF0000)
-              else:
-                data[dc >> 2] = (data[dc >> 2] & 0x00FFFFFF) | ((value << 24) & 0xFF000000)
-            except ValueError:
-              if (dc & 3) == 0:
-                data.append(0)
-                dfixup.append("%d:data8.0:%s" % (dc, x))
-              elif (dc & 3) == 1:
-                dfixup.append("%d:data8.1:%s" % (dc, x))
-              elif (dc & 3) == 2:
-                dfixup.append("%d:data8.2:%s" % (dc, x))
-              else:
-                dfixup.append("%d:data8.3:%s" % (dc, x))
-            dc += 1  
-            dsize[dctv[1]] += 1        
-        else:
-          print("ERROR: Invalid alloc data type '%s' @ %s:%d" % (dctv[1], filename, linenum))
-          exit(-1)
-      
-      elif dctv[0] == '.string':
-        if len(dctv) < 3:
-          print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
-          exit(-1)
-      
-        if (dctv[1] in plabels) or (dctv[1] in dlabels) or (dctv[1] in elabels):
-          print("ERROR: Redefined label '%s' @ %s:%d" % (dctv[1], filename, linenum))
-          exit(-1)
-          
-        s = line.replace('.string', '', 1)
-        s = s.replace(dctv[1], '', 1)
-        s = s.strip()
-        if s[0] == "'":
-          s = s.strip("'")
-        if s[0] == '"':
-          s = s.strip('"')
-          
-        dsize[dctv[1]] = len(s) + 1
-        dlabels[dctv[1]] = dc
-        for x in s:
-          value = ord(x)
-          if (dc & 3) == 0:
-            data.append(value & 0x000000FF)
-          elif (dc & 3) == 1:
-            data[dc >> 2] = (data[dc >> 2] & 0xFFFF00FF) | ((value << 8) & 0x0000FF00)
-          elif (dc & 3) == 2:
-            data[dc >> 2] = (data[dc >> 2] & 0xFF00FFFF) | ((value << 16) & 0x00FF0000)
-          else:
-            data[dc >> 2] = (data[dc >> 2] & 0x00FFFFFF) | ((value << 24) & 0xFF000000)
-          dc += 1    
+        if line[-1] == ':':
+            label = line[:-1]
+            if (label in plabels) or (label in dlabels) or (label in elabels):
+                print("ERROR: Redefined label '%s' @ %s:%d" % (label, filename, linenum))
+                exit(-1)
+            plabels[label] = pc
+            continue
             
-        if (dc & 3) == 0:
-          data.append(0)
-        elif (dc & 3) == 1:
-          data[dc >> 2] = (data[dc >> 2] & 0xFFFF00FF)
-        elif (dc & 3) == 2:
-          data[dc >> 2] = (data[dc >> 2] & 0xFF00FFFF)
-        else:
-          data[dc >> 2] = (data[dc >> 2] & 0x00FFFFFF)
-        dc += 1  
-      
-      elif dctv[0] == '.global':
-        if len(dctv) != 2:
-          print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
-          exit(-1)
-        glabels.append(dctv[1])
-      
-      elif dctv[0] == '.equ':
-        if len(dctv) < 3:
-          print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
-          exit(-1)
-        if run_equate(dctv[1], ' '.join(dctv[2:])) < 0:
-          print("ERROR: Unable to evaluate directive '%s' @ %s:%d" % (line, filename, linenum))
-          exit(-1)
-        if (dctv[1] in plabels) or (dctv[1] in dlabels) or (dctv[1] in elabels):
-          print("ERROR: Redefined label in directive '%s' @ %s:%d" % (line, filename, linenum))
-          exit(-1)
-        elabels[dctv[1]] = local_equates[dctv[1]]
-        
-      elif dctv[0] == '.reg':
-        if len(dctv) != 3:
-          print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
-          exit(-1)
-        reg_rename[dctv[1]] = dctv[2]
+        if line[0] == '.':
+            dctv = line.split()
+            if dctv[0] == '.alloc':
+                if len(dctv) != 4:
+                    print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
+                    exit(-1)
+                    
+                try:
+                    cnt = int(dctv[3], 0)
+                except ValueError:
+                    print("ERROR: Alloc count field is not a number '%s' @ %s:%d" % (line, filename, linenum))
+                    exit(-1)
+                    
+                if (dctv[1] in plabels) or (dctv[1] in dlabels) or (dctv[1] in elabels):
+                    print("ERROR: Redefined label '%s' @ %s:%d" % (dctv[1], filename, linenum))
+                    exit(-1)
+                        
+                if dctv[2] == 'w':
+                    dsize[dctv[1]] = (4 * cnt)
+                    if dc & 3:
+                        dc = (dc & 0xFFFFFFFC) + 4
+                    dlabels[dctv[1]] = dc
+                    for x in range(cnt):
+                        data.append(0)
+                        dc += 4
+                elif dctv[2] == 'h':
+                    dsize[dctv[1]] = (2 * cnt)
+                    if dc & 1:
+                        dc = (dc & 0xFFFFFFFE) + 2
+                    dlabels[dctv[1]] = dc
+                    for x in range(cnt):
+                        if (dc & 2) == 0:
+                            data.append(0)
+                        dc += 2
+                elif dctv[2] == 'b':
+                    dsize[dctv[1]] = cnt
+                    dlabels[dctv[1]] = dc
+                    for x in range(cnt):
+                        if (dc & 3) == 0:
+                            data.append(0)
+                        dc += 1                    
+                else:
+                    print("ERROR: Invalid alloc data type '%s' @ %s:%d" % (dctv[1], filename, linenum))
+                    exit(-1)
+                    
+            elif dctv[0] == '.data':
+                if len(dctv) < 4:
+                    print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
+                    exit(-1)
+                
+                if (dctv[1] in plabels) or (dctv[1] in dlabels) or (dctv[1] in elabels):
+                    print("ERROR: Redefined label '%s' @ %s:%d" % (dctv[1], filename, linenum))
+                    exit(-1)
+                    
+                if dctv[2] == 'w':
+                    dsize[dctv[1]] = 0
+                    if dc & 3:
+                        dc = (dc & 0xFFFFFFFC) + 4
+                    dlabels[dctv[1]] = dc
+                    for x in dctv[3:]:
+                        try:
+                            value = int(x, 0)
+                            data.append(value)
+                        except ValueError:
+                            data.append(0)
+                            dfixup.append("%d:data32:%s" % (dc, x))
+                        dc += 4
+                        dsize[dctv[1]] += 4
+                elif dctv[2] == 'h':
+                    dsize[dctv[1]] = 0
+                    if dc & 1:
+                        dc = (dc & 0xFFFFFFFE) + 2
+                    dlabels[dctv[1]] = dc
+                    for x in dctv[3:]:
+                        try:
+                            value = int(x, 0)
+                            if (dc & 2) == 0:
+                                data.append(value & 0xFFFF)
+                            else:
+                                data[dc >> 2] = (data[dc >> 2] & 0x0000FFFF) | ((value << 16) & 0xFFFF0000)
+                        except ValueError:
+                            if (dc & 2) == 0:
+                                data.append(0)
+                                dfixup.append("%d:data16.0:%s" % (dc, x))
+                            else:
+                                data[dc >> 2] = (data[dc >> 2] & 0x0000FFFF)
+                                dfixup.append("%d:data16.1:%s" % (dc, x))
+                        dc += 2
+                        dsize[dctv[1]] += 2
+                elif dctv[2] == 'b':
+                    dsize[dctv[1]] = 0
+                    dlabels[dctv[1]] = dc
+                    for x in dctv[3:]:
+                        try:
+                            value = int(x, 0)
+                            if (dc & 3) == 0:
+                                data.append(value & 0x000000FF)
+                            elif (dc & 3) == 1:
+                                data[dc >> 2] = (data[dc >> 2] & 0xFFFF00FF) | ((value << 8) & 0x0000FF00)
+                            elif (dc & 3) == 2:
+                                data[dc >> 2] = (data[dc >> 2] & 0xFF00FFFF) | ((value << 16) & 0x00FF0000)
+                            else:
+                                data[dc >> 2] = (data[dc >> 2] & 0x00FFFFFF) | ((value << 24) & 0xFF000000)
+                        except ValueError:
+                            if (dc & 3) == 0:
+                                data.append(0)
+                                dfixup.append("%d:data8.0:%s" % (dc, x))
+                            elif (dc & 3) == 1:
+                                dfixup.append("%d:data8.1:%s" % (dc, x))
+                            elif (dc & 3) == 2:
+                                dfixup.append("%d:data8.2:%s" % (dc, x))
+                            else:
+                                dfixup.append("%d:data8.3:%s" % (dc, x))
+                        dc += 1    
+                        dsize[dctv[1]] += 1                
+                else:
+                    print("ERROR: Invalid alloc data type '%s' @ %s:%d" % (dctv[1], filename, linenum))
+                    exit(-1)
+            
+            elif dctv[0] == '.string':
+                if len(dctv) < 3:
+                    print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
+                    exit(-1)
+            
+                if (dctv[1] in plabels) or (dctv[1] in dlabels) or (dctv[1] in elabels):
+                    print("ERROR: Redefined label '%s' @ %s:%d" % (dctv[1], filename, linenum))
+                    exit(-1)
+                    
+                s = line.replace('.string', '', 1)
+                s = s.replace(dctv[1], '', 1)
+                s = s.strip()
+                if s[0] == "'":
+                    s = s.strip("'")
+                if s[0] == '"':
+                    s = s.strip('"')
+                    
+                dsize[dctv[1]] = len(s) + 1
+                dlabels[dctv[1]] = dc
+                for x in s:
+                    value = ord(x)
+                    if (dc & 3) == 0:
+                        data.append(value & 0x000000FF)
+                    elif (dc & 3) == 1:
+                        data[dc >> 2] = (data[dc >> 2] & 0xFFFF00FF) | ((value << 8) & 0x0000FF00)
+                    elif (dc & 3) == 2:
+                        data[dc >> 2] = (data[dc >> 2] & 0xFF00FFFF) | ((value << 16) & 0x00FF0000)
+                    else:
+                        data[dc >> 2] = (data[dc >> 2] & 0x00FFFFFF) | ((value << 24) & 0xFF000000)
+                    dc += 1        
+                        
+                if (dc & 3) == 0:
+                    data.append(0)
+                elif (dc & 3) == 1:
+                    data[dc >> 2] = (data[dc >> 2] & 0xFFFF00FF)
+                elif (dc & 3) == 2:
+                    data[dc >> 2] = (data[dc >> 2] & 0xFF00FFFF)
+                else:
+                    data[dc >> 2] = (data[dc >> 2] & 0x00FFFFFF)
+                dc += 1    
+            
+            elif dctv[0] == '.global':
+                if len(dctv) != 2:
+                    print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
+                    exit(-1)
+                glabels.append(dctv[1])
+            
+            elif dctv[0] == '.equ':
+                if len(dctv) < 3:
+                    print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
+                    exit(-1)
+                if run_equate(dctv[1], ' '.join(dctv[2:])) < 0:
+                    print("ERROR: Unable to evaluate directive '%s' @ %s:%d" % (line, filename, linenum))
+                    exit(-1)
+                if (dctv[1] in plabels) or (dctv[1] in dlabels) or (dctv[1] in elabels):
+                    print("ERROR: Redefined label in directive '%s' @ %s:%d" % (line, filename, linenum))
+                    exit(-1)
+                elabels[dctv[1]] = local_equates[dctv[1]]
+                
+            elif dctv[0] == '.reg':
+                if len(dctv) != 3:
+                    print("ERROR: Wrong number of arguments for directive '%s' @ %s:%d" % (line, filename, linenum))
+                    exit(-1)
+                reg_rename[dctv[1]] = dctv[2]
 
-      else:
-        print("ERROR: Invalid directive '%s' @ %s:%d" % (line, filename, linenum))
-        exit(-1)
-      continue
-      
-    if line[0] == '\\':
-      prog[-1].append("%s @ %s:%d" %(line[1:].strip(), filename, linenum))
-    else:
-      prog.append(["%s @ %s:%d" %(line, filename, linenum)])
-      pc += 1
+            else:
+                print("ERROR: Invalid directive '%s' @ %s:%d" % (line, filename, linenum))
+                exit(-1)
+            continue
+            
+        if line[0] == '\\':
+            prog[-1].append("%s @ %s:%d" %(line[1:].strip(), filename, linenum))
+        else:
+            prog.append(["%s @ %s:%d" %(line, filename, linenum)])
+            pc += 1
 
 #
 # Convert opcode strings to 32-bit instruction data
@@ -373,563 +373,570 @@ br_cmds = ['br', 'jmpi', 'skip', 'skip2', 'br_nop']
 ls_cmds = ['ld', 'st', 'push', 'pop']
 au_cmds = ['or', 'xor', 'cmp', 'add', 'sub', 'and', 'clr', 'tstz',
            'bset', 'bclr', 'btst', 
-           'lsl', 'lsr', 'asr', 'sx',
+           'lsl', 'lsr', 'asr', 'sxb', 'sxh',
            'mv', 'mvi', 'cmpi', 'addi', 'inc', 'dec', 'nop', 'au_nop']
 
 def decode_reg(reg):
-  global reg_rename
-  
-  if reg in reg_rename:
-    reg = reg_rename[reg]
+    global reg_rename
     
-  if len(reg) < 2:
-    return -1
-    
-  if reg == 'sp':
-    return 15
-  if reg == 'crp':
-    return 7
-    
-  if reg[0] == 'r':
-    try:
-      r = int(reg[1:])
-    except ValueError:
-      return -1
-  elif reg[0] == 'p':
-    try:
-      r = int(reg[1:]) + 8
-    except ValueError:
-      return -1
-      
-  if (r < 0) or (r > 15):
-    return -1
-  return r
+    if reg in reg_rename:
+        reg = reg_rename[reg]
+        
+    if len(reg) < 2:
+        return -1
+        
+    if reg == 'sp':
+        return 6
+    if reg == 'crp':
+        return 7
+
+    if reg[0] == 'r':
+        try:
+            r = int(reg[1:])
+        except ValueError:
+            return -1
+    else:
+        return -1
+
+    if (r < 0) or (r > 7):
+        return -1
+    return r
 
 def decode_hw_op(pc, hw_op, upper):
-  global pfixup
-  rtn = 0
-  parts = hw_op.split('@')
-  opcode = parts[0].split()
-  
-  if (opcode[0] == 'br'):
-    if len(opcode) == 3:
-      if (opcode[1] == 'z') or (opcode[1] == 'eq'):
-        rtn = 0x1000
-      elif (opcode[1] == 'nz') or (opcode[1] == 'ne'):
-        rtn = 0x1800
-      elif opcode[1] == 'neg':
-        rtn = 0x1100
-      elif opcode[1] == 'pos':
-        rtn = 0x1900
-      elif opcode[1] == 'ovfl':
-        rtn = 0x1200
-      elif opcode[1] == 'not-ovfl':
-        rtn = 0x1A00
-      else:
-        print("ERROR: Bad condition code: %s" % (hw_op))
-        exit(-1)
-      try:
-        value = int(opcode[2], 0)
-        rtn |= (value & 0x000000FF)
-      except ValueError:
-        pfixup.append("%d:rel8:%s" % (pc, opcode[2])) 
-    elif len(opcode) == 2:
-      try:
-        value = int(opcode[1], 0)
-        rtn |= (value & 0x00000FFF)
-      except ValueError:
-        pfixup.append("%d:rel12:%s" % (pc, opcode[1])) 
-    else:
-      print("ERROR: Bad opcode: %s" % (hw_op))
-      exit(-1)
-  
-  elif (opcode[0] == 'skip') or (opcode[0] == 'skip2'):
-    if (opcode[0] == 'skip2'):
-      rtn = 3
-    else:
-      rtn = 2
-    if len(opcode) == 2:
-      if (opcode[1] == 'z') or (opcode[1] == 'eq'):
-        rtn |= 0x1000
-      elif (opcode[1] == 'nz') or (opcode[1] == 'ne'):
-        rtn |= 0x1800
-      elif opcode[1] == 'neg':
-        rtn |= 0x1100
-      elif opcode[1] == 'pos':
-        rtn |= 0x1900
-      elif opcode[1] == 'ovfl':
-        rtn |= 0x1200
-      elif opcode[1] == 'not-ovfl':
-        rtn |= 0x1A00
-      else:
-        print("ERROR: Bad condition code: %s" % (hw_op))
-        exit(-1)
-    else:
-      print("ERROR: Bad opcode: %s" % (hw_op))
-      exit(-1)
-
-  elif (opcode[0] == 'jmpi'):
-    rtn = 0x1001
-  
-  elif (opcode[0] == 'push') or (opcode[0] == 'pop'):
-    if len(opcode) != 2:
-      print("ERROR: Bad opcode: %s" % (hw_op))
-      exit(-1)
-    if opcode[0] == 'push':
-      rtn = 0x67C0
-    else:
-      rtn = 0x2040
-    reg = decode_reg(opcode[1])
-    rtn |= (reg & 7)
-    if reg < 0:
-      print("ERROR: Bad register name: %s" % (hw_op))
-      exit(-1)
-    ptr = 15
-    rtn |= ((ptr & 7) << 3)
-    if reg > 7:
-      rtn |= (3 << 11)
-    else:
-      rtn |= (2 << 11)
-  
-  elif (opcode[0] == 'ld') or (opcode[0] == 'st'):
-    if len(opcode) != 5:
-      print("ERROR: Bad opcode: %s" % (hw_op))
-      exit(-1)
-    if opcode[0] == 'st':
-      rtn = 0x4000
-    else:
-      rtn = 0x0000
-    reg = decode_reg(opcode[2])
-    rtn |= (reg & 7)
-    if reg < 0:
-      print("ERROR: Bad register name: %s" % (hw_op))
-      exit(-1)
-    ptr = decode_reg(opcode[3])
-    rtn |= ((ptr & 7) << 3)
-    if ptr < 8:
-      print("ERROR: Bad pointer name: %s" % (hw_op))
-      exit(-1)
-    if opcode[1] == 'b':
-      if reg > 7:
-        print("ERROR: Cannot load/store byte with upper registers: %s" % (hw_op))
-        exit(-1)
-    elif opcode[1] == 'h':
-      rtn |= (1 << 11)
-      if reg > 7:
-        print("ERROR: Cannot load/store byte with upper registers: %s" % (hw_op))
-        exit(-1)
-    elif opcode[1] == 'w': 
-      if reg > 7:
-        rtn |= (3 << 11)
-      else:
-        rtn |= (2 << 11)
-    else:
-      print("ERROR: Invalid load/store size: %s" % (hw_op))
-      exit(-1)
-    if opcode[4][0] == '[':
-      idx = opcode[4].strip('[]')
-      try:
-        idx = int(idx, 0)
-      except ValueError:
-        print("ERROR: Invalid load/store index: %s" % (hw_op))
-        exit(-1)
-      if (idx < 0) or (idx > 31):
-        print("ERROR: Load/store index out of range (0-31): %s" % (hw_op))
-        exit(-1)
-      rtn |= (idx << 6)
-    elif opcode[4][0:2] == '++':
-      rtn |= (1 << 13)
-      offset = opcode[4][2:]
-      try:
-        offset = int(offset, 0)
-      except ValueError:
-        print("ERROR: Invalid load/store offset: %s" % (hw_op))
-        exit(-1)
-      if (offset < 0) or (offset > 15):
-        print("ERROR: Load/store offset out of range (0-15): %s" % (hw_op))
-        exit(-1)
-      rtn |= (offset << 6)
-    elif opcode[4][0:2] == '--':
-      rtn |= (1 << 13)
-      offset = opcode[4][2:]
-      try:
-        offset = int(offset, 0)
-      except ValueError:
-        print("ERROR: Invalid load/store offset: %s" % (hw_op))
-        exit(-1)
-      if (offset < 1) or (offset > 16):
-        print("ERROR: Load/store offset out of range -(1-16): %s" % (hw_op))
-        exit(-1)
-      offset = (-offset) & 0x1F
-      rtn |= (offset << 6)
-    else:
-      print("ERROR: Invalid load/store address modifier: %s" % (hw_op))
-      exit(-1)
-
-  elif (opcode[0] == 'bset') or (opcode[0] == 'bclr') or (opcode[0] == 'btst'):
-    if len(opcode) != 3:
-      print("ERROR: Bad opcode: %s" % (hw_op))
-      exit(-1)
-    rtn = 0x2000
-    if opcode[0] == 'bset':
-      rtn |= (0 << 9)
-    elif opcode[0] == 'bclr':
-      rtn |= (1 << 9)
-    elif opcode[0] == 'btst':
-      rtn |= (2 << 9)
-    reg = decode_reg(opcode[1])
-    rtn |= reg
-    if reg < 0:
-      print("ERROR: Bad register name: %s" % (hw_op))
-      exit(-1)
-    try:
-      value = int(opcode[2], 0)
-      if (value < 0) or (value > 31):
-        print("ERROR: Argument must be 0-31: %s" % (hw_op))
-        exit(-1)
-      rtn |= ((value & 0x0000001F) << 4)
-    except ValueError:
-      print("ERROR: Invalid immediate argument: %s" % (hw_op))
-      exit(-1)
-    return(rtn)
-  
-  elif (opcode[0] == 'lsl') or (opcode[0] == 'lsr') or (opcode[0] == 'asr') or (opcode[0] == 'sx'):
-    if len(opcode) != 3:
-      print("ERROR: Bad opcode: %s" % (hw_op))
-      exit(-1)
-    rtn = 0x2000
-    if opcode[0] == 'lsl':
-      rtn |= (4 << 9)
-    elif opcode[0] == 'lsr':
-      rtn |= (5 << 9)
-    elif opcode[0] == 'asr':
-      rtn |= (6 << 9)
-    elif opcode[0] == 'sx':
-      rtn |= (7 << 9)
-    reg = decode_reg(opcode[1])
-    rtn |= reg
-    if reg < 0:
-      print("ERROR: Bad register name: %s" % (hw_op))
-      exit(-1)
-    try:
-      value = int(opcode[2], 0)
-      if (value < 0) or (value > 31):
-        print("ERROR: Argument must be 0-31: %s" % (hw_op))
-        exit(-1)
-      rtn |= ((value & 0x0000001F) << 4)
-    except ValueError:
-      print("ERROR: Invalid immediate argument: %s" % (hw_op))
-      exit(-1)
-    return(rtn)
-  
-  elif (opcode[0] == 'inc') or (opcode[0] == 'dec'):
-    if len(opcode) != 2:
-      print("ERROR: Bad opcode: %s" % (hw_op))
-      exit(-1)
-    if opcode[0] == 'inc':
-      reg = 0x3010
-    else:
-      reg = 0x3FF0
-    reg = decode_reg(opcode[1])
-    rtn |= reg
-    if reg < 0:
-      print("ERROR: Bad register name: %s" % (hw_op))
-      exit(-1)
-    return(rtn)
-        
-  elif (opcode[0] == 'addi') or (opcode[0] == 'cmpi') or (opcode[0] == 'mvi'):
-    if len(opcode) != 3:
-      print("ERROR: Bad opcode: %s" % (hw_op))
-      exit(-1)
-    if opcode[0] == 'addi':
-      rtn = 0x3000
-    elif opcode[0] == 'cmpi':
-      rtn = 0x4000
-    else:
-      rtn = 0x6000
-    reg = decode_reg(opcode[1])
-    rtn |= reg
-    if reg < 0:
-      print("ERROR: Bad register name: %s" % (hw_op))
-      exit(-1)
-    if opcode[0] == 'addi':
-      try:
-        value = int(opcode[2], 0)
-        if ((value & 0xFFFFFF80) != 0) and ((value & 0xFFFFFF80) != 0xFFFFFF80):
-          print("ERROR: Immediate 8-bit overflow: %s" % (hw_op))
-          exit(-1)
-        rtn |= ((value & 0x000000FF) << 4)
-      except ValueError:
-        if upper:
-          pfixup.append("%d:imm8.h:%s" % (pc, opcode[2]))
-        else:
-          pfixup.append("%d:imm8.l:%s" % (pc, opcode[2]))
-    else:
-      try:
-        value = int(opcode[2], 0)
-        if ((value & 0xFFFFFF00) != 0) and ((value & 0xFFFFFF00) != 0xFFFFFF00):
-          print("ERROR: Immediate 9-bit overflow: %s" % (hw_op))
-          exit(-1)
-        rtn |= ((value & 0x000001FF) << 4)
-      except ValueError:
-        if upper:
-          pfixup.append("%d:imm9.h:%s" % (pc, opcode[2]))
-        else:
-          pfixup.append("%d:imm9.l:%s" % (pc, opcode[2]))
-    return(rtn)
-
-  elif (opcode[0] == 'mv') or (opcode[0] == 'not') or (opcode[0] == 'neg') or (opcode[0] == 'cmp'):
-    if len(opcode) != 3:
-      print("ERROR: Bad opcode: %s" % (hw_op))
-      exit(-1)
-    if opcode[0] == 'mv':
-      rtn = 0x0800
-    elif opcode[0] == 'not':
-      rtn = 0x0900
-    elif opcode[0] == 'neg':
-      rtn = 0x0A00
-    elif opcode[0] == 'cmp':
-      rtn = 0x0B00   
-    reg = decode_reg(opcode[1])
-    rtn |= reg
-    if reg < 0:
-      print("ERROR: Bad register name: %s" % (hw_op))
-      exit(-1)
-    reg = decode_reg(opcode[2])
-    rtn |= (reg << 4)
-    if reg < 0:
-      print("ERROR: Bad register name: %s" % (hw_op))
-      exit(-1)
-  
-  elif opcode[0] == 'tstz':
-    if len(opcode) != 2:
-      print("ERROR: Bad opcode: %s" % (hw_op))
-      exit(-1)
-    rtn = 0x4000
-    reg = decode_reg(opcode[1])
-    rtn |= reg
-    if reg < 0:
-      print("ERROR: Bad register name: %s" % (hw_op))
-      exit(-1)
-
-  elif opcode[0] == 'clr':
-    if len(opcode) != 2:
-      print("ERROR: Bad opcode: %s" % (hw_op))
-      exit(-1)
-    rtn = 0x0200
-    reg = decode_reg(opcode[1])
-    rtn |= reg
-    rtn |= (reg << 4)
-    if reg < 0:
-      print("ERROR: Bad register name: %s" % (hw_op))
-      exit(-1)
-              
-  elif (opcode[0] == 'or') or (opcode[0] == 'and') or (opcode[0] == 'xor') or (opcode[0] == 'add') or (opcode[0] == 'sub'):
-    if opcode[0] == 'or':
-      cmd = 0
-    elif opcode[0] == 'and':
-      cmd = 1
-    elif opcode[0] == 'xor':
-      cmd = 2
-    elif opcode[0] == 'add':
-      cmd = 3
-    elif opcode[0] == 'sub':
-      cmd = 4    
-    if len(opcode) == 2:
-      reg = decode_reg(opcode[1])
-      if reg < 0:
-        print("ERROR: Bad register name: %s" % (hw_op))
-        exit(-1)
-      rtn = (cmd << 8) | (reg << 4) | (reg)
-    elif len(opcode) == 3:
-      reg_a = decode_reg(opcode[1])
-      if reg_a < 0:
-        print("ERROR: Bad register name: %s" % (hw_op))
-        exit(-1)
-      reg_b = decode_reg(opcode[2])
-      if reg_b < 0:
-        print("ERROR: Bad register name: %s" % (hw_op))
-        exit(-1)
-      rtn = (cmd << 8) | (reg_b << 4) | (reg_a)
-    elif len(opcode) == 4:
-      reg_a = decode_reg(opcode[2])
-      if (reg_a < 0) or (reg_a > 7):
-        print("ERROR: Bad register name: %s" % (hw_op))
-        exit(-1)
-      reg_b = decode_reg(opcode[3])
-      if (reg_b < 0) or (reg_b > 7):
-        print("ERROR: Bad register name: %s" % (hw_op))
-        exit(-1)
-      reg_c = decode_reg(opcode[1])
-      if (reg_c < 0) or (reg_c > 7):
-        print("ERROR: Bad register name: %s" % (hw_op))
-        exit(-1)
-      if cmd > 7:
-        print("ERROR: Cannot use this command with three register form: %s" % (hw_op))
-        exit(-1)
-      rtn = (1 << 12) | (cmd << 9) | (reg_c << 6) | (reg_b << 3) | (reg_a)
-    else:
-      print("ERROR: Bad opcode: %s" % (hw_op))
-      exit(-1)
-      
-  elif (opcode[0] == 'au_nop') or (opcode[0] == 'nop'):
-    return 0
-  elif opcode[0] == 'br_nop':
-    return 1
+    global pfixup
+    rtn = 0
+    parts = hw_op.split('@')
+    opcode = parts[0].split()
     
-  else:
-      print("ERROR: Unknown opcode: %s" % (hw_op))
-      exit(-1)
+    if (opcode[0] == 'br'):
+        if len(opcode) == 3:
+            if (opcode[1] == 'z') or (opcode[1] == 'eq'):
+                rtn = 0x1000
+            elif (opcode[1] == 'nz') or (opcode[1] == 'ne'):
+                rtn = 0x1800
+            elif opcode[1] == 'neg':
+                rtn = 0x1100
+            elif opcode[1] == 'pos':
+                rtn = 0x1900
+            elif opcode[1] == 'ovfl':
+                rtn = 0x1200
+            elif opcode[1] == 'not-ovfl':
+                rtn = 0x1A00
+            else:
+                print("ERROR: Bad condition code: %s" % (hw_op))
+                exit(-1)
+            try:
+                value = int(opcode[2], 0)
+                rtn |= (value & 0x000000FF)
+            except ValueError:
+                pfixup.append("%d:rel8:%s" % (pc, opcode[2])) 
+        elif len(opcode) == 2:
+            try:
+                value = int(opcode[1], 0)
+                rtn |= (value & 0x00000FFF)
+            except ValueError:
+                pfixup.append("%d:rel12:%s" % (pc, opcode[1])) 
+        else:
+            print("ERROR: Bad opcode: %s" % (hw_op))
+            exit(-1)
+    
+    elif (opcode[0] == 'skip') or (opcode[0] == 'skip2'):
+        if (opcode[0] == 'skip2'):
+            rtn = 3
+        else:
+            rtn = 2
+        if len(opcode) == 2:
+            if (opcode[1] == 'z') or (opcode[1] == 'eq'):
+                rtn |= 0x1000
+            elif (opcode[1] == 'nz') or (opcode[1] == 'ne'):
+                rtn |= 0x1800
+            elif opcode[1] == 'neg':
+                rtn |= 0x1100
+            elif opcode[1] == 'pos':
+                rtn |= 0x1900
+            elif opcode[1] == 'ovfl':
+                rtn |= 0x1200
+            elif opcode[1] == 'not-ovfl':
+                rtn |= 0x1A00
+            else:
+                print("ERROR: Bad condition code: %s" % (hw_op))
+                exit(-1)
+        else:
+            print("ERROR: Bad opcode: %s" % (hw_op))
+            exit(-1)
 
-  return(rtn)
+    elif (opcode[0] == 'jmpi'):
+        rtn = 0x1001
+    
+    elif (opcode[0] == 'push') or (opcode[0] == 'pop'):
+        if len(opcode) != 2:
+            print("ERROR: Bad opcode: %s" % (hw_op))
+            exit(-1)
+        if opcode[0] == 'push':
+            rtn = 0x77F0
+        else:
+            rtn = 0x3070
+        reg = decode_reg(opcode[1])
+        rtn |= (reg & 7)
+        if reg < 0:
+            print("ERROR: Bad register name: %s" % (hw_op))
+            exit(-1)
+    
+    elif (opcode[0] == 'ld') or (opcode[0] == 'st'):
+        if len(opcode) != 5:
+            print("ERROR: Bad opcode: %s" % (hw_op))
+            exit(-1)
+        if opcode[0] == 'st':
+            rtn = 0x4000
+        else:
+            rtn = 0x0000
+        reg = decode_reg(opcode[2])
+        rtn |= (reg & 7)
+        if reg < 0:
+            print("ERROR: Bad register name: %s" % (hw_op))
+            exit(-1)
+        ptr = decode_reg(opcode[3])
+        rtn |= ((ptr & 7) << 3)
+        if ptr < 0:
+            print("ERROR: Bad pointer name: %s" % (hw_op))
+            exit(-1)
+        if opcode[1] == 'h':
+            rtn |= (1 << 11)
+        elif opcode[1] == 'w': 
+            rtn |= (2 << 11)
+        elif opcode[1] == 'post': 
+            rtn |= (3 << 11)
+        elif opcode[1] != 'b':
+            print("ERROR: Invalid load/store size: %s" % (hw_op))
+            exit(-1)
+        if opcode[4][0] == '[':
+            idx = opcode[4].strip('[]')
+            try:
+                idx = int(idx, 0)
+            except ValueError:
+                print("ERROR: Invalid load/store index: %s" % (hw_op))
+                exit(-1)
+            if (idx < 0) or (idx > 31):
+                print("ERROR: Load/store index out of range (0-31): %s" % (hw_op))
+                exit(-1)
+            rtn |= (idx << 6)
+        elif opcode[4][0:2] == '++':
+            rtn |= (1 << 13)
+            offset = opcode[4][2:]
+            try:
+                offset = int(offset, 0)
+            except ValueError:
+                print("ERROR: Invalid load/store offset: %s" % (hw_op))
+                exit(-1)
+            if (offset < 0) or (offset > 15):
+                print("ERROR: Load/store offset out of range (0-15): %s" % (hw_op))
+                exit(-1)
+            rtn |= (offset << 6)
+        elif opcode[4][0:2] == '--':
+            rtn |= (1 << 13)
+            offset = opcode[4][2:]
+            try:
+                offset = int(offset, 0)
+            except ValueError:
+                print("ERROR: Invalid load/store offset: %s" % (hw_op))
+                exit(-1)
+            if (offset < 1) or (offset > 16):
+                print("ERROR: Load/store offset out of range -(1-16): %s" % (hw_op))
+                exit(-1)
+            offset = (-offset) & 0x1F
+            rtn |= (offset << 6)
+        else:
+            print("ERROR: Invalid load/store address modifier: %s" % (hw_op))
+            exit(-1)
+
+    elif (opcode[0] == 'bset') or (opcode[0] == 'bclr') or (opcode[0] == 'btst'):
+        if len(opcode) != 3:
+            print("ERROR: Bad opcode: %s" % (hw_op))
+            exit(-1)
+        rtn = 0x2800
+        if opcode[0] == 'btst':
+            rtn |= (0 << 8)
+        elif opcode[0] == 'bclr':
+            rtn |= (1 << 8)
+        elif opcode[0] == 'bset':
+            rtn |= (2 << 8)
+        reg = decode_reg(opcode[1])
+        rtn |= reg
+        if reg < 0:
+            print("ERROR: Bad register name: %s" % (hw_op))
+            exit(-1)
+        try:
+            value = int(opcode[2], 0)
+            if (value < 0) or (value > 31):
+                print("ERROR: Argument must be 0-31: %s" % (hw_op))
+                exit(-1)
+            rtn |= ((value & 0x0000001F) << 3)
+        except ValueError:
+            print("ERROR: Invalid immediate argument: %s" % (hw_op))
+            exit(-1)
+        return(rtn)
+    
+    elif (opcode[0] == 'lsl') or (opcode[0] == 'lsr') or (opcode[0] == 'asr'):
+        if len(opcode) != 3:
+            print("ERROR: Bad opcode: %s" % (hw_op))
+            exit(-1)
+        rtn = 0x2800
+        if opcode[0] == 'lsl':
+            rtn |= (4 << 8)
+        elif opcode[0] == 'lsr':
+            rtn |= (5 << 8)
+        elif opcode[0] == 'asr':
+            rtn |= (6 << 8)
+        reg = decode_reg(opcode[1])
+        rtn |= reg
+        if reg < 0:
+            print("ERROR: Bad register name: %s" % (hw_op))
+            exit(-1)
+        try:
+            value = int(opcode[2], 0)
+            if (value < 0) or (value > 31):
+                print("ERROR: Argument must be 0-31: %s" % (hw_op))
+                exit(-1)
+            rtn |= ((value & 0x0000001F) << 3)
+        except ValueError:
+            print("ERROR: Invalid immediate argument: %s" % (hw_op))
+            exit(-1)
+        return(rtn)
+    
+    elif (opcode[0] == 'inc') or (opcode[0] == 'dec'):
+        if len(opcode) != 2:
+            print("ERROR: Bad opcode: %s" % (hw_op))
+            exit(-1)
+        if opcode[0] == 'inc':
+            reg = 0x4008
+        else:
+            reg = 0x5FF8
+        reg = decode_reg(opcode[1])
+        rtn |= reg
+        if reg < 0:
+            print("ERROR: Bad register name: %s" % (hw_op))
+            exit(-1)
+        return(rtn)
+                
+    elif (opcode[0] == 'addi') or (opcode[0] == 'cmpi') or (opcode[0] == 'mvi'):
+        if len(opcode) != 3:
+            print("ERROR: Bad opcode: %s" % (hw_op))
+            exit(-1)
+        if opcode[0] == 'addi':
+            rtn = 0x4000
+        elif opcode[0] == 'cmpi':
+            rtn = 0x3000
+        else:
+            rtn = 0x6000
+        reg = decode_reg(opcode[1])
+        rtn |= reg
+        if reg < 0:
+            print("ERROR: Bad register name: %s" % (hw_op))
+            exit(-1)
+        if opcode[0] == 'cmpi':
+            try:
+                value = int(opcode[2], 0)
+                if ((value & 0xFFFFFE00) != 0) and ((value & 0xFFFFFE00) != 0xFFFFFE00):
+                    print("ERROR: Immediate 9-bit overflow: %s" % (hw_op))
+                    exit(-1)
+                rtn |= ((value & 0x000001FF) << 3)
+            except ValueError:
+                if upper:
+                    pfixup.append("%d:imm9.h:%s" % (pc, opcode[2]))
+                else:
+                    pfixup.append("%d:imm9.l:%s" % (pc, opcode[2]))
+        else:
+            try:
+                value = int(opcode[2], 0)
+                if ((value & 0xFFFFFC00) != 0) and ((value & 0xFFFFFC00) != 0xFFFFFC00):
+                    print("ERROR: Immediate 10-bit overflow: %s" % (hw_op))
+                    exit(-1)
+                rtn |= ((value & 0x000003FF) << 3)
+            except ValueError:
+                if upper:
+                    pfixup.append("%d:imm10.h:%s" % (pc, opcode[2]))
+                else:
+                    pfixup.append("%d:imm10.l:%s" % (pc, opcode[2]))
+        return(rtn)
+
+    elif (opcode[0] == 'not') or (opcode[0] == 'neg') or (opcode[0] == 'cmp') or \
+         (opcode[0] == 'sxb') or (opcode[0] == 'sxh'):
+        if opcode[0] == 'not':
+            rtn = 0x2000
+        elif opcode[0] == 'neg':
+            rtn = 0x2040
+        elif opcode[0] == 'sxb':
+            rtn = 0x2080
+        elif opcode[0] == 'sxh':
+            rtn = 0x20C0
+        elif opcode[0] == 'cmp':
+            rtn = 0x27C0
+        if len(opcode) == 3:
+                reg = decode_reg(opcode[1])
+                rtn |= reg
+                if reg < 0:
+                    print("ERROR: Bad register name: %s" % (hw_op))
+                    exit(-1)
+                reg = decode_reg(opcode[2])
+                rtn |= (reg << 3)
+                if reg < 0:
+                    print("ERROR: Bad register name: %s" % (hw_op))
+                    exit(-1)
+        elif len(opcode) == 2:
+                reg = decode_reg(opcode[1])
+                rtn |= (reg << 3) | reg
+                if reg < 0:
+                    print("ERROR: Bad register name: %s" % (hw_op))
+                    exit(-1)
+        else:
+            print("ERROR: Bad opcode: %s" % (hw_op))
+            exit(-1)
+            
+    elif opcode[0] == 'tstz':
+        if len(opcode) != 2:
+            print("ERROR: Bad opcode: %s" % (hw_op))
+            exit(-1)
+        rtn = 0x3000
+        reg = decode_reg(opcode[1])
+        rtn |= reg
+        if reg < 0:
+            print("ERROR: Bad register name: %s" % (hw_op))
+            exit(-1)
+
+    elif opcode[0] == 'clr':
+        if len(opcode) != 2:
+            print("ERROR: Bad opcode: %s" % (hw_op))
+            exit(-1)
+        rtn = 0x0400
+        reg = decode_reg(opcode[1])
+        rtn |= reg
+        rtn |= (reg << 3)
+        rtn |= (reg << 6)
+        if reg < 0:
+            print("ERROR: Bad register name: %s" % (hw_op))
+            exit(-1)
+
+    elif (opcode[0] == 'mv'):
+        if len(opcode) != 3:
+            print("ERROR: Bad opcode: %s" % (hw_op))
+            exit(-1)
+        reg_a = decode_reg(opcode[1])
+        if reg_a < 0:
+            print("ERROR: Bad register name: %s" % (hw_op))
+            exit(-1)
+        reg_b = decode_reg(opcode[2])
+        if reg_b < 0:
+            print("ERROR: Bad register name: %s" % (hw_op))
+            exit(-1)
+        rtn = (reg_a << 6) | (reg_b << 3) | (reg_b)
+            
+    elif (opcode[0] == 'or') or (opcode[0] == 'and') or (opcode[0] == 'xor') or \
+         (opcode[0] == 'add') or (opcode[0] == 'sub'):
+        if opcode[0] == 'or':
+            cmd = 0
+        elif opcode[0] == 'and':
+            cmd = 1
+        elif opcode[0] == 'xor':
+            cmd = 2
+        elif opcode[0] == 'add':
+            cmd = 3
+        elif opcode[0] == 'sub':
+            cmd = 4        
+        if len(opcode) == 2:
+            reg = decode_reg(opcode[1])
+            if reg < 0:
+                print("ERROR: Bad register name: %s" % (hw_op))
+                exit(-1)
+            rtn = (cmd << 9) | (reg << 6) | (reg << 3) | (reg)
+        elif len(opcode) == 3:
+            reg_a = decode_reg(opcode[1])
+            if reg_a < 0:
+                print("ERROR: Bad register name: %s" % (hw_op))
+                exit(-1)
+            reg_b = decode_reg(opcode[2])
+            if reg_b < 0:
+                print("ERROR: Bad register name: %s" % (hw_op))
+                exit(-1)
+            rtn = (cmd << 9) | (reg_a << 6) | (reg_b << 3) | (reg_a)
+        elif len(opcode) == 4:
+            reg_a = decode_reg(opcode[2])
+            if (reg_a < 0) or (reg_a > 7):
+                print("ERROR: Bad register name: %s" % (hw_op))
+                exit(-1)
+            reg_b = decode_reg(opcode[3])
+            if (reg_b < 0) or (reg_b > 7):
+                print("ERROR: Bad register name: %s" % (hw_op))
+                exit(-1)
+            reg_c = decode_reg(opcode[1])
+            if (reg_c < 0) or (reg_c > 7):
+                print("ERROR: Bad register name: %s" % (hw_op))
+                exit(-1)
+            if cmd > 7:
+                print("ERROR: Cannot use this command with three register form: %s" % (hw_op))
+                exit(-1)
+            rtn = (cmd << 9) | (reg_c << 6) | (reg_b << 3) | (reg_a)
+        else:
+            print("ERROR: Bad opcode: %s" % (hw_op))
+            exit(-1)
+            
+    elif (opcode[0] == 'au_nop') or (opcode[0] == 'nop'):
+        return 0
+    elif opcode[0] == 'br_nop':
+        return 1
+        
+    else:
+            print("ERROR: Unknown opcode: %s" % (hw_op))
+            exit(-1)
+
+    return(rtn)
 
 def decode_fw_op(pc, fw_op):
-  global pfixup
-  rtn = 0
-  parts = fw_op.split('@')
-  opcode = parts[0].split()
+    global pfixup
+    rtn = 0
+    parts = fw_op.split('@')
+    opcode = parts[0].split()
  
-  if opcode[0] == 'halt':
-    if len(opcode) != 1:
-      print("ERROR: Bad opcode: %s" % (fw_op))
-      exit(-1)
-    rtn = 0xC0000000
-    return(rtn)
+    if opcode[0] == 'halt':
+        if len(opcode) != 1:
+            print("ERROR: Bad opcode: %s" % (fw_op))
+            exit(-1)
+        rtn = 0xC0000000
+        return(rtn)
 
-  if opcode[0] == 'rtn':
-    if len(opcode) != 1:
-      print("ERROR: Bad opcode: %s" % (fw_op))
-      exit(-1)
-    rtn = 0xD800B07F
-    return(rtn)
-     
-  if opcode[0] == 'ldi':
-    if len(opcode) != 3:
-      print("ERROR: Bad opcode: %s" % (fw_op))
-      exit(-1)
-    reg = decode_reg(opcode[1])
-    if reg < 0:
-      print("ERROR: Bad register name: %s" % (fw_op))
-      exit(-1)
-    rtn = 0xE0000000 | (reg << 24)
-    try:
-      value = int(opcode[2], 0)
-      if ((value & 0xFF800000) != 0) and ((value & 0xFF800000) != 0xFF800000):
-        print("ERROR: Immediate 24-bit overflow: %s" % (hw_op))
-      rtn |= (value & 0x00FFFFFF)
-    except ValueError:
-      pfixup.append("%d:imm24:%s" % (pc, opcode[2]))
-    return(rtn)
+    if opcode[0] == 'rtn':
+        if len(opcode) != 1:
+            print("ERROR: Bad opcode: %s" % (fw_op))
+            exit(-1)
+        rtn = 0xD800B077
+        return(rtn)
+         
+    if opcode[0] == 'ldi':
+        if len(opcode) != 3:
+            print("ERROR: Bad opcode: %s" % (fw_op))
+            exit(-1)
+        reg = decode_reg(opcode[1])
+        if reg < 0:
+            print("ERROR: Bad register name: %s" % (fw_op))
+            exit(-1)
+        rtn = 0xE0000000 | (reg << 25)
+        try:
+            value = int(opcode[2], 0)
+            if ((value & 0xFF000000) != 0) and ((value & 0xFF000000) != 0xFF000000):
+                print("ERROR: Immediate 25-bit overflow: %s" % (hw_op))
+            rtn |= (value & 0x01FFFFFF)
+        except ValueError:
+            pfixup.append("%d:imm25:%s" % (pc, opcode[2]))
+        return(rtn)
  
-  if (opcode[0] == 'ldd') or (opcode[0] == 'std'):
-    if len(opcode) != 3:
-      print("ERROR: Bad opcode: %s" % (fw_op))
-      exit(-1)
-    reg = decode_reg(opcode[1])
-    if reg < 0:
-      print("ERROR: Bad register name: %s" % (fw_op))
-      exit(-1)
-    rtn = 0xF0000000 | (reg << 22)
-    if opcode[0] == 'std':
-      rtn |= (1 << 26)
-    try:
-      value = int(opcode[2], 0)
-      if (value & 0xFF000000) != 0:
-        print("ERROR: Address 24-bit overflow: %s" % (hw_op))
-      rtn |= ((value & 0x00FFFFFF) >> 2)
-    except ValueError:
-      pfixup.append("%d:wordptr22:%s" % (pc, opcode[2]))
-    return(rtn)
-       
-  if len(opcode) != 2:
-    print("ERROR: Bad opcode: %s" % (fw_op))
-    exit(-1)
-      
-  if opcode[0] == 'jmp':
-    rtn = 0xFE000000
-    try:
-      value = int(opcode[1], 0)
-      rtn |= (value & 0x00FFFFFF)
-    except ValueError:
-      pfixup.append("%d:abs24:%s" % (pc, opcode[1]))
-  elif opcode[0] == 'call':
-    rtn = 0xFF000000
-    try:
-      value = int(opcode[1], 0)
-      rtn |= (value & 0x00FFFFFF)
-    except ValueError:
-      pfixup.append("%d:abs24:%s" % (pc, opcode[1])) 
+    if (opcode[0] == 'ldd') or (opcode[0] == 'std'):
+        if len(opcode) != 3:
+            print("ERROR: Bad opcode: %s" % (fw_op))
+            exit(-1)
+        reg = decode_reg(opcode[1])
+        if reg < 0:
+            print("ERROR: Bad register name: %s" % (fw_op))
+            exit(-1)
+        rtn = 0xF0000000 | (reg << 23)
+        if opcode[0] == 'std':
+            rtn |= (1 << 26)
+        try:
+            value = int(opcode[2], 0)
+            if (value & 0xFE000000) != 0:
+                print("ERROR: Address 25-bit overflow: %s" % (hw_op))
+            rtn |= ((value & 0x01FFFFFF) >> 2)
+        except ValueError:
+            pfixup.append("%d:wordptr23:%s" % (pc, opcode[2]))
+        return(rtn)
+             
+    if len(opcode) != 2:
+        print("ERROR: Bad opcode: %s" % (fw_op))
+        exit(-1)
+            
+    if opcode[0] == 'jmp':
+        rtn = 0xFE000000
+        try:
+            value = int(opcode[1], 0)
+            rtn |= (value & 0x00FFFFFF)
+        except ValueError:
+            pfixup.append("%d:abs24:%s" % (pc, opcode[1]))
+    elif opcode[0] == 'call':
+        rtn = 0xFF000000
+        try:
+            value = int(opcode[1], 0)
+            rtn |= (value & 0x00FFFFFF)
+        except ValueError:
+            pfixup.append("%d:abs24:%s" % (pc, opcode[1])) 
 
-  return(rtn)
-  
+    return(rtn)
+    
 prog_hex = []
 pc = 0
 for p in prog:
-  if len(p) == 1:
-    cmd0 = p[0].split()[0]
-    if (cmd0 not in fw_cmds):
-      if (cmd0 in au_cmds):
-        p.append('br_nop @ n:0')
-      else:
-        p.append('au_nop @ n:0')
+    if len(p) == 1:
+        cmd0 = p[0].split()[0]
+        if (cmd0 not in fw_cmds):
+            if (cmd0 in au_cmds):
+                p.append('br_nop @ n:0')
+            else:
+                p.append('au_nop @ n:0')
+        
+    if len(p) == 2:
+        cmd0 = p[0].split()[0]
+        cmd1 = p[1].split()[0]
+        
+        if (cmd0 in fw_cmds) or (cmd1 in fw_cmds):
+            print("ERROR: Full word command collision with another command: %s" % (p[0]))
+            exit(-1)
+            
+        if (cmd0 in br_cmds) and (cmd1 in br_cmds):
+            print("ERROR: Branch family collision with another branch family command: %s" % (p[0]))
+            exit(-1)
     
-  if len(p) == 2:
-    cmd0 = p[0].split()[0]
-    cmd1 = p[1].split()[0]
-    
-    if (cmd0 in fw_cmds) or (cmd1 in fw_cmds):
-      print("ERROR: Full word command collision with another command: %s" % (p[0]))
-      exit(-1)
-      
-    if (cmd0 in br_cmds) and (cmd1 in br_cmds):
-      print("ERROR: Branch family collision with another branch family command: %s" % (p[0]))
-      exit(-1)
-  
-    if (cmd0 in au_cmds) and (cmd1 in au_cmds):
-      low_op = p[0]
-      high_op = p[1]
-      ifmt = 0x0
-    elif (cmd0 in ls_cmds) and (cmd1 in ls_cmds):
-      low_op = p[0]
-      high_op = p[1]
-      ifmt = 0x4
-    elif (cmd0 in ls_cmds) and (cmd1 in au_cmds):
-      low_op = p[1]
-      high_op = p[0]
-      ifmt = 0x8
-    elif (cmd0 in au_cmds) and (cmd1 in ls_cmds):
-      low_op = p[0]
-      high_op = p[1]
-      ifmt = 0x8
-    elif cmd0 in br_cmds:
-      low_op = p[1]
-      high_op = p[0]
-      if cmd1 in au_cmds:
-        ifmt = 0xC
-      else:
-        ifmt = 0xD
-    elif cmd1 in br_cmds:
-      low_op = p[0]
-      high_op = p[1]
-      if cmd0 in au_cmds:
-        ifmt = 0xC
-      else:
-        ifmt = 0xD
+        if (cmd0 in au_cmds) and (cmd1 in au_cmds):
+            low_op = p[0]
+            high_op = p[1]
+            ifmt = 0x0
+        elif (cmd0 in ls_cmds) and (cmd1 in ls_cmds):
+            low_op = p[0]
+            high_op = p[1]
+            ifmt = 0x4
+        elif (cmd0 in ls_cmds) and (cmd1 in au_cmds):
+            low_op = p[1]
+            high_op = p[0]
+            ifmt = 0x8
+        elif (cmd0 in au_cmds) and (cmd1 in ls_cmds):
+            low_op = p[0]
+            high_op = p[1]
+            ifmt = 0x8
+        elif cmd0 in br_cmds:
+            low_op = p[1]
+            high_op = p[0]
+            if cmd1 in au_cmds:
+                ifmt = 0xC
+            else:
+                ifmt = 0xD
+        elif cmd1 in br_cmds:
+            low_op = p[0]
+            high_op = p[1]
+            if cmd0 in au_cmds:
+                ifmt = 0xC
+            else:
+                ifmt = 0xD
+        else:
+            low_op = p[0]
+            high_op = p[1]
+            print("HALF WORD OPS: ???: %-40s %s" % (high_op, low_op))
+            print("ERROR: Internal error decoding half word instruction types/format")
+            exit(-1)
+        
+        low_op = decode_hw_op(pc, low_op, 0)
+        high_op = decode_hw_op(pc, high_op, 1)
+        prog_hex.append((ifmt << 28) | (high_op << 15) | (low_op))
     else:
-      low_op = p[0]
-      high_op = p[1]
-      print("HALF WORD OPS: ???: %-40s %s" % (high_op, low_op))
-      print("ERROR: Internal error decoding half word instruction types/format")
-      exit(-1)
+        prog_hex.append(decode_fw_op(pc, p[0]))
     
-    low_op = decode_hw_op(pc, low_op, 0)
-    high_op = decode_hw_op(pc, high_op, 1)
-    prog_hex.append((ifmt << 28) | (high_op << 15) | (low_op))
-  else:
-    prog_hex.append(decode_fw_op(pc, p[0]))
-  
-  pc += 1  
-     
+    pc += 1    
+         
 prog = prog_hex
 
 #
@@ -937,86 +944,86 @@ prog = prog_hex
 #
 
 for x in range(len(prog)):
-  prog[x] = "%08X" % (prog[x])
+    prog[x] = "%08X" % (prog[x])
 
 for fixup in pfixup:
-  f = fixup.split(':')
-  if f[2] in glabels:
-    label = f[2]
-  elif (f[2] in plabels) or (f[2] in dlabels) or (f[2] in elabels):
-    label = f[2] + ouid
-  else:
-    label = f[2]
-  if prog[int(f[0])].find(':') < 0:
-    prog[int(f[0])] += ":%s:%s" % (f[1], label)
-  else:
-    prog[int(f[0])] += "\n        :%s:%s" % (f[1], label)
+    f = fixup.split(':')
+    if f[2] in glabels:
+        label = f[2]
+    elif (f[2] in plabels) or (f[2] in dlabels) or (f[2] in elabels):
+        label = f[2] + ouid
+    else:
+        label = f[2]
+    if prog[int(f[0])].find(':') < 0:
+        prog[int(f[0])] += ":%s:%s" % (f[1], label)
+    else:
+        prog[int(f[0])] += "\n                :%s:%s" % (f[1], label)
 
 #
 # Annotate data with fixups after converting to strings
 #
 
 for x in range(len(data)):
-  data[x] = "%08X" % (data[x])
+    data[x] = "%08X" % (data[x])
 
 for fixup in dfixup:
-  f = fixup.split(':')
-  if f[2] in glabels:
-    label = f[2]
-  elif (f[2] in plabels) or (f[2] in dlabels) or (f[2] in elabels):
-    label = f[2] + ouid
-  else:
-    label = f[2]
-  if data[int(f[0]) >> 2].find(':') < 0:
-    data[int(f[0]) >> 2] += ":%s:%s" % (f[1], label)
-  else:
-    data[int(f[0]) >> 2] += "\n        :%s:%s" % (f[1], label)
+    f = fixup.split(':')
+    if f[2] in glabels:
+        label = f[2]
+    elif (f[2] in plabels) or (f[2] in dlabels) or (f[2] in elabels):
+        label = f[2] + ouid
+    else:
+        label = f[2]
+    if data[int(f[0]) >> 2].find(':') < 0:
+        data[int(f[0]) >> 2] += ":%s:%s" % (f[1], label)
+    else:
+        data[int(f[0]) >> 2] += "\n                :%s:%s" % (f[1], label)
 
 #
 # Dump instruction/data segments to output files
 #
 
 try:
-  fout = open(obj_out, "w")
+    fout = open(obj_out, "w")
 except IOError:
-    print("ERROR: Unable to create file '%s'" % (obj_out))
-    exit(-1)
+        print("ERROR: Unable to create file '%s'" % (obj_out))
+        exit(-1)
 
 fout.write("\n<program>\n\n")
 
 for label in plabels:
-  if label in glabels:
-    label_o = label
-  else:
-    label_o = label + ouid
-  fout.write("%s += %d\n" % (label_o, plabels[label]))
+    if label in glabels:
+        label_o = label
+    else:
+        label_o = label + ouid
+    fout.write("%s += %d\n" % (label_o, plabels[label]))
 fout.write("\n")
 
 for p in prog:
-  fout.write("%s\n" % (p))
+    fout.write("%s\n" % (p))
 fout.write("\n")
 
 fout.write("\n<data>\n\n")
 
 for label in dlabels:
-  if label in glabels:
-    label_o = label
-  else:
-    label_o = label + ouid
-  fout.write("%s += %d\n" % (label_o, dlabels[label]))
+    if label in glabels:
+        label_o = label
+    else:
+        label_o = label + ouid
+    fout.write("%s += %d\n" % (label_o, dlabels[label]))
 fout.write("\n")
 
 for label in elabels:
-  if label in glabels:
-    label_o = label
-  else:
-    label_o = label + ouid
-  fout.write("%s == %d\n" % (label_o, elabels[label]))
+    if label in glabels:
+        label_o = label
+    else:
+        label_o = label + ouid
+    fout.write("%s == %d\n" % (label_o, elabels[label]))
 fout.write("\n")
 
 for d in data:
-  fout.write("%s\n" % (d))
-  
+    fout.write("%s\n" % (d))
+    
 fout.close()
 
 exit(0)
