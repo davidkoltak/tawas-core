@@ -35,7 +35,7 @@ module dram
 
     always @ (posedge clk)
         if (cs)
-        data_out <= data_array[addr[15:2]];
+            data_out <= data_array[addr[15:2]];
 
     assign dout = data_out;
   

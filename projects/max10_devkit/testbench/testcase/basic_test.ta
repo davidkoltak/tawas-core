@@ -69,5 +69,23 @@ _t0_reset:
     xch w r5 r3
     xch w r5 r3
 
+    ldi r0 0xFF000000
+    st w r2 r0 [0]
+    \ inc r2
+    st w r2 r0 [1]
+    \ inc r2
+    st w r2 r0 [2]
+    \ inc r2
+    st w r2 r0 [3]
+    \ inc r2
+    st w r2 r0 [4]
+    \ inc r2
+
+    ld w r1 r0 [0]
+    ld w r2 r0 [1]
+    ld w r3 r0 [2]
+    ld w r4 r0 [3]
+    ld w r5 r0 [4]
+
     jmp test_pass_wait
 

@@ -12,15 +12,21 @@ module tawas_ls
     input clk,
     input rst,
 
-    output reg [31:0] daddr,
     output reg dcs,
-    output reg rcn_cs,
-    output reg rcn_pfch_xch,
-    output reg [2:0] writeback_reg,
     output reg dwr,
+    output reg [31:0] daddr,
+    output reg [2:0] writeback_reg,
     output reg [3:0] dmask,
     output reg [31:0] dout,
     input [31:0] din,
+
+    output rcn_cs,
+    output rcn_xch,
+    output rcn_wr,
+    output [31:0] rcn_addr,
+    output [2:0] rcn_wbreg,
+    output [3:0] rcn_mask,
+    output [31:0] rcn_wdata,
 
     input ls_op_vld,
     input [14:0] ls_op,
@@ -140,8 +146,6 @@ module tawas_ls
         begin
             daddr <= {addr_out[31:2], 2'b00};
             dcs <=  !rcn_space;
-            rcn_cs <= rcn_space;
-            rcn_pfch_xch <= &ls_op[12:11];
             writeback_reg <= data_reg;
             dwr <= wr_en;
             dmask <= data_mask;
@@ -151,13 +155,23 @@ module tawas_ls
         begin
             daddr <= 32'd0;
             dcs <= 1'b0;
-            rcn_cs <= 1'b0;
-            rcn_pfch_xch <= 1'b0;
             writeback_reg <= 3'd0;
             dwr <= 1'b0;
             dmask <= 4'b0000;
             dout <= 32'd0;
         end
+
+    //
+    // RCN interface
+    //
+
+    assign rcn_cs = rcn_space && (ls_op_vld || ls_dir_vld);
+    assign rcn_xch = xch_en;
+    assign rcn_wr = wr_en;
+    assign rcn_addr = {addr_out[31:2], 2'b00};
+    assign rcn_wbreg = data_reg;
+    assign rcn_mask = data_mask;
+    assign rcn_wdata = wr_data;
 
     //
     // Register no-wait read data (D BUS) and send to regfile

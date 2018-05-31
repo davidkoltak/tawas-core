@@ -2,6 +2,7 @@ rcn_delay.v
 rcn_slave.v
 rcn_master.v
 rcn_master_buf.v
+rcn_ram.v
 rcn_dma.v
 rcn_bridge.v
 rcn_testregs.v

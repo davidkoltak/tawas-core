@@ -103,9 +103,9 @@ foreach my $package (@packages)
     chomp $line;
     $line =~ s/^\s+//;
     if ($line eq '')
-    { continue; }
+    { next; }
     if ($line =~ /^#/)
-    { continue; }
+    { next; }
 
     my $filename = $list_dir."rtl/".$line;
     

@@ -1,4 +1,4 @@
 dram.v
 irom.v
 max10_devkit_top.v
-sram.v
+

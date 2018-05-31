@@ -370,7 +370,7 @@ for filename in infiles:
 
 fw_cmds = ['call', 'rtn', 'jmp', 'halt', 'ldi', 'ldd', 'std']
 br_cmds = ['br', 'jmpi', 'skip', 'skip2', 'br_nop']
-ls_cmds = ['ld', 'st', 'push', 'pop', 'xch', 'pfch']
+ls_cmds = ['ld', 'st', 'push', 'pop', 'xch']
 au_cmds = ['or', 'xor', 'cmp', 'add', 'sub', 'and', 'clr', 'tstz',
            'bset', 'bclr', 'btst', 'rdcsr', 'wrcsr',
            'lsl', 'lsr', 'asr', 'sxb', 'sxh',
@@ -495,8 +495,7 @@ def decode_hw_op(pc, hw_op, upper):
             print("ERROR: Bad register name: %s" % (hw_op))
             exit(-1)
 
-    elif (opcode[0] == 'ld') or (opcode[0] == 'st') or (opcode[0] == 'xch') or \
-         (opcode[0] == 'pfch'):
+    elif (opcode[0] == 'ld') or (opcode[0] == 'st') or (opcode[0] == 'xch'):
         if (len(opcode) != 4) and (len(opcode) != 5):
             print("ERROR: Bad opcode: %s" % (hw_op))
             exit(-1)
@@ -509,9 +508,9 @@ def decode_hw_op(pc, hw_op, upper):
                 print("ERROR: Type must be 'w' for xch: %s" % (hw_op))
                 exit(-1)
             rtn = 0x4800
-        elif opcode[0] == 'pfch':
+        elif opcode[0] == 'special_read':
             if opcode[1] != 'w':
-                print("ERROR: Type must be 'w' for pfch: %s" % (hw_op))
+                print("ERROR: Type must be 'w' for special_read: %s" % (hw_op))
                 exit(-1)
             rtn = 0x0800
         if opcode[1] == 'h':

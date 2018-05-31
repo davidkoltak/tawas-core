@@ -62,6 +62,7 @@ module max10_devkit_top
     wire [66:0] rcn_0;
     wire [66:0] rcn_1;
     wire [66:0] rcn_2;
+    wire [66:0] rcn_3;
   
     tawas tawas
     (
@@ -71,9 +72,9 @@ module max10_devkit_top
         .iaddr(irom_addr),
         .idata(irom_data),
 
-        .daddr(dram_addr),
         .dcs(dram_cs),
         .dwr(dram_wr),
+        .daddr(dram_addr),
         .dmask(dram_mask),
         .dout(dram_din),
         .din(dram_dout),
@@ -95,12 +96,21 @@ module max10_devkit_top
         .rcn_out(rcn_2)
     );
 
-    sram #(.ADDR_BASE(32'h00000000)) sram
+    rcn_ram #(.ADDR_BASE(32'h00000000)) sram
     (
         .clk(clk_50),
         .rst(!fpga_reset_n),
 
         .rcn_in(rcn_2),
+        .rcn_out(rcn_3)
+    );
+
+    rcn_delay #(.DELAY_CYCLES(16)) rcn_delay
+    (
+        .clk(clk_50),
+        .rst(!fpga_reset_n),
+
+        .rcn_in(rcn_3),
         .rcn_out(rcn_0)
     );
 

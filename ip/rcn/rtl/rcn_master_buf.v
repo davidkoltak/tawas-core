@@ -24,6 +24,9 @@ module rcn_master_buf
     input [21:0] addr,
     input [31:0] wdata,
     
+    output issue,
+    output [1:0] iss_seq,
+    
     output rdone,
     output wdone,
     output [1:0] rsp_seq,
@@ -73,6 +76,9 @@ module rcn_master_buf
   wire req_busy;
 
   assign req_pop = req_vld && !req_busy;
+
+  assign issue = req_pop;
+  assign iss_seq = req[58:57];
   
   rcn_master #(.MASTER_ID(MASTER_ID)) rcn_master
   (

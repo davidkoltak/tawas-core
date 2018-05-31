@@ -16,9 +16,9 @@ module tawas
     output [23:0] iaddr,
     input [31:0] idata,
 
-    output [31:0] daddr,
     output dcs,
     output dwr,
+    output [31:0] daddr,
     output [3:0] dmask,
     output [31:0] dout,
     input [31:0] din,
@@ -124,18 +124,13 @@ module tawas
         .au_rc(au_rc)
     );
 
-    wire [31:0] daddr_out;
     wire rcn_cs;
-    wire rcn_pfch_xch;
-    wire [2:0] writeback_reg;
-    wire dwr_out;
-    wire [3:0] dmask_out;
-    wire [31:0] dout_out;
-
-    assign daddr = daddr_out;
-    assign dwr = dwr_out;
-    assign dmask = dmask_out;
-    assign dout = dout_out;
+    wire rcn_xch;
+    wire rcn_wr;
+    wire [31:0] rcn_addr;
+    wire [2:0] rcn_wbreg;
+    wire [3:0] rcn_mask;
+    wire [31:0] rcn_wdata;
 
     wire [2:0] ls_ptr_sel;
     wire [31:0] ls_ptr;
@@ -156,15 +151,20 @@ module tawas
         .clk(clk),
         .rst(rst),
 
-        .daddr(daddr_out),
         .dcs(dcs),
-        .rcn_cs(rcn_cs),
-        .rcn_pfch_xch(rcn_pfch_xch),
-        .writeback_reg(writeback_reg),
-        .dwr(dwr_out),
-        .dmask(dmask_out),
-        .dout(dout_out),
+        .dwr(dwr),
+        .daddr(daddr),
+        .dmask(dmask),
+        .dout(dout),
         .din(din),
+
+        .rcn_cs(rcn_cs),
+        .rcn_xch(rcn_xch),
+        .rcn_wr(rcn_wr),
+        .rcn_addr(rcn_addr),
+        .rcn_wbreg(rcn_wbreg),
+        .rcn_mask(rcn_mask),
+        .rcn_wdata(rcn_wdata),
 
         .ls_op_vld(ls_op_vld),
         .ls_op(ls_op),
@@ -202,13 +202,13 @@ module tawas
         .slice(slice),
         .rcn_stall(rcn_stall),
 
-        .daddr(daddr_out),
         .rcn_cs(rcn_cs),
-        .rcn_pfch_xch(rcn_pfch_xch),
-        .writeback_reg(writeback_reg),
-        .dwr(dwr_out),
-        .dmask(dmask_out),
-        .dout(dout_out),
+        .rcn_xch(rcn_xch),
+        .rcn_wr(rcn_wr),
+        .rcn_addr(rcn_addr),
+        .rcn_wbreg(rcn_wbreg),
+        .rcn_mask(rcn_mask),
+        .rcn_wdata(rcn_wdata),
 
         .rcn_load_vld(rcn_load_vld),
         .rcn_load_slice(rcn_load_slice),
