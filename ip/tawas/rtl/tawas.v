@@ -194,7 +194,7 @@ module tawas
     wire [2:0] rcn_load_sel;
     wire [31:0] rcn_load;
 
-    tawas_rcn tawas_rcn
+    tawas_rcn #(.MASTER_ID(MASTER_ID)) tawas_rcn
     (
         .clk(clk),
         .rst(rst),

@@ -2,13 +2,13 @@
 /* (c) Copyright 2018 David M. Koltak, all rights reserved. */
 
 /*
- * rcn bus slave interface - one cycle read delay
+ * rcn bus slave interface - zero cycle read delay (aka "fast")
  *
  * rcn bus vector definition =
  *   {valid, pending, wr, id[5:0], seq[1:0], we[3:0], addr[21:2], data[31:0]}
  */
 
-module rcn_slave
+module rcn_slave_fast
 (
     input rst,
     input clk,
@@ -27,7 +27,6 @@ module rcn_slave
     parameter ADDR_BASE = 0;
 
     reg [66:0] rin;
-    reg [66:0] rin_d1;
     reg [66:0] rout;
 
     assign rcn_out = rout;
@@ -36,7 +35,6 @@ module rcn_slave
     wire [31:0] my_base = ADDR_BASE;
 
     wire my_req = rin[66] && rin[65] && ((rin[51:32] & my_mask[21:2]) == my_base[21:2]);
-    reg my_req_d1;
 
     wire [66:0] my_resp;
 
@@ -44,16 +42,12 @@ module rcn_slave
         if (rst)
         begin
             rin <= 67'd0;
-            rin_d1 <= 67'd0;
-            my_req_d1 <= 1'b0;
             rout <= 67'd0;
         end
         else
         begin
             rin <= rcn_in;
-            rin_d1 <= rin;
-            my_req_d1 <= my_req;
-            rout <= (my_req_d1) ? my_resp : rin_d1;
+            rout <= (my_req) ? my_resp : rin;
         end
 
     assign cs = my_req;
@@ -62,6 +56,6 @@ module rcn_slave
     assign addr = {rin[51:32], 2'd0};
     assign wdata = rin[31:0];
 
-    assign my_resp = {1'b1, 1'b0, rin_d1[64:32], rdata};
+    assign my_resp = {1'b1, 1'b0, rin[64:32], rdata};
 
 endmodule

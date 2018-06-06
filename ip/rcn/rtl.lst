@@ -1,5 +1,6 @@
 rcn_delay.v
 rcn_slave.v
+rcn_slave_fast.v
 rcn_master.v
 rcn_master_buf.v
 rcn_ram.v

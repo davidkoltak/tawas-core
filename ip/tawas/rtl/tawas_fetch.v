@@ -80,7 +80,7 @@ module tawas_fetch
     reg series_cmd_1;
     reg series_cmd_2;
     reg series_cmd_3;
-  
+
     assign slice = pc_sel[1:0];
 
     assign pc_store = !fetch_stall_d1 && pc_store_en;
@@ -106,7 +106,7 @@ module tawas_fetch
         endcase
         au_cond_true = au_cond_flag ^ idata[26];
     end
-  
+
     always @ *
     begin
         case (pc_sel[1:0])
@@ -167,7 +167,7 @@ module tawas_fetch
             fetch_stall <= pc_stall;
             fetch_stall_d1 <= fetch_stall;
         end
-      
+
     always @ (posedge clk or posedge rst)
         if (rst)
         begin
@@ -206,7 +206,7 @@ module tawas_fetch
                     series_cmd_3 <= 1'b0;
                 end
             end
-      
+
             2'd1:
             begin
                 pc <= pc_2;
@@ -223,7 +223,7 @@ module tawas_fetch
                     series_cmd_0 <= 1'b0;
                 end
             end
-      
+
             2'd2:
             begin
                 pc <= pc_3;
@@ -240,7 +240,7 @@ module tawas_fetch
                     series_cmd_1 <= 1'b0;
                 end
             end
-      
+
             default:
             begin
                 pc <= pc_0;
@@ -262,7 +262,7 @@ module tawas_fetch
 
     //
     // Pick opcodes from instruction words
-    //  
+    //
 
     reg au_upper;
     wire ls_upper;
@@ -274,10 +274,10 @@ module tawas_fetch
     2'd2: au_upper = series_cmd_1;
     default: au_upper = series_cmd_2;
     endcase
-  
+
     assign ls_upper = au_upper || (idata[31:30] == 2'b10);
 
-    assign au_op_vld = !fetch_stall_d1 && ((idata[31:30] == 2'b00) || 
+    assign au_op_vld = !fetch_stall_d1 && ((idata[31:30] == 2'b00) ||
                        (idata[31:30] == 2'b10) || (idata[31:28] == 4'b1100));
 
     assign au_op = (au_upper) ? idata[30:15] : idata[14:0];
@@ -292,9 +292,9 @@ module tawas_fetch
     assign ls_dir_addr = {{8{idata[22]}}, idata[21:0], 2'd0};
 
     assign ls_op_vld = !fetch_stall_d1 && (r7_push_en ||
-                       (idata[31:30] == 2'b01) || (idata[31:30] == 2'b10) || 
+                       (idata[31:30] == 2'b01) || (idata[31:30] == 2'b10) ||
                        (idata[31:28] == 4'b1101));
-    assign ls_op = (r7_push_en) ? {4'he, 5'h1f, 3'd6, 3'd7} : 
+    assign ls_op = (r7_push_en) ? {4'he, 5'h1f, 3'd6, 3'd7} :
                      (ls_upper) ? idata[30:15] : idata[14:0];
 
 endmodule

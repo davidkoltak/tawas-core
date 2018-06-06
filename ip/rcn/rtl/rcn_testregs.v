@@ -29,7 +29,7 @@ module rcn_testregs
     wire [31:0] wdata;
     reg [31:0] rdata;
 
-    rcn_slave #(.ADDR_MASK(32'hFFFFFFF0), .ADDR_BASE(ADDR_BASE)) rcn_slave
+    rcn_slave_fast #(.ADDR_MASK(32'hFFFFFFF0), .ADDR_BASE(ADDR_BASE)) rcn_slave
     (
         .rst(rst),
         .clk(clk),
@@ -58,14 +58,13 @@ module rcn_testregs
     assign test_fail = test_fail_reg;
     assign test_pass = test_pass_reg;
 
-    always @ (posedge clk)
-        if (cs)
-            case (addr[3:0])
-            4'h0: rdata <= {24'd0, id_seq};
-            4'h4: rdata <= test_progress_reg;
-            4'h8: rdata <= test_fail_reg;
-            default: rdata <= test_pass_reg;
-            endcase
+    always @ *
+        case (addr[3:0])
+        4'h0: rdata = {24'd0, id_seq};
+        4'h4: rdata = test_progress_reg;
+        4'h8: rdata = test_fail_reg;
+        default: rdata = test_pass_reg;
+        endcase
 
     always @ (posedge clk or posedge rst)
         if (rst)

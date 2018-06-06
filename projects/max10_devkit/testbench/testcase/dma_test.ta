@@ -1,0 +1,72 @@
+
+#include <rcn_dma.h>
+#include <platform.h>
+
+.global _t0_reset
+.global _t1_reset
+.global _t2_reset
+.global _t3_reset
+
+.alloc stack_0_bot w 127
+.data stack_0_top w 0xAAAAAAAA
+.alloc stack_1_bot w 127
+.data stack_1_top w 0xAAAAAAAA
+.alloc stack_2_bot w 127
+.data stack_2_top w 0xAAAAAAAA
+.alloc stack_3_bot w 127
+.data stack_3_top w 0xAAAAAAAA
+
+_t0_reset:
+    ldi sp stack_0_top
+    jmp dma_test
+
+_t1_reset:
+    ldi sp stack_1_top
+    jmp stub
+
+_t2_reset:
+    ldi sp stack_2_top
+    jmp stub
+
+_t3_reset:
+    ldi sp stack_3_top
+    jmp stub
+
+stub:
+    rdcsr r0 thread
+    call test_progress_inc
+    jmp test_pass_wait
+
+.data test_seed w 0xAABBCCD0
+dma_test:
+    ldi r0 0xFF000000
+    ldd r1 test_seed
+    ldi r2 16
+loop_0:
+    st w r1 r0 ++1
+    \ dec r2
+    br nz loop_0
+    \ inc r1
+
+    ldi r0 RCN_DMA_BASE
+    ldi r1 0
+    ldi r2 0xFF000000
+    ldi r3 0xFF000F00
+.equ dma_cfg_1 (RCN_DMA_SRC_INC | RCN_DMA_DST_INC | RCN_DMA_TRANS_WORD)
+    ldi r4 dma_cfg_1
+    call rcn_dma_config
+    
+    ldi r0 RCN_DMA_BASE
+    ldi r1 0
+    ldi r2 16
+    call rcn_dma_start
+
+loop_1:
+    ldi r0 RCN_DMA_BASE
+    ldi r1 0
+    call rcn_dma_done
+    cmpi r0 0
+    br eq loop_1
+    
+    jmp test_pass_wait
+    

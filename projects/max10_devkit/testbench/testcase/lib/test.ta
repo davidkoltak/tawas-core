@@ -17,17 +17,17 @@
 //   - jmp test_fail_wait
 //
 
-.equ test_reg_base 0xFFFFFFF0
+#include <platform.h>
 
-#define test_reg_bus_id     0
-#define test_reg_progress   1
-#define test_reg_fail       2
-#define test_reg_pass       3
+#define TEST_REG_BUS_ID     0
+#define TEST_REG_PROGRESS   1
+#define TEST_REG_FAIL       2
+#define TEST_REG_PASS       3
 
-.equ test_reg_bus_id_addr      test_reg_base + (test_reg_bus_id * 4)
-.equ test_reg_progress_addr    test_reg_base + (test_reg_progress * 4)
-.equ test_reg_fail_addr        test_reg_base + (test_reg_fail * 4)
-.equ test_reg_pass_addr        test_reg_base + (test_reg_pass * 4)
+.equ test_reg_bus_id_addr      TEST_REG_BASE + (TEST_REG_BUS_ID * 4)
+.equ test_reg_progress_addr    TEST_REG_BASE + (TEST_REG_PROGRESS * 4)
+.equ test_reg_fail_addr        TEST_REG_BASE + (TEST_REG_FAIL * 4)
+.equ test_reg_pass_addr        TEST_REG_BASE + (TEST_REG_PASS * 4)
 
 
 .data test_sema w 1
@@ -103,6 +103,7 @@ test_pass_wait:
     \ br test_store_results
 
 test_store_results:
+    ldd r4 test_reg_progress_addr // all pending transactions are complete
     ldi r4 thread_results
     rdcsr r1 thread
     lsl r1 2

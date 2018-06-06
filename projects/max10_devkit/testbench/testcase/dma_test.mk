@@ -3,7 +3,7 @@ TOOLS_PATH = ../../../../ip/tawas/tools/
 
 SIM_DEFS = -DMAX_CLOCKS=4000 -DSIM
 
-SRC = basic_test.ta lib/test.ta lib/string.ta
+SRC = dma_test.ta lib/test.ta lib/rcn_dma.ta
 INC = -Iinclude/
 
 all: irom.hex dram.hex
@@ -16,3 +16,4 @@ irom.hex dram.hex: $(SRC:.ta=.to)
 
 clean:
 	rm -f *.to ./lib/*.to *.hex
+

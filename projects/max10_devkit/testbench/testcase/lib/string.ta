@@ -1,6 +1,25 @@
 
 // basic string library
 
+.global strlen
+.reg ptr r0
+.reg rtn r0
+strlen:
+    push r1
+    \ mv r1 ptr
+    push r2
+    \ ld b r2 r1 ++1
+strlen_loop:
+    cmpi r2 0
+    \ ld b r2 r1 ++1
+    br ne strlen_loop
+strlen_done:
+    pop r2
+    \ addi r1 -2
+    pop r1
+    \ sub rtn r1 ptr
+    rtn
+
 .global strcpy
 .reg from_ptr r0
 .reg to_ptr r1

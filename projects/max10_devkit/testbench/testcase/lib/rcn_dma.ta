@@ -1,0 +1,75 @@
+
+//
+// RCN Bus DMA Engine API
+//
+
+#define SRC_REG  0
+#define DST_REG  1
+#define CTRL_REG 2
+#define CNT_REG  3
+
+.global rcn_dma_config
+.reg dma_base r0
+.reg channel r1
+.reg src r2
+.reg dst r3
+.reg ctrl r4
+.reg rtn r0
+rcn_dma_config:
+    cmpi channel 3
+    br gt rcn_dma_err
+    lsl channel 4
+    add dma_base channel
+    st w src dma_base [SRC_REG]
+    st w dst dma_base [DST_REG]
+    st w ctrl dma_base [CTRL_REG]
+    mvi rtn 0
+    rtn
+
+rcn_dma_err:
+    mvi r0 -1
+    rtn
+
+.global rcn_dma_start
+.reg dma_base r0
+.reg channel r1
+.reg cnt r2
+.reg rtn r0
+rcn_dma_start:
+    cmpi channel 3
+    br gt rcn_dma_err
+    lsl channel 4
+    add dma_base channel
+    st w cnt dma_base [CNT_REG]
+    mvi rtn 0
+    rtn
+
+.global rcn_dma_stop
+.reg dma_base r0
+.reg channel r1
+.reg rtn r0
+rcn_dma_stop:
+    cmpi channel 3
+    br gt rcn_dma_err
+    lsl channel 4
+    add dma_base channel
+    mvi channel 0
+    st w channel dma_base [CNT_REG]
+    mvi rtn 0
+    rtn
+
+.global rcn_dma_done
+.reg dma_base r0
+.reg channel r1
+.reg rtn r0
+rcn_dma_done:
+    cmpi channel 3
+    br gt rcn_dma_err
+    lsl channel 4
+    add dma_base channel
+    ld w channel dma_base [CNT_REG]
+    mvi rtn 1
+    cmpi channel 0
+    skip eq
+    mvi rtn 0
+    rtn

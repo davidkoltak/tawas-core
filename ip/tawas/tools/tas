@@ -427,9 +427,9 @@ def decode_hw_op(pc, hw_op, upper):
                 rtn = 0x1000
             elif (opcode[1] == 'nz') or (opcode[1] == 'ne'):
                 rtn = 0x1800
-            elif opcode[1] == 'neg':
+            elif (opcode[1] == 'neg') or (opcode[1] == 'lt'):
                 rtn = 0x1100
-            elif opcode[1] == 'pos':
+            elif (opcode[1] == 'pos') or (opcode[1] == 'gt'):
                 rtn = 0x1900
             elif opcode[1] == 'ovfl':
                 rtn = 0x1200
@@ -862,6 +862,7 @@ def decode_fw_op(pc, fw_op):
             value = int(opcode[2], 0)
             if ((value & 0xFF000000) != 0) and ((value & 0xFF000000) != 0xFF000000):
                 print("ERROR: Immediate 25-bit overflow: %s" % (fw_op))
+                exit(-1)
             rtn |= (value & 0x01FFFFFF)
         except ValueError:
             pfixup.append("%d:imm25:%s" % (pc, opcode[2]))

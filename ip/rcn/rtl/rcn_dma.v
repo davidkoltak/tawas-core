@@ -28,70 +28,70 @@ module rcn_dma
 (
     input rst,
     input clk,
-    
+
     input [66:0] rcn_in,
     output [66:0] rcn_out,
-    
+
     input [15:0] req,
     output [3:0] done
 );
     parameter MASTER_ID = 0;
     parameter ADDR_BASE = 0;
-    
+
     wire [66:0] rcn_internal;
-    
+
     wire slave_cs;
     wire slave_wr;
     wire [3:0] slave_mask;
     wire [21:0] slave_addr;
     wire [31:0] slave_wdata;
     reg [31:0] slave_rdata;
-    
+
     wire slave_write = slave_cs && slave_wr;
     wire slave_read = slave_cs && !slave_wr;
-    
-    rcn_slave #(.ADDR_MASK(32'hFFFFFFC0), .ADDR_BASE(ADDR_BASE)) rcn_slave
+
+    rcn_slave_fast #(.ADDR_MASK(32'hFFFFFFC0), .ADDR_BASE(ADDR_BASE)) rcn_slave
     (
         .rst(rst),
         .clk(clk),
-    
+
         .rcn_in(rcn_in),
         .rcn_out(rcn_internal),
-    
+
         .cs(slave_cs),
         .wr(slave_wr),
         .mask(slave_mask),
         .addr(slave_addr),
         .wdata(slave_wdata),
-        .rdata(save_rdata)
+        .rdata(slave_rdata)
     );
-    
+
     reg [21:0] src_addr_0;
     reg [21:0] dst_addr_0;
     reg [12:0] ctrl_0;
     reg [21:0] cnt_0;
-    
+
     reg [21:0] src_addr_1;
     reg [21:0] dst_addr_1;
     reg [12:0] ctrl_1;
     reg [21:0] cnt_1;
-    
+
     reg [21:0] src_addr_2;
     reg [21:0] dst_addr_2;
     reg [12:0] ctrl_2;
     reg [21:0] cnt_2;
-    
+
     reg [21:0] src_addr_3;
     reg [21:0] dst_addr_3;
     reg [12:0] ctrl_3;
     reg [21:0] cnt_3;
-    
+
     reg [3:0] update;
     reg [3:0] null_trans;
     reg [21:0] next_src_addr;
     reg [21:0] next_dst_addr;
     reg [21:0] next_cnt;
-    
+
     always @ (posedge clk or posedge rst)
         if (rst)
             src_addr_0 <= 22'd0;
@@ -99,7 +99,7 @@ module rcn_dma
             src_addr_0 <= slave_wdata[21:0];
         else if (update[0] && ctrl_0[8])
             src_addr_0 <= next_src_addr;
-    
+
     always @ (posedge clk or posedge rst)
         if (rst)
             dst_addr_0 <= 22'd0;
@@ -131,7 +131,7 @@ module rcn_dma
             src_addr_1 <= slave_wdata[21:0];
         else if (update[1] && ctrl_1[8])
             src_addr_1 <= next_src_addr;
-    
+
     always @ (posedge clk or posedge rst)
         if (rst)
             dst_addr_1 <= 22'd0;
@@ -163,7 +163,7 @@ module rcn_dma
             src_addr_2 <= slave_wdata[21:0];
         else if (update[2] && ctrl_2[8])
             src_addr_2 <= next_src_addr;
-    
+
     always @ (posedge clk or posedge rst)
         if (rst)
             dst_addr_2 <= 22'd0;
@@ -195,7 +195,7 @@ module rcn_dma
             src_addr_3 <= slave_wdata[21:0];
         else if (update[3] && ctrl_3[8])
             src_addr_3 <= next_src_addr;
-    
+
     always @ (posedge clk or posedge rst)
         if (rst)
             dst_addr_3 <= 22'd0;
@@ -219,34 +219,31 @@ module rcn_dma
             cnt_3 <= 22'd0;
         else if (update[3])
             cnt_3 <= next_cnt;
-            
-    always @ (posedge clk or posedge rst)
-        if (rst)
-            slave_rdata <= 32'd0;
-        else if (slave_read)
-            case (slave_addr[5:0])
-            6'h00: slave_rdata <= {10'd0, src_addr_0};
-            6'h04: slave_rdata <= {10'd0, dst_addr_0};
-            6'h08: slave_rdata <= {19'd0, ctrl_0};
-            6'h0C: slave_rdata <= {10'd0, cnt_0};
-            
-            6'h10: slave_rdata <= {10'd0, src_addr_1};
-            6'h14: slave_rdata <= {10'd0, dst_addr_1};
-            6'h18: slave_rdata <= {19'd0, ctrl_1};
-            6'h1C: slave_rdata <= {10'd0, cnt_1};
-            
-            6'h20: slave_rdata <= {10'd0, src_addr_2};
-            6'h24: slave_rdata <= {10'd0, dst_addr_2};
-            6'h28: slave_rdata <= {19'd0, ctrl_2};
-            6'h2C: slave_rdata <= {10'd0, cnt_2};
-            
-            6'h30: slave_rdata <= {10'd0, src_addr_3};
-            6'h34: slave_rdata <= {10'd0, dst_addr_3};
-            6'h38: slave_rdata <= {19'd0, ctrl_3};
-            6'h3C: slave_rdata <= {10'd0, cnt_3};
-            
-            default: slave_rdata <= 32'd0;
-            endcase
+
+    always @ *
+        case (slave_addr[5:0])
+        6'h00: slave_rdata = {10'd0, src_addr_0};
+        6'h04: slave_rdata = {10'd0, dst_addr_0};
+        6'h08: slave_rdata = {19'd0, ctrl_0};
+        6'h0C: slave_rdata = {10'd0, cnt_0};
+
+        6'h10: slave_rdata = {10'd0, src_addr_1};
+        6'h14: slave_rdata = {10'd0, dst_addr_1};
+        6'h18: slave_rdata = {19'd0, ctrl_1};
+        6'h1C: slave_rdata = {10'd0, cnt_1};
+
+        6'h20: slave_rdata = {10'd0, src_addr_2};
+        6'h24: slave_rdata = {10'd0, dst_addr_2};
+        6'h28: slave_rdata = {19'd0, ctrl_2};
+        6'h2C: slave_rdata = {10'd0, cnt_2};
+
+        6'h30: slave_rdata = {10'd0, src_addr_3};
+        6'h34: slave_rdata = {10'd0, dst_addr_3};
+        6'h38: slave_rdata = {19'd0, ctrl_3};
+        6'h3C: slave_rdata = {10'd0, cnt_3};
+
+        default: slave_rdata = 32'd0;
+        endcase
 
     reg master_cs;
     reg [1:0] master_seq;
@@ -255,7 +252,7 @@ module rcn_dma
     reg [3:0] master_mask;
     reg [21:0] master_addr;
     reg [31:0] master_wdata;
-    
+
     wire rdone;
     wire wdone;
     wire [1:0] rsp_seq;
@@ -266,10 +263,10 @@ module rcn_dma
     (
         .rst(rst),
         .clk(clk),
-        
+
         .rcn_in(rcn_internal),
         .rcn_out(rcn_out),
-        
+
         .cs(master_cs),
         .seq(master_seq),
         .busy(master_busy),
@@ -277,20 +274,20 @@ module rcn_dma
         .mask(master_mask),
         .addr(master_addr),
         .wdata(master_wdata),
-        
+
         .rdone(rdone),
         .wdone(wdone),
         .rsp_seq(rsp_seq),
         .rsp_mask(rsp_mask),
         .rsp_addr(),
-        .rsp_data(rsp_addr)
+        .rsp_data(rsp_data)
     );
-    
+
     reg [31:0] rdata_0;
     reg [31:0] rdata_1;
     reg [31:0] rdata_2;
     reg [31:0] rdata_3;
-    
+
     wire [31:0] rsp_data_adj = (rsp_mask[3:0] == 4'b1111) ? rsp_data[31:0] :
                                (rsp_mask[3:2] == 2'b11) ? {2{rsp_data[31:16]}} :
                                (rsp_mask[1:0] == 2'b11) ? {2{rsp_data[15:0]}} :
@@ -301,25 +298,25 @@ module rcn_dma
     always @ (posedge clk)
         if (rdone && (rsp_seq == 2'd0))
             rdata_0 <= rsp_data_adj;
-            
+
     always @ (posedge clk)
         if (rdone && (rsp_seq == 2'd1))
             rdata_1 <= rsp_data_adj;
-            
+
     always @ (posedge clk)
         if (rdone && (rsp_seq == 2'd2))
             rdata_2 <= rsp_data_adj;
-            
+
     always @ (posedge clk)
         if (rdone && (rsp_seq == 2'd3))
             rdata_3 <= rsp_data_adj;
 
     reg [3:0] read_pending;
     reg [3:0] write_pending;
-    
+
     wire [3:0] set_rpend = (master_cs && !master_wr && !master_busy) ? (4'd1 << master_seq) : 4'd0;
     wire [3:0] clr_rpend = (rdone) ? (4'd1 << rsp_seq) : 4'd0;
-    
+
     always @ (posedge clk or posedge rst)
         if (rst)
             read_pending <= 4'd0;
@@ -328,7 +325,7 @@ module rcn_dma
 
     wire [3:0] set_wpend = (master_cs && master_wr && !master_busy) ? (4'd1 << master_seq) : 4'd0;
     wire [3:0] clr_wpend = (wdone) ? (4'd1 << rsp_seq) : 4'd0;
-    
+
     always @ (posedge clk or posedge rst)
         if (rst)
             write_pending <= 4'd0;
@@ -358,7 +355,7 @@ module rcn_dma
     reg [3:0] chan_dst_mask;
 
     reg [15:0] req_d1;
-    
+
     always @ (posedge clk)
         req_d1 <= req;
 
@@ -429,14 +426,14 @@ module rcn_dma
             next_src_addr = chan_src + 22'd1;
             next_dst_addr = chan_dst + 22'd1;
             next_cnt = chan_cnt - 22'd1;
-            
+
             case (chan_src[1:0])
             2'b00: chan_src_mask = 4'b0001;
             2'b01: chan_src_mask = 4'b0010;
             2'b10: chan_src_mask = 4'b0100;
             default: chan_src_mask = 4'b1000;
             endcase
-            
+
             case (chan_dst[1:0])
             2'b00: chan_dst_mask = 4'b0001;
             2'b01: chan_dst_mask = 4'b0010;
@@ -449,12 +446,12 @@ module rcn_dma
             next_src_addr = (chan_src + 22'd2) & 22'h3FFFFE;
             next_dst_addr = (chan_dst + 22'd2) & 22'h3FFFFE;
             next_cnt = (chan_cnt - 22'd2) & 22'h2FFFFE;
-            
+
             if (chan_src[1])
                 chan_src_mask = 4'b1100;
             else
                 chan_src_mask = 4'b0011;
-                
+
             if (chan_dst[1])
                 chan_dst_mask = 4'b1100;
             else
@@ -465,12 +462,12 @@ module rcn_dma
             next_src_addr = (chan_src + 22'd4) & 22'h3FFFFC;
             next_dst_addr = (chan_dst + 22'd4) & 22'h3FFFFC;
             next_cnt = (chan_cnt - 22'd4) & 22'h2FFFFC;
-            
+
             chan_src_mask = 4'b1111;
             chan_dst_mask = 4'b1111;
         end
         endcase
-    
+
     always @ *
     begin
         chan_next_state = chan_state;
@@ -481,7 +478,7 @@ module rcn_dma
         master_addr = 22'd0;
         master_wdata = 32'd0;
         update = 4'd0;
-        
+
         if (chan_cnt == 22'd0)
             chan_next_state = 3'd0;
         else
@@ -526,36 +523,36 @@ module rcn_dma
                 update = chan_sel;
                 chan_next_state = 3'd0;
             end
-            
+
             default: chan_next_state = 3'd0;
             endcase
         end
     end
-    
+
     always @ (posedge clk or posedge rst)
         if (rst)
             chan_num <= 2'd0;
         else
             chan_num <= chan_num + 2'd1;
-    
+
     always @ (posedge clk or posedge rst)
         if (rst)
             state_0 <= 3'd0;
         else if (chan_sel[0])
             state_0 <= chan_next_state;
-    
+
     always @ (posedge clk or posedge rst)
         if (rst)
             state_1 <= 3'd0;
         else if (chan_sel[1])
             state_1 <= chan_next_state;
-    
+
     always @ (posedge clk or posedge rst)
         if (rst)
             state_2 <= 3'd0;
         else if (chan_sel[2])
             state_2 <= chan_next_state;
-    
+
     always @ (posedge clk or posedge rst)
         if (rst)
             state_3 <= 3'd0;
@@ -563,4 +560,4 @@ module rcn_dma
             state_3 <= chan_next_state;
 
 endmodule
-    
+

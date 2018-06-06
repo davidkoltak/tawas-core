@@ -3,9 +3,9 @@
 
 //
 // Intel PSG Max 10 DevKit Reference Design
-// 
+//
 
-module max10_devkit_top 
+module max10_devkit_top
 (
     input clk_50,
     input fpga_reset_n,
@@ -26,7 +26,7 @@ module max10_devkit_top
     wire irom_cs;
     wire [23:0] irom_addr;
     wire [31:0] irom_data;
-  
+
     irom irom
     (
         .clk(clk_50),
@@ -42,7 +42,7 @@ module max10_devkit_top
     wire [3:0] dram_mask;
     wire [31:0] dram_din;
     wire [31:0] dram_dout;
-    
+
     dram dram
     (
         .clk(clk_50),
@@ -54,7 +54,7 @@ module max10_devkit_top
         .din(dram_din),
         .dout(dram_dout)
     );
-  
+
     wire [31:0] test_progress;
     wire [31:0] test_fail;
     wire [31:0] test_pass;
@@ -63,8 +63,8 @@ module max10_devkit_top
     wire [66:0] rcn_1;
     wire [66:0] rcn_2;
     wire [66:0] rcn_3;
-  
-    tawas tawas
+
+    tawas #(.MASTER_ID(0)) tawas
     (
         .clk(clk_50),
         .rst(!fpga_reset_n),
@@ -105,13 +105,16 @@ module max10_devkit_top
         .rcn_out(rcn_3)
     );
 
-    rcn_delay #(.DELAY_CYCLES(16)) rcn_delay
+    rcn_dma #(.ADDR_BASE(32'hFFFFFEC0), .MASTER_ID(1)) rcn_dma
     (
         .clk(clk_50),
         .rst(!fpga_reset_n),
 
         .rcn_in(rcn_3),
-        .rcn_out(rcn_0)
+        .rcn_out(rcn_0),
+
+        .req(16'h0001),
+        .done()
     );
 
 endmodule

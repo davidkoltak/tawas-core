@@ -116,7 +116,7 @@ LS Opcodes: 15-bits
  00 : 8-bit
  01 : 16-bit
  10 : 32-bit
- 11 : 32-bit (prefetch on load, exchange on store)
+ 11 : 32-bit (normal on load, exchange on store)
 
 NOTE: Pre-decrement, Post-increment
 

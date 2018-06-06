@@ -9,10 +9,10 @@ module rcn_uart
 (
     input clk,
     input rst,
-    
+
     input [66:0] rcn_in,
     output [66:0] rcn_out,
-    
+
     input uart_rx,
     output uart_tx
 );

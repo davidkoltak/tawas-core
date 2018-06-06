@@ -131,7 +131,9 @@ module tawas_ls
         if (rst)
             ld_d1 <= 8'd0;
         else if (ls_op_vld || ls_dir_vld)
-            ld_d1 <= {(!wr_en || xch_en) && !rcn_space, ls_op[12:11], addr_out[1:0], data_reg};
+            ld_d1 <= {(!wr_en || xch_en) && !rcn_space, 
+                      (ls_dir_vld) ? 2'b10 : ls_op[12:11], 
+                      addr_out[1:0], data_reg};
         else
             ld_d1 <= 8'd0;
 

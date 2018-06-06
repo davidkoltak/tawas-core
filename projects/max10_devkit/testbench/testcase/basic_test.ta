@@ -61,6 +61,13 @@ _t0_reset:
     skip eq
     jmp test_fail_now
 
+.string test_str "Test String"
+    ldi r0 test_str
+    call strlen
+    cmpi r0 11
+    skip eq
+    jmp test_fail_now
+
     rdcsr r5 ticks
     rdcsr r5 ticks
     rdcsr r5 ticks
