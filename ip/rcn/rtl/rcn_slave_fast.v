@@ -24,15 +24,15 @@ module rcn_slave_fast
     input [31:0] rdata
 );
     parameter ADDR_MASK = 0;
-    parameter ADDR_BASE = 0;
+    parameter ADDR_BASE = 1;
 
     reg [66:0] rin;
     reg [66:0] rout;
 
     assign rcn_out = rout;
 
-    wire [31:0] my_mask = ADDR_MASK;
-    wire [31:0] my_base = ADDR_BASE;
+    wire [21:0] my_mask = ADDR_MASK;
+    wire [21:0] my_base = ADDR_BASE;
 
     wire my_req = rin[66] && rin[65] && ((rin[51:32] & my_mask[21:2]) == my_base[21:2]);
 

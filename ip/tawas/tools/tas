@@ -429,7 +429,7 @@ def decode_hw_op(pc, hw_op, upper):
                 rtn = 0x1800
             elif (opcode[1] == 'neg') or (opcode[1] == 'lt'):
                 rtn = 0x1100
-            elif (opcode[1] == 'pos') or (opcode[1] == 'gt'):
+            elif (opcode[1] == 'pos') or (opcode[1] == 'ge'):
                 rtn = 0x1900
             elif opcode[1] == 'ovfl':
                 rtn = 0x1200

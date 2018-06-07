@@ -29,7 +29,7 @@ module rcn_testregs
     wire [31:0] wdata;
     reg [31:0] rdata;
 
-    rcn_slave_fast #(.ADDR_MASK(32'hFFFFFFF0), .ADDR_BASE(ADDR_BASE)) rcn_slave
+    rcn_slave_fast #(.ADDR_MASK(22'h3FFFF0), .ADDR_BASE(ADDR_BASE)) rcn_slave
     (
         .rst(rst),
         .clk(clk),

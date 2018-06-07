@@ -1,0 +1,78 @@
+
+//
+// RCN Bus DMA Engine API
+//
+
+#define SRC_REG  0
+#define DST_REG  1
+#define CTRL_REG 2
+#define CNT_REG  3
+
+.global rcn_dma_start
+.reg dma_base r0
+.reg channel r1
+.reg cfg r2
+.reg rtn r0
+rcn_dma_start:
+    cmpi channel 4
+    br ge rcn_dma_err
+    \ lsl channel 4
+    add dma_base channel
+    ld w r1 cfg [SRC_REG]
+    \ st w r1 dma_base [SRC_REG]
+    ld w r1 cfg [DST_REG]
+    \ st w r1 dma_base [DST_REG]
+    ld w r1 cfg [CTRL_REG]
+    \ st w r1 dma_base [CTRL_REG]
+    ld w r1 cfg [CNT_REG]
+    \ st w r1 dma_base [CNT_REG]
+    mvi rtn 0
+    rtn
+
+.global rcn_dma_stop
+.reg dma_base r0
+.reg channel r1
+.reg rtn r0
+rcn_dma_stop:
+    cmpi channel 4
+    br ge rcn_dma_err
+    \ lsl channel 4
+    add dma_base channel
+    \ mvi r1 0
+    st w r1 dma_base [CNT_REG]
+    \ mvi rtn 0
+    rtn
+
+.global rcn_dma_done
+.reg dma_base r0
+.reg channel r1
+.reg rtn r0
+rcn_dma_done:
+    cmpi channel 4
+    br ge rcn_dma_err
+    \ lsl channel 4
+    add dma_base channel
+    ld w r1 dma_base [CTRL_REG]
+    \ mvi rtn 1
+    btst r1 31
+    skip nz
+    mvi rtn 0
+    rtn
+
+.global rcn_dma_done_wait
+.reg dma_base r0
+.reg channel r1
+rcn_dma_done_wait:
+    cmpi channel 4
+    br ge rcn_dma_err
+    \ lsl channel 4
+    add dma_base channel
+rcn_dma_done_wait_loop:
+    ld w r1 dma_base [CTRL_REG]
+    btst r1 31
+    br z rcn_dma_done_wait_loop
+    rtn
+
+rcn_dma_err:
+    mvi r0 -1
+    rtn

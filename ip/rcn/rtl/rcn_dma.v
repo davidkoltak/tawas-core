@@ -16,6 +16,7 @@
  * crtl[11:10] = transfer size (0=8-bit, 1=16-bit, 2=32-bit)
  *               NOTE: Addresses/Counts are aligned to transfer size
  * ctrl[12] = null terminate
+ * ctrl[31] = channel done
  *
  * cnt[21:0] = byte count
  *
@@ -50,7 +51,7 @@ module rcn_dma
     wire slave_write = slave_cs && slave_wr;
     wire slave_read = slave_cs && !slave_wr;
 
-    rcn_slave_fast #(.ADDR_MASK(32'hFFFFFFC0), .ADDR_BASE(ADDR_BASE)) rcn_slave
+    rcn_slave_fast #(.ADDR_MASK(22'h3FFFC0), .ADDR_BASE(ADDR_BASE)) rcn_slave
     (
         .rst(rst),
         .clk(clk),
@@ -85,6 +86,9 @@ module rcn_dma
     reg [21:0] dst_addr_3;
     reg [12:0] ctrl_3;
     reg [21:0] cnt_3;
+
+    reg [3:0] status_done;
+    assign done = status_done;
 
     reg [3:0] update;
     reg [3:0] null_trans;
@@ -224,22 +228,22 @@ module rcn_dma
         case (slave_addr[5:0])
         6'h00: slave_rdata = {10'd0, src_addr_0};
         6'h04: slave_rdata = {10'd0, dst_addr_0};
-        6'h08: slave_rdata = {19'd0, ctrl_0};
+        6'h08: slave_rdata = {status_done[0], 18'd0, ctrl_0};
         6'h0C: slave_rdata = {10'd0, cnt_0};
 
         6'h10: slave_rdata = {10'd0, src_addr_1};
         6'h14: slave_rdata = {10'd0, dst_addr_1};
-        6'h18: slave_rdata = {19'd0, ctrl_1};
+        6'h18: slave_rdata = {status_done[1], 18'd0, ctrl_1};
         6'h1C: slave_rdata = {10'd0, cnt_1};
 
         6'h20: slave_rdata = {10'd0, src_addr_2};
         6'h24: slave_rdata = {10'd0, dst_addr_2};
-        6'h28: slave_rdata = {19'd0, ctrl_2};
+        6'h28: slave_rdata = {status_done[2], 18'd0, ctrl_2};
         6'h2C: slave_rdata = {10'd0, cnt_2};
 
         6'h30: slave_rdata = {10'd0, src_addr_3};
         6'h34: slave_rdata = {10'd0, dst_addr_3};
-        6'h38: slave_rdata = {19'd0, ctrl_3};
+        6'h38: slave_rdata = {status_done[3], 18'd0, ctrl_3};
         6'h3C: slave_rdata = {10'd0, cnt_3};
 
         default: slave_rdata = 32'd0;
@@ -332,10 +336,10 @@ module rcn_dma
         else
             write_pending <= (write_pending | set_wpend) & ~clr_wpend;
 
-    reg [2:0] state_0;
-    reg [2:0] state_1;
-    reg [2:0] state_2;
-    reg [2:0] state_3;
+    reg [1:0] state_0;
+    reg [1:0] state_1;
+    reg [1:0] state_2;
+    reg [1:0] state_3;
 
     reg [1:0] chan_num;
     reg [3:0] chan_sel;
@@ -348,8 +352,8 @@ module rcn_dma
     reg chan_rpend;
     reg chan_wpend;
     reg [31:0] chan_rdata;
-    reg [2:0] chan_state;
-    reg [2:0] chan_next_state;
+    reg [1:0] chan_state;
+    reg [1:0] chan_next_state;
 
     reg [3:0] chan_src_mask;
     reg [3:0] chan_dst_mask;
@@ -484,47 +488,41 @@ module rcn_dma
         else
         begin
             case (chan_state)
-            3'd0: // Src Ready (and no previous pending transactions)
-                if (chan_src_req && !chan_rpend && !chan_wpend)
-                    chan_next_state = chan_state + 3'd1;
-            3'd1: // Read Request
+            2'd0: // Read Request
             begin
-                master_cs = 1'b1;
-                master_seq = chan_num;
-                master_wr = 1'b0;
-                master_mask = chan_src_mask;
-                master_addr = {chan_src[21:2], 2'b00};
-                if (!master_busy)
-                    chan_next_state = chan_state + 3'd1;
+                if (chan_src_req && !chan_rpend)
+                begin
+                    master_cs = 1'b1;
+                    master_seq = chan_num;
+                    master_wr = 1'b0;
+                    master_mask = chan_src_mask;
+                    master_addr = {chan_src[21:2], 2'b00};
+                    if (!master_busy)
+                        chan_next_state = chan_state + 2'd1;
+                end
             end
-            3'd2: // Read Response
-                if (!chan_rpend)
-                    chan_next_state = chan_state + 3'd1;
-            3'd3: // Dst Ready
-                if (chan_dst_req)
-                    chan_next_state = chan_state + 3'd1;
-            3'd4: // Write Request
+            2'd1: // Write Request
             begin
-                master_cs = 1'b1;
-                master_seq = chan_num;
-                master_wr = 1'b1;
-                master_mask = chan_dst_mask;
-                master_addr = {chan_dst[21:2], 2'b00};
-                master_wdata = chan_rdata;
-                if (!master_busy)
-                    chan_next_state = chan_state + 3'd1;
+                if (chan_dst_req && !chan_rpend && !chan_wpend)
+                begin
+                    master_cs = 1'b1;
+                    master_seq = chan_num;
+                    master_wr = 1'b1;
+                    master_mask = chan_dst_mask;
+                    master_addr = {chan_dst[21:2], 2'b00};
+                    master_wdata = chan_rdata;
+                    if (!master_busy)
+                        chan_next_state = chan_state + 2'd1;
+                end
             end
-            3'd5: // Write Response
-                if (!chan_wpend)
-                    chan_next_state = chan_state + 3'd1;
-            3'd6: // Status Update
+            2'd2: // Status Update
             begin
                 null_trans = (chan_rdata == 32'd0) ? chan_sel : 4'd0;
                 update = chan_sel;
-                chan_next_state = 3'd0;
+                chan_next_state = 2'd0;
             end
 
-            default: chan_next_state = 3'd0;
+            default: chan_next_state = 2'd0;
             endcase
         end
     end
@@ -532,32 +530,46 @@ module rcn_dma
     always @ (posedge clk or posedge rst)
         if (rst)
             chan_num <= 2'd0;
+        else if (!read_pending[0] && (cnt_0 != 22'd0))
+            chan_num <= 2'd0;
+        else if (!read_pending[1] && (cnt_1 != 22'd0))
+            chan_num <= 2'd1;
+        else if (!read_pending[2] && (cnt_2 != 22'd0))
+            chan_num <= 2'd2;
         else
-            chan_num <= chan_num + 2'd1;
+            chan_num <= 2'd3;
 
     always @ (posedge clk or posedge rst)
         if (rst)
-            state_0 <= 3'd0;
+            state_0 <= 2'd0;
         else if (chan_sel[0])
             state_0 <= chan_next_state;
 
     always @ (posedge clk or posedge rst)
         if (rst)
-            state_1 <= 3'd0;
+            state_1 <= 2'd0;
         else if (chan_sel[1])
             state_1 <= chan_next_state;
 
     always @ (posedge clk or posedge rst)
         if (rst)
-            state_2 <= 3'd0;
+            state_2 <= 2'd0;
         else if (chan_sel[2])
             state_2 <= chan_next_state;
 
     always @ (posedge clk or posedge rst)
         if (rst)
-            state_3 <= 3'd0;
+            state_3 <= 2'd0;
         else if (chan_sel[3])
             state_3 <= chan_next_state;
+
+    always @ (posedge clk)
+    begin
+        status_done[0] <= !read_pending[0] && !write_pending[0] && (cnt_0 == 22'd0);
+        status_done[1] <= !read_pending[1] && !write_pending[1] && (cnt_1 == 22'd0);
+        status_done[2] <= !read_pending[2] && !write_pending[2] && (cnt_2 == 22'd0);
+        status_done[3] <= !read_pending[3] && !write_pending[3] && (cnt_3 == 22'd0);
+    end
 
 endmodule
 
