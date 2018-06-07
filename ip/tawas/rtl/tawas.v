@@ -23,8 +23,8 @@ module tawas
     output [31:0] dout,
     input [31:0] din,
 
-    input [66:0] rcn_in,
-    output [66:0] rcn_out
+    input [68:0] rcn_in,
+    output [68:0] rcn_out
 );
     parameter MASTER_ID = 0;
 

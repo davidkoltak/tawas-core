@@ -78,7 +78,7 @@ _t0_reset:
     xch w r5 r3
     xch w r5 r3
 
-    ldi r0 RCN_RAM0_BASE
+    ldi r0 RCN_RAM1_BASE
     st w r2 r0 [0]
     \ inc r2
     st w r2 r0 [1]

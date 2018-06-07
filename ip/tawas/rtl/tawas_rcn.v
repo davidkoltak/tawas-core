@@ -28,8 +28,8 @@ module tawas_rcn
     output reg [2:0] rcn_load_sel,
     output reg [31:0] rcn_load,
 
-    input [66:0] rcn_in,
-    output [66:0] rcn_out
+    input [68:0] rcn_in,
+    output [68:0] rcn_out
 );
     parameter MASTER_ID = 0;
 
@@ -55,7 +55,7 @@ module tawas_rcn
         .busy(),
         .wr(rcn_wr),
         .mask(rcn_mask),
-        .addr(rcn_addr[21:0]),
+        .addr(rcn_addr[23:0]),
         .wdata(rcn_wdata),
 
         .issue(issue),

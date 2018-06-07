@@ -13,15 +13,15 @@ module rcn_master_buf
     input rst,
     input clk,
 
-    input [66:0] rcn_in,
-    output [66:0] rcn_out,
+    input [68:0] rcn_in,
+    output [68:0] rcn_out,
 
     input cs,
     input [1:0] seq,
     output busy,
     input wr,
     input [3:0] mask,
-    input [21:0] addr,
+    input [23:0] addr,
     input [31:0] wdata,
 
     output issue,
@@ -31,12 +31,12 @@ module rcn_master_buf
     output wdone,
     output [1:0] rsp_seq,
     output [3:0] rsp_mask,
-    output [21:0] rsp_addr,
+    output [23:0] rsp_addr,
     output [31:0] rsp_data
 );
     parameter MASTER_ID = 0;
 
-    reg [58:0] req_buf[3:0];
+    reg [60:0] req_buf[3:0];
     reg [1:0] write_ptr;
     reg [1:0] read_ptr;
     reg [2:0] req_cnt;
@@ -69,16 +69,16 @@ module rcn_master_buf
 
     always @ (posedge clk)
         if (req_push)
-            req_buf[write_ptr] <= {seq, wr, mask[3:0], addr[21:2], wdata[31:0]};
+            req_buf[write_ptr] <= {seq, wr, mask[3:0], addr[23:2], wdata[31:0]};
 
   wire req_vld = (req_cnt[2:0] != 3'd0);
-  wire [58:0] req = req_buf[read_ptr][58:0];
+  wire [60:0] req = req_buf[read_ptr][60:0];
   wire req_busy;
 
   assign req_pop = req_vld && !req_busy;
 
   assign issue = req_pop;
-  assign iss_seq = req[58:57];
+  assign iss_seq = req[60:59];
 
   rcn_master #(.MASTER_ID(MASTER_ID)) rcn_master
   (
@@ -89,11 +89,11 @@ module rcn_master_buf
       .rcn_out(rcn_out),
 
       .cs(req_vld),
-      .seq(req[58:57]),
+      .seq(req[60:59]),
       .busy(req_busy),
-      .wr(req[56]),
-      .mask(req[55:52]),
-      .addr({req[51:32], 2'd0}),
+      .wr(req[58]),
+      .mask(req[57:54]),
+      .addr({req[53:32], 2'd0}),
       .wdata(req[31:0]),
 
       .rdone(rdone),

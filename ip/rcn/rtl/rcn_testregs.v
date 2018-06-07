@@ -14,8 +14,8 @@ module rcn_testregs
     input clk,
     input rst,
 
-    input [66:0] rcn_in,
-    output [66:0] rcn_out,
+    input [68:0] rcn_in,
+    output [68:0] rcn_out,
 
     output [31:0] test_progress,
     output [31:0] test_fail,
@@ -25,11 +25,11 @@ module rcn_testregs
 
     wire cs;
     wire wr;
-    wire [21:0] addr;
+    wire [23:0] addr;
     wire [31:0] wdata;
     reg [31:0] rdata;
 
-    rcn_slave_fast #(.ADDR_MASK(22'h3FFFF0), .ADDR_BASE(ADDR_BASE)) rcn_slave
+    rcn_slave_fast #(.ADDR_MASK(24'hFFFFF0), .ADDR_BASE(ADDR_BASE)) rcn_slave
     (
         .rst(rst),
         .clk(clk),
@@ -48,7 +48,7 @@ module rcn_testregs
     reg [7:0] id_seq;
 
     always @ (posedge clk)
-        id_seq <= rcn_in[63:56];
+        id_seq <= {rcn_in[65:60], rcn_in[33:32]};
 
     reg [31:0] test_progress_reg;
     reg [31:0] test_fail_reg;

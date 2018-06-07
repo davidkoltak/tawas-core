@@ -59,11 +59,11 @@ module ip_test_top
     wire [31:0] test_fail;
     wire [31:0] test_pass;
 
-    wire [66:0] rcn_00;
-    wire [66:0] rcn_01;
-    wire [66:0] rcn_02;
-    wire [66:0] rcn_03;
-    wire [66:0] rcn_04;
+    wire [68:0] rcn_00;
+    wire [68:0] rcn_01;
+    wire [68:0] rcn_02;
+    wire [68:0] rcn_03;
+    wire [68:0] rcn_04;
 
     tawas #(.MASTER_ID(0)) tawas
     (
@@ -84,7 +84,7 @@ module ip_test_top
         .rcn_out(rcn_01)
     );
 
-    rcn_testregs #(.ADDR_BASE(22'h3FFFF0)) testregs
+    rcn_testregs #(.ADDR_BASE(24'hFFFFF0)) testregs
     (
         .clk(clk_50),
         .rst(!fpga_reset_n),
@@ -97,7 +97,7 @@ module ip_test_top
         .rcn_out(rcn_02)
     );
 
-    rcn_ram #(.ADDR_BASE(22'h3E0000)) sram_0
+    rcn_ram #(.ADDR_BASE(24'hFE0000)) sram_0
     (
         .clk(clk_50),
         .rst(!fpga_reset_n),
@@ -106,12 +106,12 @@ module ip_test_top
         .rcn_out(rcn_03)
     );
 
-    wire [66:0] rcn_10;
-    wire [66:0] rcn_11;
-    wire [66:0] rcn_12;
+    wire [68:0] rcn_10;
+    wire [68:0] rcn_11;
+    wire [68:0] rcn_12;
 
     rcn_bridge #(.ID_MASK(6'h3C), .ID_BASE(6'h04),
-                 .ADDR_MASK(22'h300000), .ADDR_BASE(22'h000000)) bridge_1
+                 .ADDR_MASK(24'hF00000), .ADDR_BASE(24'h000000)) bridge_1
     (
         .clk(clk_50),
         .rst(!fpga_reset_n),
@@ -123,7 +123,7 @@ module ip_test_top
         .sub_rcn_out(rcn_11)
     );
 
-    rcn_ram #(.ADDR_BASE(22'h0E0000)) sram_1
+    rcn_ram #(.ADDR_BASE(24'h0E0000)) sram_1
     (
         .clk(clk_50),
         .rst(!fpga_reset_n),
@@ -132,7 +132,7 @@ module ip_test_top
         .rcn_out(rcn_12)
     );
 
-    rcn_dma #(.ADDR_BASE(22'h0FFFC0), .MASTER_ID(4)) dma_1
+    rcn_dma #(.ADDR_BASE(24'h0FFFC0), .MASTER_ID(4)) dma_1
     (
         .clk(clk_50),
         .rst(!fpga_reset_n),
@@ -144,12 +144,12 @@ module ip_test_top
         .done()
     );
 
-    wire [66:0] rcn_20;
-    wire [66:0] rcn_21;
-    wire [66:0] rcn_22;
+    wire [68:0] rcn_20;
+    wire [68:0] rcn_21;
+    wire [68:0] rcn_22;
 
     rcn_bridge #(.ID_MASK(6'h3C), .ID_BASE(6'h08),
-                 .ADDR_MASK(22'h300000), .ADDR_BASE(22'h100000))  rcn_bridge_2
+                 .ADDR_MASK(24'h300000), .ADDR_BASE(24'h100000))  bridge_2
     (
         .clk(clk_50),
         .rst(!fpga_reset_n),
@@ -161,7 +161,7 @@ module ip_test_top
         .sub_rcn_out(rcn_21)
     );
 
-    rcn_ram #(.ADDR_BASE(22'h1E0000)) sram_2
+    rcn_ram #(.ADDR_BASE(24'h1E0000)) sram_2
     (
         .clk(clk_50),
         .rst(!fpga_reset_n),
@@ -170,7 +170,7 @@ module ip_test_top
         .rcn_out(rcn_22)
     );
 
-    rcn_dma #(.ADDR_BASE(22'h1FFFC0), .MASTER_ID(8)) dma_2
+    rcn_dma #(.ADDR_BASE(24'h1FFFC0), .MASTER_ID(8)) dma_2
     (
         .clk(clk_50),
         .rst(!fpga_reset_n),

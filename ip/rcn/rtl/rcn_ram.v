@@ -9,27 +9,27 @@ module rcn_ram
 (
     input clk,
     input rst,
-    
-    input [66:0] rcn_in,
-    output [66:0] rcn_out
+
+    input [68:0] rcn_in,
+    output [68:0] rcn_out
 );
     parameter ADDR_BASE = 0;
 
     wire cs;
     wire wr;
     wire [3:0] mask;
-    wire [21:0] addr;
+    wire [23:0] addr;
     wire [31:0] wdata;
     wire [31:0] rdata;
-        
-    rcn_slave #(.ADDR_MASK(32'hFFFF0000), .ADDR_BASE(ADDR_BASE)) rcn_slave
+
+    rcn_slave #(.ADDR_MASK(24'hFF0000), .ADDR_BASE(ADDR_BASE)) rcn_slave
     (
         .rst(rst),
         .clk(clk),
-        
+
         .rcn_in(rcn_in),
         .rcn_out(rcn_out),
-        
+
         .cs(cs),
         .wr(wr),
         .mask(mask),
@@ -41,7 +41,7 @@ module rcn_ram
     reg [31:0] data_array[(1024 * 16)-1:0];
     reg [31:0] data_out;
     wire [31:0] bitmask;
-    
+
     assign bitmask = {{8{mask[3]}}, {8{mask[2]}}, {8{mask[1]}}, {8{mask[0]}}};
 
     always @ (posedge clk)

@@ -10,12 +10,12 @@ module rcn_delay
     input clk,
     input rst,
 
-    input [66:0] rcn_in,
-    output [66:0] rcn_out
+    input [68:0] rcn_in,
+    output [68:0] rcn_out
 );
     parameter DELAY_CYCLES = 7;
 
-    reg [66:0] bus_delay[(DELAY_CYCLES-1):0];
+    reg [68:0] bus_delay[(DELAY_CYCLES-1):0];
 
     integer x;
 
@@ -23,7 +23,7 @@ module rcn_delay
         if (rst)
         begin
             for (x = 0; x < DELAY_CYCLES; x = x + 1)
-                bus_delay[x] <= 67'd0;
+                bus_delay[x] <= 69'd0;
         end
         else
         begin
@@ -31,7 +31,7 @@ module rcn_delay
             for (x = 1; x < DELAY_CYCLES; x = x + 1)
                 bus_delay[x-1] <= bus_delay[x];
         end
-  
+
     assign rcn_out = bus_delay[0];
 
 endmodule
