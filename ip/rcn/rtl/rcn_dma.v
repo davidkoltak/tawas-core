@@ -39,7 +39,19 @@ module rcn_dma
     parameter MASTER_ID = 0;
     parameter ADDR_BASE = 0;
 
-    wire [68:0] rcn_internal;
+    reg master_cs;
+    reg [1:0] master_seq;
+    wire master_busy;
+    reg master_wr;
+    reg [3:0] master_mask;
+    reg [23:0] master_addr;
+    reg [31:0] master_wdata;
+
+    wire rdone;
+    wire wdone;
+    wire [1:0] rsp_seq;
+    wire [3:0] rsp_mask;
+    wire [31:0] rsp_data;
 
     wire slave_cs;
     wire slave_wr;
@@ -51,20 +63,37 @@ module rcn_dma
     wire slave_write = slave_cs && slave_wr;
     wire slave_read = slave_cs && !slave_wr;
 
-    rcn_slave_fast #(.ADDR_MASK(24'hFFFFC0), .ADDR_BASE(ADDR_BASE)) rcn_slave
+    rcn_master_slave_fast #(.MASTER_ID(MASTER_ID),
+                            .ADDR_MASK(24'hFFFFC0),
+                            .ADDR_BASE(ADDR_BASE)) rcn_master_slave
     (
         .rst(rst),
         .clk(clk),
 
         .rcn_in(rcn_in),
-        .rcn_out(rcn_internal),
+        .rcn_out(rcn_out),
 
-        .cs(slave_cs),
-        .wr(slave_wr),
-        .mask(slave_mask),
-        .addr(slave_addr),
-        .wdata(slave_wdata),
-        .rdata(slave_rdata)
+        .cs(master_cs),
+        .seq(master_seq),
+        .busy(master_busy),
+        .wr(master_wr),
+        .mask(master_mask),
+        .addr(master_addr),
+        .wdata(master_wdata),
+
+        .rdone(rdone),
+        .wdone(wdone),
+        .rsp_seq(rsp_seq),
+        .rsp_mask(rsp_mask),
+        .rsp_addr(),
+        .rsp_data(rsp_data),
+
+        .slave_cs(slave_cs),
+        .slave_wr(slave_wr),
+        .slave_mask(slave_mask),
+        .slave_addr(slave_addr),
+        .slave_wdata(slave_wdata),
+        .slave_rdata(slave_rdata)
     );
 
     reg [23:0] src_addr_0;
@@ -248,44 +277,6 @@ module rcn_dma
 
         default: slave_rdata = 32'd0;
         endcase
-
-    reg master_cs;
-    reg [1:0] master_seq;
-    wire master_busy;
-    reg master_wr;
-    reg [3:0] master_mask;
-    reg [23:0] master_addr;
-    reg [31:0] master_wdata;
-
-    wire rdone;
-    wire wdone;
-    wire [1:0] rsp_seq;
-    wire [3:0] rsp_mask;
-    wire [31:0] rsp_data;
-
-    rcn_master #(.MASTER_ID(MASTER_ID)) rcn_master
-    (
-        .rst(rst),
-        .clk(clk),
-
-        .rcn_in(rcn_internal),
-        .rcn_out(rcn_out),
-
-        .cs(master_cs),
-        .seq(master_seq),
-        .busy(master_busy),
-        .wr(master_wr),
-        .mask(master_mask),
-        .addr(master_addr),
-        .wdata(master_wdata),
-
-        .rdone(rdone),
-        .wdone(wdone),
-        .rsp_seq(rsp_seq),
-        .rsp_mask(rsp_mask),
-        .rsp_addr(),
-        .rsp_data(rsp_data)
-    );
 
     reg [31:0] rdata_0;
     reg [31:0] rdata_1;

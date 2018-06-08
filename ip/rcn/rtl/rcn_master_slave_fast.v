@@ -2,23 +2,11 @@
 /* (c) Copyright 2018 David M. Koltak, all rights reserved. */
 
 /*
- * rcn bus master interface.
- *
- * rcn bus vector definition =
- *   {valid, pending, wr, id[5:0], mask[3:0], addr[23:2], seq[1:0], data[31:0]}
- *
- *  data    = [31:0]
- *  seq     = [33:32]
- *  addr    = [55:34]
- *  mask    = [59:56]
- *  id      = [65:60]
- *  wr      = [66]
- *  pending = [67]
- *  valid   = [68]
+ * rcn bus master and slave (combined) interface - zero cycle read delay.
  *
  */
 
-module rcn_master
+module rcn_master_slave_fast
 (
     input rst,
     input clk,
@@ -39,9 +27,18 @@ module rcn_master
     output [1:0] rsp_seq,
     output [3:0] rsp_mask,
     output [23:0] rsp_addr,
-    output [31:0] rsp_data
+    output [31:0] rsp_data,
+
+    output slave_cs,
+    output slave_wr,
+    output [3:0] slave_mask,
+    output [23:0] slave_addr,
+    output [31:0] slave_wdata,
+    input [31:0] slave_rdata
 );
     parameter MASTER_ID = 0;
+    parameter ADDR_MASK = 0;
+    parameter ADDR_BASE = 1;
 
     reg [68:0] rin;
     reg [68:0] rout;
@@ -49,8 +46,14 @@ module rcn_master
     assign rcn_out = rout;
 
     wire [5:0] my_id = MASTER_ID;
+    wire [23:0] my_mask = ADDR_MASK;
+    wire [23:0] my_base = ADDR_BASE;
 
     wire my_resp = rin[68] && !rin[67] && (rin[65:60] == my_id);
+
+    wire my_req = rin[68] && rin[67] && ((rin[55:34] & my_mask[23:2]) == my_base[23:2]);
+
+    wire [68:0] resp;
 
     wire req_valid;
     wire [68:0] req;
@@ -64,7 +67,7 @@ module rcn_master
         else
         begin
             rin <= rcn_in;
-            rout <= (req_valid) ? req : (my_resp) ? 69'd0 : rin;
+            rout <= (my_req) ? resp : (req_valid) ? req : (my_resp) ? 69'd0 : rin;
         end
 
     assign busy = rin[68] && !my_resp;
@@ -77,5 +80,13 @@ module rcn_master
     assign rsp_mask = rin[59:56];
     assign rsp_addr = {rin[55:34], 2'd0};
     assign rsp_data = rin[31:0];
+
+    assign slave_cs = my_req;
+    assign slave_wr = rin[66];
+    assign slave_mask = rin[59:56];
+    assign slave_addr = {rin[55:34], 2'd0};
+    assign slave_wdata = rin[31:0];
+
+    assign resp = {1'b1, 1'b0, rin[66:32], slave_rdata};
 
 endmodule

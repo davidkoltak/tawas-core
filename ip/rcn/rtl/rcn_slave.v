@@ -36,7 +36,7 @@ module rcn_slave
     wire my_req = rin[68] && rin[67] && ((rin[55:34] & my_mask[23:2]) == my_base[23:2]);
     reg my_req_d1;
 
-    wire [68:0] my_resp;
+    wire [68:0] resp;
 
     always @ (posedge clk or posedge rst)
         if (rst)
@@ -51,7 +51,7 @@ module rcn_slave
             rin <= rcn_in;
             rin_d1 <= rin;
             my_req_d1 <= my_req;
-            rout <= (my_req_d1) ? my_resp : rin_d1;
+            rout <= (my_req_d1) ? resp : rin_d1;
         end
 
     assign cs = my_req;
@@ -60,6 +60,6 @@ module rcn_slave
     assign addr = {rin[55:34], 2'd0};
     assign wdata = rin[31:0];
 
-    assign my_resp = {1'b1, 1'b0, rin_d1[66:32], rdata};
+    assign resp = {1'b1, 1'b0, rin_d1[66:32], rdata};
 
 endmodule

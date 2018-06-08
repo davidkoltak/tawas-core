@@ -3,6 +3,8 @@ rcn_slave.v
 rcn_slave_fast.v
 rcn_master.v
 rcn_master_buf.v
+rcn_master_slave.v
+rcn_master_slave_fast.v
 rcn_ram.v
 rcn_dma.v
 rcn_bridge.v
