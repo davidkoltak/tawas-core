@@ -111,8 +111,8 @@ module ip_test_top
     wire [68:0] rcn_11;
     wire [68:0] rcn_12;
 
-    rcn_bridge #(.ID_MASK(6'h3C), .ID_BASE(6'h04),
-                 .ADDR_MASK(24'hF00000), .ADDR_BASE(24'h000000)) bridge_1
+    rcn_bridge_buf #(.ID_MASK(6'h3C), .ID_BASE(6'h04),
+                     .ADDR_MASK(24'hF00000), .ADDR_BASE(24'h000000)) bridge_1
     (
         .clk(clk_50),
         .rst(!fpga_reset_n),

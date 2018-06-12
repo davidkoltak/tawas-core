@@ -57,7 +57,7 @@ module rcn_fifo_async
         end
         else
         begin
-            if (push && !fifo_full)
+            if (push)
                 head_in <= head_in_next;
 
             case (cross_in)
@@ -78,7 +78,7 @@ module rcn_fifo_async
         end
         else
         begin
-            if (pop && !fifo_empty)
+            if (pop)
                 tail_out <= tail_out_next;
 
             case (cross_out)
@@ -90,7 +90,7 @@ module rcn_fifo_async
     reg [67:0] fifo[15:0];
 
     always @ (posedge clk_in)
-        if (rcn_in[68] & !fifo_full)
+        if (push)
             fifo[head_in] <= rcn_in[67:0];
 
     assign full = fifo_full;

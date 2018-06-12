@@ -20,32 +20,39 @@ module rcn_fifo
     output empty
 );
 
-    reg [3:0] head;
-    reg [3:0] tail;
-
-    wire [3:0] head_next = head + 4'd1;
-    wire fifo_full = (head_next == tail);
-    wire fifo_empty = (head == tail);
+    reg [1:0] head;
+    reg [1:0] tail;
+    reg [2:0] cnt;
+    
+    wire fifo_full = cnt[2];
+    wire fifo_empty = (cnt == 3'd0);
 
     always @ (posedge clk or posedge rst)
         if (rst)
         begin
-            head <= 4'd0;
-            tail <= 4'd0;
+            head <= 2'd0;
+            tail <= 2'd0;
+            cnt <= 3'd0;
         end
         else
         begin
-            if (push & !fifo_full)
-                head <= head_next;
+            if (push)
+                head <= head + 2'd1;
 
-            if (pop & !fifo_empty)
-                tail <= tail + 4'd1;
+            if (pop)
+                tail <= tail + 2'd1;
+            
+            case ({push, pop})
+            2'b10: cnt <= cnt + 3'd1;
+            2'b01: cnt <= cnt - 3'd1;
+            default: ;
+            endcase
         end
 
-    reg [67:0] fifo[15:0];
+    reg [67:0] fifo[3:0];
 
     always @ (posedge clk)
-        if (rcn_in[68] & !fifo_full)
+        if (push)
             fifo[head] <= rcn_in[67:0];
 
     assign full = fifo_full;
