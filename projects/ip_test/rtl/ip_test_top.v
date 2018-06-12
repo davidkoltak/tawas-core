@@ -8,6 +8,7 @@
 module ip_test_top
 (
     input clk_50,
+    input clk_slow,
     input fpga_reset_n,
 
     output qspi_clk,
@@ -148,11 +149,12 @@ module ip_test_top
     wire [68:0] rcn_21;
     wire [68:0] rcn_22;
 
-    rcn_bridge #(.ID_MASK(6'h3C), .ID_BASE(6'h08),
-                 .ADDR_MASK(24'h300000), .ADDR_BASE(24'h100000))  bridge_2
+    rcn_bridge_async #(.ID_MASK(6'h3C), .ID_BASE(6'h08),
+                       .ADDR_MASK(24'h300000), .ADDR_BASE(24'h100000))  bridge_2
     (
-        .clk(clk_50),
-        .rst(!fpga_reset_n),
+        .main_clk(clk_50),
+        .main_rst(!fpga_reset_n),
+        .sub_clk(clk_slow),
 
         .main_rcn_in(rcn_04),
         .main_rcn_out(rcn_00),
@@ -163,7 +165,7 @@ module ip_test_top
 
     rcn_ram #(.ADDR_BASE(24'h1E0000)) sram_2
     (
-        .clk(clk_50),
+        .clk(clk_slow),
         .rst(!fpga_reset_n),
 
         .rcn_in(rcn_21),
@@ -172,7 +174,7 @@ module ip_test_top
 
     rcn_dma #(.ADDR_BASE(24'h1FFFC0), .MASTER_ID(8)) dma_2
     (
-        .clk(clk_50),
+        .clk(clk_slow),
         .rst(!fpga_reset_n),
 
         .rcn_in(rcn_22),

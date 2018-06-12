@@ -7,5 +7,9 @@ rcn_master_slave.v
 rcn_master_slave_fast.v
 rcn_ram.v
 rcn_dma.v
+rcn_fifo.v
+rcn_fifo_async.v
 rcn_bridge.v
+rcn_bridge_buf.v
+rcn_bridge_async.v
 rcn_testregs.v
