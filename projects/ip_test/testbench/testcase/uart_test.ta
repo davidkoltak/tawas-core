@@ -1,0 +1,75 @@
+
+#include <rcn_dma.h>
+#include <platform.h>
+
+.global _t0_reset
+.global _t1_reset
+.global _t2_reset
+.global _t3_reset
+
+.alloc stack_0_bot w 127
+.data stack_0_top w 0xAAAAAAAA
+.alloc stack_1_bot w 127
+.data stack_1_top w 0xAAAAAAAA
+.alloc stack_2_bot w 127
+.data stack_2_top w 0xAAAAAAAA
+.alloc stack_3_bot w 127
+.data stack_3_top w 0xAAAAAAAA
+
+_t0_reset:
+    ldi sp stack_0_top
+    jmp uart_test
+
+_t1_reset:
+    ldi sp stack_1_top
+    jmp stub
+
+_t2_reset:
+    ldi sp stack_2_top
+    jmp stub
+
+_t3_reset:
+    ldi sp stack_3_top
+    jmp stub
+
+stub:
+    rdcsr r0 thread
+    call test_progress_inc
+    jmp test_pass_wait
+
+uart_test:
+    ldi r0 RCN_UART0_BASE
+    ldi r1 RCN_UART1_BASE
+    
+// SEND 8 BYTES
+    mvi r2 0xA0
+send_loop:
+    ld b r3 r0 [0]
+    btst r3 0
+    br nz send_loop
+    inc r2
+    st b r2 r0 [1]
+    cmpi r2 0xA9
+    br ne send_loop
+
+// RECEIVE 8 BYTES
+    mvi r2 0xA0
+recv_loop:
+    ld b r3 r1 [0]
+    btst r3 1
+    br nz recv_loop
+    inc r2
+    ld b r3 r1 [1]
+    cmp r2 r3
+    br ne recv_fail
+    cmpi r2 0xA9
+    br ne recv_loop
+
+recv_pass:
+    jmp test_pass_now
+
+recv_fail:
+    jmp test_fail_now
+
+    
+    

@@ -21,6 +21,7 @@ module rcn_uart_framer
     output uart_tx,
     input uart_rx
 );
+    parameter SAMPLE_CLK_DIV = 6'd61; // Value for 115200 @ 50 MHz in
 
     //
     // 50 MHz -> sample clock (7 * bit)
@@ -35,7 +36,7 @@ module rcn_uart_framer
             sample_cnt <= 6'd0;
             sample_en <= 1'b0;
         end
-        else if (sample_cnt == 6'd61)
+        else if (sample_cnt == SAMPLE_CLK_DIV)
         begin
             sample_cnt <= 6'd0;
             sample_en <= 1'b1;
@@ -91,16 +92,16 @@ module rcn_uart_framer
             begin
                 rx_busy <= (rx_bit_cnt == 4'd9) ? 1'b0 : 1'b1;
 
+                rx_bitclk_en <= (rx_bitclk_cnt == 3'd5) ? 1'b1 : 1'b0;
+                
                 if (rx_bitclk_cnt == 3'd6)
                 begin
                     rx_bitclk_cnt <= 3'd0;
-                    rx_bitclk_en <= 1'b1;
                     rx_bit_cnt <= rx_bit_cnt + 4'd1;
                 end
                 else
                 begin
                     rx_bitclk_cnt <= rx_bitclk_cnt + 3'd1;
-                    rx_bitclk_en <= 1'b0;
                 end
             end
         end
@@ -122,7 +123,7 @@ module rcn_uart_framer
         end
         else if (sample_en && rx_bitclk_en)
         begin
-            rx_capture <= (rx_capture[7:0], rx_high && !rx_low};
+            rx_capture <= {rx_capture[7:0], rx_high && !rx_low};
             rx_signal_errors <= {rx_signal_errors[7:0], !rx_high && !rx_low};
         end
 
@@ -130,7 +131,7 @@ module rcn_uart_framer
         if (rst)
         begin
             rx_data_done <= 1'b0;
-            rx_busy_d1 <= 1'b0;;
+            rx_busy_d1 <= 1'b0;
         end
         else
         begin
@@ -157,19 +158,19 @@ module rcn_uart_framer
     always @ (posedge clk_50 or rst)
         if (rst)
         begin
-            tx_shift <= 10'd0;
-            tx_bitclk_cnt <= 3'0;
+            tx_shift <= {10{1'b1}};
+            tx_bitclk_cnt <= 3'd0;
             tx_cnt <= 4'd0;
             tx_busy <= 1'b0;
         end
         else if (!tx_busy && tx_vld)
         begin
             tx_shift <= {1'b0, tx_data};
-            tx_bitclk_cnt <= 3'0;
+            tx_bitclk_cnt <= 3'd0;
             tx_cnt <= 4'd0;
             tx_busy <= 1'b1;
         end
-        else
+        else if (sample_en)
         begin
             tx_busy <= (tx_cnt == 4'd10) ? 1'b0 : 1'b1;
 

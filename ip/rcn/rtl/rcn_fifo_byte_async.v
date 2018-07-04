@@ -57,7 +57,7 @@ module rcn_fifo_byte_async
         end
         else
         begin
-            if (push)
+            if (push && !fifo_full)
                 head_in <= head_in_next;
 
             case (cross_in)
@@ -78,7 +78,7 @@ module rcn_fifo_byte_async
         end
         else
         begin
-            if (pop)
+            if (pop && !fifo_empty)
                 tail_out <= tail_out_next;
 
             case (cross_out)

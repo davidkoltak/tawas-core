@@ -128,6 +128,9 @@ module testbench();
     always @ (sim_clk_slow_gen)
         sim_clk_slow <= sim_clk_slow_gen;
 
+    wire uart_tx;
+    wire uart_rx;
+    
     ip_test_top ip_test_top
     (
         .clk_50(sim_clk),
@@ -138,9 +141,12 @@ module testbench();
         .qspi_io(),
         .qspi_csn(),
 
-        .uart_rx(1'b1),
-        .uart_tx(),
+        .uart_0_rx(uart_rx),
+        .uart_0_tx(uart_tx),
 
+        .uart_1_rx(uart_tx),
+        .uart_1_tx(uart_rx),
+        
         .user_led(user_leds),
         .user_pb(4'b1111)
     );

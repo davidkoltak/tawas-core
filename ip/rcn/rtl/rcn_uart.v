@@ -4,7 +4,9 @@
 //
 // RCN bus UART
 //
-// Single 32-bit register for byte read/write to 16-entry fifo.
+// Registers -
+//  0: Status : [rx_empty, tx_full]
+//  1: Data   : 8-bit read/write
 //
 
 module rcn_uart
@@ -13,8 +15,8 @@ module rcn_uart
     input clk_50,
     input rst,
 
-    input [66:0] rcn_in,
-    output [66:0] rcn_out,
+    input [68:0] rcn_in,
+    output [68:0] rcn_out,
 
     output tx_req,
     output rx_req,
@@ -22,6 +24,8 @@ module rcn_uart
     output uart_tx,
     input uart_rx
 );
+    parameter ADDR_BASE = 0;
+    parameter SAMPLE_CLK_DIV = 6'd61; // Value for 115200 @ 50 MHz in
 
     wire cs;
     wire wr;
@@ -30,7 +34,7 @@ module rcn_uart
     wire [31:0] wdata;
     wire [31:0] rdata;
 
-    rcn_slave_fast #(.ADDR_BASE(ADDR_BASE), .ADDR_MASK(24'hFFFFC)) rcn_slave
+    rcn_slave_fast #(.ADDR_BASE(ADDR_BASE), .ADDR_MASK(24'hFFFFFC)) rcn_slave
     (
         .rst(rst),
         .clk(clk),
@@ -53,7 +57,7 @@ module rcn_uart
     wire rx_vld;
     wire [7:0] rx_data;
 
-    rcn_uart_framer rcn_uart_framer
+    rcn_uart_framer #(.SAMPLE_CLK_DIV(SAMPLE_CLK_DIV)) rcn_uart_framer
     (
         .clk_50(clk_50),
         .rst(rst),
@@ -82,8 +86,8 @@ module rcn_uart
         .clk_in(clk),
         .clk_out(clk_50),
 
-        .in(wdata[7:0]),
-        .push(cs && wr),
+        .din(wdata[7:0]),
+        .push(cs && wr && mask[1]),
         .full(tx_full),
 
         .dout(tx_data),
@@ -94,7 +98,7 @@ module rcn_uart
     wire [7:0] rdata_byte;
     wire rx_empty;
 
-    assign rdata = {4{rdata_byte}};
+    assign rdata = {16'd0, rdata_byte, 6'd0, rx_empty, tx_full};
     assign rx_req = !rx_empty;
 
     rcn_fifo_byte_async rx_fifo
@@ -103,12 +107,12 @@ module rcn_uart
         .clk_in(clk_50),
         .clk_out(clk),
 
-        .in(rx_data),
+        .din(rx_data),
         .push(rx_vld),
         .full(),
 
         .dout(rdata_byte),
-        .pop(cs && !wr),
+        .pop(cs && !wr && mask[1]),
         .empty(rx_empty)
     );
 
