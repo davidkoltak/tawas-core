@@ -13,3 +13,6 @@ rcn_bridge.v
 rcn_bridge_buf.v
 rcn_bridge_async.v
 rcn_testregs.v
+rcn_fifo_byte_async.v
+rcn_uart_framer.v
+rcn_uart.v
