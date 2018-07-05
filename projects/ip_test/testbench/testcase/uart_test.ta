@@ -40,7 +40,7 @@ stub:
 uart_test:
     ldi r0 RCN_UART0_BASE
     ldi r1 RCN_UART1_BASE
-    
+
 // SEND 8 BYTES
     mvi r2 0xA0
 send_loop:
@@ -71,5 +71,5 @@ recv_pass:
 recv_fail:
     jmp test_fail_now
 
-    
-    
+
+

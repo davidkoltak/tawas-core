@@ -22,5 +22,5 @@
 #define RCN_UART1_DMA       RCN_DMA1_BASE
 #define RCN_UART1_TX_REQ    3
 #define RCN_UART1_RX_REQ    4
-     
+
 #endif

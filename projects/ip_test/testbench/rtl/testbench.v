@@ -130,7 +130,7 @@ module testbench();
 
     wire uart_tx;
     wire uart_rx;
-    
+
     ip_test_top ip_test_top
     (
         .clk_50(sim_clk),
@@ -146,7 +146,7 @@ module testbench();
 
         .uart_1_rx(uart_tx),
         .uart_1_tx(uart_rx),
-        
+
         .user_led(user_leds),
         .user_pb(4'b1111)
     );

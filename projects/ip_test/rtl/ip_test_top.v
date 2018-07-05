@@ -20,7 +20,7 @@ module ip_test_top
 
     input uart_1_rx,
     output uart_1_tx,
-    
+
     output [4:0] user_led,
     input [3:0] user_pb
 );
@@ -135,7 +135,7 @@ module ip_test_top
     wire [68:0] rcn_10;
     wire [68:0] rcn_11;
     wire [68:0] rcn_12;
-    
+
     rcn_bridge_buf #(.ID_MASK(6'h3C), .ID_BASE(6'h04),
                      .ADDR_MASK(24'hF00000), .ADDR_BASE(24'h000000)) bridge_1
     (
@@ -157,7 +157,7 @@ module ip_test_top
         .rcn_in(rcn_11),
         .rcn_out(rcn_12)
     );
-    
+
     rcn_dma #(.ADDR_BASE(24'h0FFFC0), .MASTER_ID(4)) dma_1
     (
         .clk(clk_50),
@@ -166,7 +166,7 @@ module ip_test_top
         .rcn_in(rcn_12),
         .rcn_out(rcn_10),
 
-        .req({11'd0, uart_1_rx_req, uart_1_tx_req, 
+        .req({11'd0, uart_1_rx_req, uart_1_tx_req,
               uart_0_rx_req, uart_0_tx_req, 1'b1}),
         .done()
     );
@@ -198,7 +198,7 @@ module ip_test_top
         .rcn_in(rcn_21),
         .rcn_out(rcn_22)
     );
-    
+
     rcn_uart #(.ADDR_BASE(24'h1FFFB8), .SAMPLE_CLK_DIV(6'd3)) uart_1
     (
         .clk(clk_slow),
@@ -214,7 +214,7 @@ module ip_test_top
         .uart_tx(uart_1_tx),
         .uart_rx(uart_1_rx)
     );
-    
+
     rcn_dma #(.ADDR_BASE(24'h1FFFC0), .MASTER_ID(8)) dma_2
     (
         .clk(clk_slow),

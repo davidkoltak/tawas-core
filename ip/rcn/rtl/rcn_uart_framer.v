@@ -93,7 +93,7 @@ module rcn_uart_framer
                 rx_busy <= (rx_bit_cnt == 4'd9) ? 1'b0 : 1'b1;
 
                 rx_bitclk_en <= (rx_bitclk_cnt == 3'd5) ? 1'b1 : 1'b0;
-                
+
                 if (rx_bitclk_cnt == 3'd6)
                 begin
                     rx_bitclk_cnt <= 3'd0;
