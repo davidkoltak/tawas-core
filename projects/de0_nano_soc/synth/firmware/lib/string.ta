@@ -1,0 +1,67 @@
+
+// basic string library
+
+.global strlen
+.reg ptr r0
+.reg rtn r0
+strlen:
+    push r1
+    \ mv r1 ptr
+    push r2
+    \ ld b r2 r1 ++1
+strlen_loop:
+    cmpi r2 0
+    \ ld b r2 r1 ++1
+    br ne strlen_loop
+strlen_done:
+    pop r2
+    \ addi r1 -2
+    pop r1
+    \ sub rtn r1 ptr
+    rtn
+
+.global strcpy
+.reg from_ptr r0
+.reg to_ptr r1
+.reg rtn r0
+strcpy:
+    push r2
+    \ mv r2 from_ptr
+    push r3
+    \ ld b r3 from_ptr ++1
+strcpy_loop:
+    tstz r3
+    \ st b r3 to_ptr ++1
+    br ne strcpy_loop
+    \ ld b r3 from_ptr ++1
+strcpy_done:
+    pop r3
+    \ dec from_ptr
+    pop r2
+    \ sub rtn from_ptr r2
+    rtn
+
+.global strcmp
+.reg str1_ptr r0
+.reg str2_ptr r1
+.reg rtn r0
+strcmp:
+    push r2
+    \ push r3
+    push r4
+    ld b r2 str1_ptr ++1
+    \ ld b r3 str2_ptr ++1
+strcmp_loop:
+    ld b r2 str1_ptr ++1
+    \ sub r4 r3 r2
+    br nz strcmp_done
+    \ cmpi r3 0
+    br ne strcmp_loop
+    \ ld b r3 str2_ptr ++1
+    mvi r4 0
+strcmp_done:
+    pop r4
+    \ mv rtn r4
+    pop r3
+    \ pop r2
+    rtn

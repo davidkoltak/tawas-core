@@ -1,0 +1,154 @@
+
+.global _t0_reset
+.global _t1_reset
+.global _t2_reset
+.global _t3_reset
+
+_t0_reset:
+.alloc stack_0_bot w 127
+.data stack_0_top w 0xAAAAAAAA
+    ldi sp stack_0_top
+
+.string test_0_str "Testing thread 0 with a string"
+.alloc test_0_buf b 50
+
+    ldi r0 0x10001
+    call test_progress_set
+
+    ldi r0 test_0_str
+    ldi r1 test_0_buf
+    call string_test
+    mv r1 r0
+
+    ldi r0 0x10002
+    call test_progress_set
+
+    tstz r1
+    skip eq
+    jmp test_fail_wait
+    jmp test_pass_wait
+
+_t1_reset:
+.alloc stack_1_bot w 127
+.data stack_1_top w 0xBBBBBBBB
+    ldi sp stack_1_top
+
+.string test_1_str "This is thread 1 string"
+.alloc test_1_buf b 40
+
+    ldi r0 0x20001
+    call test_progress_set
+
+    ldi r0 test_1_str
+    ldi r1 test_1_buf
+    call string_test
+    mv r1 r0
+
+    ldi r0 0x20002
+    call test_progress_set
+
+    tstz r1
+    skip eq
+    jmp test_fail_wait
+    jmp test_pass_wait
+
+_t2_reset:
+.alloc stack_2_bot w 127
+.data stack_2_top w 0xCCCCCCCC
+    ldi sp stack_2_top
+
+.string test_2_str "Thread #2 is going to be the longest string in the test"
+.alloc test_2_buf b 80
+
+    ldi r0 0x30001
+    call test_progress_set
+
+    ldi r0 test_2_str
+    ldi r1 test_2_buf
+    call string_test
+    mv r1 r0
+
+    ldi r0 0x30002
+    call test_progress_set
+
+    tstz r1
+    skip eq
+    jmp test_fail_wait
+    jmp test_pass_wait
+
+_t3_reset:
+.alloc stack_3_bot w 127
+.data stack_3_top w 0xDDDDDDDD
+    ldi sp stack_3_top
+
+.string test_3_str "The shortest"
+.alloc test_3_buf b 16
+
+    ldi r0 0x40001
+    call test_progress_set
+
+    ldi r0 test_3_str
+    ldi r1 test_3_buf
+    call string_test
+    mv r1 r0
+
+    ldi r0 0x40002
+    call test_progress_set
+
+    tstz r1
+    skip eq
+    jmp test_fail_wait
+    jmp test_pass_wait
+
+.reg ptr1 r0
+.reg ptr2 r1
+.reg rtn r0
+string_test:
+    push r2
+    push ptr2
+    \ push ptr1
+
+    call strcpy
+    tstz rtn
+    br eq string_test_done
+    \ mvi r2 1
+
+    ld w ptr1 sp [0]
+    \ ld w ptr2 sp [1]
+
+    call strcmp
+    tstz rtn
+    br ne string_test_done
+    \ mvi r2 1
+
+    ld w ptr1 sp [0]
+    \ ld w ptr2 sp [1]
+
+    ld b r2 ptr1 [7]
+    addi r2 3
+    st b r2 ptr1 [7]
+
+    call strcmp
+    tstz rtn
+    br eq string_test_done
+    \ mvi r2 1
+
+    ld w ptr1 sp [0]
+    \ ld w ptr2 sp [1]
+
+    ld b r2 ptr1 [7]
+    addi r2 -3
+    st b r2 ptr1 [7]
+
+    call strcmp
+    tstz rtn
+    br ne string_test_done
+    \ mvi r2 1
+    mvi r2 0
+
+string_test_done:
+    pop ptr1
+    \ pop ptr2
+    pop r2
+    \ mv rtn r2
+    rtn

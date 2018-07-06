@@ -1,0 +1,151 @@
+
+//
+// Test reporting code
+//
+//   Signal some test progress
+//   - call test_progress_inc
+//
+//   - mvi r0 #
+//   - call test_progress_set
+//
+//   Immediately signal pass/fail:
+//   - jmp test_pass_now
+//   - jmp test_fail_now
+//
+//   Delayed result until all threads finish
+//   - jmp test_pass_wait
+//   - jmp test_fail_wait
+//
+
+#include <platform.h>
+
+#define TEST_REG_BUS_ID     0
+#define TEST_REG_PROGRESS   1
+#define TEST_REG_FAIL       2
+#define TEST_REG_PASS       3
+
+.equ test_reg_bus_id_addr      TEST_REG_BASE + (TEST_REG_BUS_ID * 4)
+.equ test_reg_progress_addr    TEST_REG_BASE + (TEST_REG_PROGRESS * 4)
+.equ test_reg_fail_addr        TEST_REG_BASE + (TEST_REG_FAIL * 4)
+.equ test_reg_pass_addr        TEST_REG_BASE + (TEST_REG_PASS * 4)
+
+
+.data test_sema w 1
+sema_get:
+    push r0
+    \ mvi r0 0
+    push r1
+    ldi r1 test_sema
+get_loop:
+    xch w r0 r1
+    cmpi r0 0
+    br eq get_loop
+    pop r1
+    \ pop r0
+    rtn
+
+sema_put:
+    push r0
+    \ mvi r0 1
+    std r0 test_sema
+    pop r0
+    rtn
+
+.global test_get_bus_id
+test_get_bus_id:
+    ldd r0 test_reg_bus_id_addr
+    rtn
+
+.global test_progress_set
+test_progress_set:
+    std r0 test_reg_progress_addr
+    rtn
+
+.global test_progress_inc
+test_progress_inc:
+    call sema_get
+    push r0
+    \ clr r0
+    push r1
+    xch w r0 r1
+
+    ldd r0 test_reg_progress_addr
+    inc r0
+    std r0 test_reg_progress_addr
+    pop r0
+    call sema_put
+    rtn
+
+.global test_fail_now
+test_fail_now:
+    rdcsr r0 thread
+    \ bset r0 8
+    std r0 test_reg_fail_addr
+    halt
+
+.global test_pass_now
+test_pass_now:
+    rdcsr r0 thread
+    \ bset r0 8
+    std r0 test_reg_pass_addr
+    halt
+
+.data thread_results w 0 0 0 0
+
+.global test_fail_wait
+test_fail_wait:
+    mvi r0 3
+    \ br test_store_results
+
+.global test_pass_wait
+test_pass_wait:
+    mvi r0 2
+    \ br test_store_results
+
+test_store_results:
+    ldd r4 test_reg_progress_addr // all pending transactions are complete
+    ldi r4 thread_results
+    rdcsr r1 thread
+    lsl r1 2
+    \ add r4 r1
+    st w r0 r4
+    tstz r1
+    skip eq
+    halt
+
+    ldi r4 thread_results
+wait_for_t0:
+    ld w r0 r4 [0]
+    tstz r0
+    br eq wait_for_t0
+wait_for_t1:
+    ld w r1 r4 [1]
+    tstz r1
+    br eq wait_for_t1
+wait_for_t2:
+    ld w r2 r4 [2]
+    tstz r2
+    br eq wait_for_t2
+wait_for_t3:
+    ld w r3 r4 [3]
+    tstz r3
+    br eq wait_for_t3
+
+    mv r4 r0
+    \ or r4 r1
+    or r4 r2
+    \ or r4 r3
+
+    lsl r1 2
+    \ lsl r2 4
+    lsl r3 6
+    \ or r0 r1
+    or r0 r2
+    \ or r0 r3
+
+    ldi r1 test_reg_fail_addr
+    btst r4 0
+    skip nz
+    ldi r1 test_reg_pass_addr
+    st w r0 r1
+    halt

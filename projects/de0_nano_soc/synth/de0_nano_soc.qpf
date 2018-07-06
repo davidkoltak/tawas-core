@@ -1,0 +1,5 @@
+
+QUARTUS_VERSION = "18.0"
+DATE = "12:00:00  July 6, 2018"
+
+PROJECT_REVISION = "de0_nano_soc"

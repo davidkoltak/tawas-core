@@ -1,0 +1,52 @@
+
+// UART interface library
+
+.global uart_send_str
+.reg uart_base r0
+.reg buf r1
+uart_send_str:
+    push r2
+send_str_loop:
+    ld b r2 r0 [0]
+    btst r2 0
+    br nz send_str_loop
+    ld b r2 r1 ++1
+    cmpi r2 0
+    br eq send_str_done
+    st b r2 r0 [1]
+    jmp send_str_loop
+send_str_done:
+    pop r2
+    rtn
+
+.global uart_flush
+.reg uart_base r0
+uart_flush:
+    push r1
+flush_loop:
+    ld b r3 r0 [0]
+    btst r3 1
+    br z flush_loop
+    pop r1
+    rtn
+
+.global uart_recv_str
+.reg uart_base r0
+.reg buf r1
+.reg size r2
+uart_recv_str:
+    push r3
+recv_str_loop:
+    ld b r3 r0 [0]
+    btst r3 3
+    br nz recv_str_loop
+    ld b r3 r0 [1]
+    \ st b r3 r1 ++1
+    cmpi r3 10
+    br eq recv_str_done
+    dec r2
+    br z recv_str_done
+    jmp recv_str_loop
+recv_str_done:
+    pop r3
+    rtn
