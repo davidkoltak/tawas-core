@@ -77,7 +77,7 @@ module testbench();
         if (sim_rst)
         begin
             CLOCK_LIMIT <= 32'd0;
-            test_progress <= ip_test_top.testregs.test_progress;
+            test_progress <= de0_nano_soc.testregs.test_progress;
         end
         else
         begin
@@ -89,26 +89,26 @@ module testbench();
                 $finish();
             end
 
-            if (ip_test_top.testregs.test_progress != test_progress)
+            if (de0_nano_soc.testregs.test_progress != test_progress)
             begin
-                test_progress <= ip_test_top.testregs.test_progress;
+                test_progress <= de0_nano_soc.testregs.test_progress;
                 $display(" ****** TEST PROGRESS %X *****",
-                ip_test_top.testregs.test_progress);
+                de0_nano_soc.testregs.test_progress);
             end
 
-            if (ip_test_top.testregs.test_fail != 32'd0)
+            if (de0_nano_soc.testregs.test_fail != 32'd0)
             begin
                 #20;
                 $display(" ****** TEST FAILED  %08X *****" ,
-                ip_test_top.testregs.test_fail);
+                de0_nano_soc.testregs.test_fail);
                 $finish();
             end
 
-            if (ip_test_top.testregs.test_pass != 32'd0)
+            if (de0_nano_soc.testregs.test_pass != 32'd0)
             begin
                 #20;
                 $display(" ****** TEST PASSED  %08X *****" ,
-                ip_test_top.testregs.test_pass);
+                de0_nano_soc.testregs.test_pass);
                 $finish();
             end
         end
@@ -131,24 +131,21 @@ module testbench();
     wire uart_tx;
     wire uart_rx;
 
-    ip_test_top ip_test_top
+    de0_nano_soc de0_nano_soc
     (
-        .clk_50(sim_clk),
-        .clk_slow(sim_clk_slow),
-        .fpga_reset_n(!sim_rst),
-
-        .qspi_clk(),
-        .qspi_io(),
-        .qspi_csn(),
-
-        .uart_0_rx(uart_rx),
-        .uart_0_tx(uart_tx),
-
-        .uart_1_rx(uart_tx),
-        .uart_1_tx(uart_rx),
-
-        .user_led(user_leds),
-        .user_pb(4'b1111)
+        .FPGA_CLK1_50(sim_clk),
+        .FPGA_CLK2_50(sim_clk_slow),
+        .FPGA_CLK3_50(~sim_clk),
+        
+        .BUTTON({1'b1, !sim_rst}),
+        .SW(4'd0),
+        .LED(),
+        
+        .UART_TX(uart_tx),
+        .UART_RX(uart_rx),
+        
+        .SPDR_TX(uart_rx),
+        .SPDR_RX(uart_tx)
     );
 
 endmodule

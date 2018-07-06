@@ -38,7 +38,7 @@ module rcn_spdr
     input uart_rx
 );
     parameter MASTER_ID = 0;
-    parameter SAMPLE_CLK_DIV = 6'd61; // Value for 115200 @ 50 MHz in
+    parameter SAMPLE_CLK_DIV = 6'd62; // Value for 115200 @ 50 MHz in
 
     reg cs;
     wire busy;

@@ -21,7 +21,7 @@ module rcn_uart_framer
     output uart_tx,
     input uart_rx
 );
-    parameter SAMPLE_CLK_DIV = 6'd61; // Value for 115200 @ 50 MHz in
+    parameter SAMPLE_CLK_DIV = 6'd62; // Value for 115200 @ 50 MHz in
 
     //
     // 50 MHz -> sample clock (7 * bit)
@@ -123,8 +123,8 @@ module rcn_uart_framer
         end
         else if (sample_en && rx_bitclk_en)
         begin
-            rx_capture <= {rx_capture[7:0], rx_high && !rx_low};
-            rx_signal_errors <= {rx_signal_errors[7:0], !rx_high && !rx_low};
+            rx_capture <= {rx_high && !rx_low, rx_capture[8:1]};
+            rx_signal_errors <= {!rx_high && !rx_low, rx_signal_errors[8:1]};
         end
 
     always @ (posedge clk_50 or posedge rst)
@@ -140,10 +140,10 @@ module rcn_uart_framer
         end
 
     assign rx_vld = rx_data_done;
-    assign rx_data = rx_capture[8:1];
+    assign rx_data = rx_capture[7:0];
 
     always @ (posedge clk_50)
-        rx_frame_error <= (rx_signal_errors != 9'd0) || !rx_capture[0];
+        rx_frame_error <= (rx_signal_errors != 9'd0) || !rx_capture[8];
 
     //
     // Tx state machine
@@ -153,19 +153,19 @@ module rcn_uart_framer
     reg [2:0] tx_bitclk_cnt;
     reg [3:0] tx_cnt;
 
-    assign uart_tx = tx_shift[8];
+    assign uart_tx = tx_shift[0];
 
-    always @ (posedge clk_50 or rst)
+    always @ (posedge clk_50 or posedge rst)
         if (rst)
         begin
-            tx_shift <= {10{1'b1}};
+            tx_shift <= {9{1'b1}};
             tx_bitclk_cnt <= 3'd0;
             tx_cnt <= 4'd0;
             tx_busy <= 1'b0;
         end
         else if (!tx_busy && tx_vld)
         begin
-            tx_shift <= {1'b0, tx_data};
+            tx_shift <= {tx_data, 1'b0};
             tx_bitclk_cnt <= 3'd0;
             tx_cnt <= 4'd0;
             tx_busy <= 1'b1;
@@ -177,7 +177,7 @@ module rcn_uart_framer
             if (tx_bitclk_cnt == 3'd6)
             begin
                 tx_bitclk_cnt <= 3'd0;
-                tx_shift <= {tx_shift[7:0], 1'b1};
+                tx_shift <= {1'b1, tx_shift[8:1]};
                 tx_cnt <= tx_cnt + 4'd1;
             end
             else

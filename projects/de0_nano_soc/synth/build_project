@@ -31,7 +31,7 @@ use Cwd 'abs_path';
 use File::Basename;
 
 if ($#ARGV != 0)
-{ die "USAGE: $0 {testname}\n"; }
+{ die "USAGE: $0 {firmware}\n"; }
 
 my $script_dir = dirname(abs_path($0))."/";
 
@@ -41,7 +41,7 @@ my $script_dir = dirname(abs_path($0))."/";
 
 my @paths = ("../../../ip/", "../../../projects/");
 
-my @packages = ("tawas", "rcn", "de0_nano_soc");
+my @packages = ("rcn", "tawas", "de0_nano_soc");
 
 my $project_name = "de0_nano_soc";
 
@@ -124,6 +124,8 @@ foreach my $package (@packages)
 #
 # Generate iverilog command file
 #
+system("rm -rf db/ incremental_db/ 2> /dev/null");
+system("rm *.rpt *.smsg *.summary *.done 2> /dev/null");
 system("cp $project_name.qsf.base $project_name.qsf 2> /dev/null");
 open(_CMD_FILE_, ">>$project_name.qsf") || die "ERROR: Unable to open QSF file'\n";
 

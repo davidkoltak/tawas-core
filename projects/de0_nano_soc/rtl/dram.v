@@ -18,7 +18,7 @@ module dram
 );
     parameter DRAM_DATA_FILE = "dram.hex";
   
-    reg [31:0] data_array[(1024 * 16)-1:0];
+    reg [31:0] data_array[(1024 * 8)-1:0];
     reg [31:0] data_out;
     wire [31:0] bitmask;
 

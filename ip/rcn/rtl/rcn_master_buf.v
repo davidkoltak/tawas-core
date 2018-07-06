@@ -54,7 +54,7 @@ module rcn_master_buf
             default: ;
             endcase
 
-    always @ (posedge clk or posedge clk)
+    always @ (posedge clk or posedge rst)
         if (rst)
             write_ptr <= 2'd0;
         else if (req_push)

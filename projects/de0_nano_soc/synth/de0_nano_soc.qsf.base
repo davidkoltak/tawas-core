@@ -1,7 +1,7 @@
 
 set_global_assignment -name FAMILY "Cyclone V"
 set_global_assignment -name DEVICE 5CSEMA4U23C6
-set_global_assignment -name TOP_LEVEL_ENTITY "de0_led_example"
+set_global_assignment -name TOP_LEVEL_ENTITY "de0_nano_soc"
 set_global_assignment -name DEVICE_FILTER_PACKAGE UFBGA
 set_global_assignment -name DEVICE_FILTER_PIN_COUNT 896
 set_global_assignment -name DEVICE_FILTER_SPEED_GRADE 6
@@ -16,11 +16,11 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to FPGA_CLK2_50
 set_location_assignment PIN_E11 -to FPGA_CLK3_50
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to FPGA_CLK3_50
 
-set_location_assignment PIN_AH17 -to KEY[0]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to KEY[0]
+set_location_assignment PIN_AH17 -to BUTTON[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to BUTTON[0]
 
-set_location_assignment PIN_AH16 -to KEY[1]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to KEY[1]
+set_location_assignment PIN_AH16 -to BUTTON[1]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to BUTTON[1]
 
 set_location_assignment PIN_W15 -to LED[0]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[0]
@@ -58,4 +58,17 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SW[2]
 
 set_location_assignment PIN_H5 -to SW[3]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SW[3]
+
+
+set_location_assignment PIN_AF11 -to UART_TX
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_TX
+
+set_location_assignment PIN_AE12 -to UART_RX
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_RX
+
+set_location_assignment PIN_AD12 -to SPDR_TX
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SPDR_TX
+
+set_location_assignment PIN_AE11 -to SPDR_RX
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SPDR_RX
 

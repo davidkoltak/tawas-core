@@ -25,7 +25,7 @@ module rcn_uart
     input uart_rx
 );
     parameter ADDR_BASE = 0;
-    parameter SAMPLE_CLK_DIV = 6'd61; // Value for 115200 @ 50 MHz in
+    parameter SAMPLE_CLK_DIV = 6'd62; // Value for 115200 @ 50 MHz in
 
     wire cs;
     wire wr;

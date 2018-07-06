@@ -61,7 +61,6 @@ module rcn_dma
     reg [31:0] slave_rdata;
 
     wire slave_write = slave_cs && slave_wr;
-    wire slave_read = slave_cs && !slave_wr;
 
     rcn_master_slave_fast #(.MASTER_ID(MASTER_ID),
                             .ADDR_MASK(24'hFFFFC0),
@@ -336,7 +335,7 @@ module rcn_dma
     reg [3:0] chan_sel;
     reg [23:0] chan_src;
     reg [23:0] chan_dst;
-    reg [11:0] chan_ctrl;
+    reg [12:0] chan_ctrl;
     reg [23:0] chan_cnt;
     reg chan_src_req;
     reg chan_dst_req;
@@ -473,9 +472,10 @@ module rcn_dma
         master_addr = 24'd0;
         master_wdata = 32'd0;
         update = 4'd0;
+        null_trans = 4'd0;
 
         if (chan_cnt == 24'd0)
-            chan_next_state = 3'd0;
+            chan_next_state = 2'd0;
         else
         begin
             case (chan_state)

@@ -3,7 +3,7 @@ TOOLS_PATH = ../../../../ip/tawas/tools/
 
 FW_DEFS = 
 
-SRC = default.ta lib/test.ta lib/string.ta
+SRC = default.ta lib/uart.ta
 INC = -Iinclude/
 
 all: irom.hex dram.hex

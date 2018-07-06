@@ -90,7 +90,7 @@ module tawas_fetch
     assign iaddr = pc;
     assign ics = !fetch_stall;
 
-    assign cmd_is_nop_loop = instr_vld && (idata[31:0] == 32'hc0000000);
+    wire cmd_is_nop_loop = instr_vld && (idata[31:0] == 32'hc0000000);
 
     always @ *
     begin
@@ -280,7 +280,7 @@ module tawas_fetch
     assign au_op_vld = !fetch_stall_d1 && ((idata[31:30] == 2'b00) ||
                        (idata[31:30] == 2'b10) || (idata[31:28] == 4'b1100));
 
-    assign au_op = (au_upper) ? idata[30:15] : idata[14:0];
+    assign au_op = (au_upper) ? idata[29:15] : idata[14:0];
 
     assign rf_imm_vld = !fetch_stall_d1 && (idata[31:28] == 4'b1110);
     assign rf_imm_sel = idata[27:25];
@@ -295,6 +295,6 @@ module tawas_fetch
                        (idata[31:30] == 2'b01) || (idata[31:30] == 2'b10) ||
                        (idata[31:28] == 4'b1101));
     assign ls_op = (r7_push_en) ? {4'he, 5'h1f, 3'd6, 3'd7} :
-                     (ls_upper) ? idata[30:15] : idata[14:0];
+                     (ls_upper) ? idata[29:15] : idata[14:0];
 
 endmodule

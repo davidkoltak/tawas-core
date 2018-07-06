@@ -52,9 +52,9 @@ module tawas_au
     assign au_rb_sel = au_op[5:3];
     assign au_rc_sel = (op_d2[14:13] == 2'b00) ? op_d2[8:6] : op_d2[2:0];
 
-    assign no_store = (op_d2[14:7] == 8'b01001111) ||
-                      (op_d2[14:8] == 7'b0101000) ||
-                      (op_d2[14:12] == 3'b011);
+    wire no_store = (op_d2[14:7] == 8'b01001111) ||
+                    (op_d2[14:8] == 7'b0101000) ||
+                    (op_d2[14:12] == 3'b011);
     assign au_rc_vld = op_d2[15] && !no_store;
 
     reg [32:0] a_d1;
@@ -65,8 +65,6 @@ module tawas_au
     reg [31:0] scratch[3:0];
     reg [31:0] tick;
     wire [1:0] thread = slice + 2'd2;
-
-    integer x;
 
     assign au_rc = result[31:0];
 
@@ -86,11 +84,14 @@ module tawas_au
         if (rst)
         begin
             result <= 33'd0;
-            for (x = 0; x < 4; x = x + 1)
-            begin
-                interrupt[x] <= 32'd0;
-                scratch[x] <= 32'd0;
-            end
+            interrupt[0] <= 32'd0;
+            interrupt[1] <= 32'd0;
+            interrupt[2] <= 32'd0;
+            interrupt[3] <= 32'd0;
+            scratch[0] <= 32'd0;
+            scratch[1] <= 32'd0;
+            scratch[2] <= 32'd0;
+            scratch[3] <= 32'd0;
         end
         else
             case (op_d1[14:13])
