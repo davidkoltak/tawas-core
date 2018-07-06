@@ -149,28 +149,28 @@ module rcn_spdr
         rx_is_num = 1'b1;
         rx_number = 4'd0;
         case (rx_byte)
-        '0': rx_number = 4'd0;
-        '1': rx_number = 4'd1;
-        '2': rx_number = 4'd2;
-        '3': rx_number = 4'd3;
-        '4': rx_number = 4'd4;
-        '5': rx_number = 4'd5;
-        '6': rx_number = 4'd6;
-        '7': rx_number = 4'd7;
-        '8': rx_number = 4'd8;
-        '9': rx_number = 4'd9;
-        'A': rx_number = 4'dA;
-        'B': rx_number = 4'dB;
-        'C': rx_number = 4'dC;
-        'D': rx_number = 4'dD;
-        'E': rx_number = 4'dE;
-        'F': rx_number = 4'dF;
-        'a': rx_number = 4'dA;
-        'b': rx_number = 4'dB;
-        'c': rx_number = 4'dC;
-        'd': rx_number = 4'dD;
-        'e': rx_number = 4'dE;
-        'f': rx_number = 4'dF;
+        "0": rx_number = 4'h0;
+        "1": rx_number = 4'h1;
+        "2": rx_number = 4'h2;
+        "3": rx_number = 4'h3;
+        "4": rx_number = 4'h4;
+        "5": rx_number = 4'h5;
+        "6": rx_number = 4'h6;
+        "7": rx_number = 4'h7;
+        "8": rx_number = 4'h8;
+        "9": rx_number = 4'h9;
+        "A": rx_number = 4'hA;
+        "B": rx_number = 4'hB;
+        "C": rx_number = 4'hC;
+        "D": rx_number = 4'hD;
+        "E": rx_number = 4'hE;
+        "F": rx_number = 4'hF;
+        "a": rx_number = 4'hA;
+        "b": rx_number = 4'hB;
+        "c": rx_number = 4'hC;
+        "d": rx_number = 4'hD;
+        "e": rx_number = 4'hE;
+        "f": rx_number = 4'hF;
         default: rx_is_num = 1'b0;
         endcase
     end
@@ -199,18 +199,18 @@ module rcn_spdr
             size <= 3'd4;
         else if (update_size)
             case (rx_byte)
-            'b': size <= 3'd1;
-            'h': size <= 3'd2;
-            'w': size <= 3'd4;
+            "b": size <= 3'd1;
+            "h": size <= 3'd2;
+            "w": size <= 3'd4;
             default: size <= 3'd0;
-            endcase;
+            endcase
 
     reg update_wdata;
 
     always @ (posedge clk or posedge rst)
         if (rst)
             wdata <= 32'd0;
-        else (update_wdata)
+        else if (update_wdata)
             wdata <= rx_number_shift;
 
     reg update_gpo;
@@ -218,11 +218,11 @@ module rcn_spdr
     always @ (posedge clk or posedge rst)
         if (rst)
             gpo <= 32'd0;
-        else (update_gpo)
+        else if (update_gpo)
             gpo <= rx_number_shift;
 
     always @ (posedge clk)
-        gpo_stobe <= update_gpo;
+        gpo_strobe <= update_gpo;
 
     reg capture_rdata;
     reg capture_gpi;
@@ -235,7 +235,7 @@ module rcn_spdr
         if (rst)
             capture_data <= 32'd0;
         else if (capture_rdata)
-            capture_data <= rdata;
+            capture_data <= rsp_data;
         else if (capture_gpi)
             capture_data <= gpi;
         else if (capture_addr)
@@ -244,26 +244,26 @@ module rcn_spdr
             capture_data <= {capture_data[27:0], 4'd0};
 
     always @ (posedge clk)
-        gpi_stobe <= capture_gpi;
+        gpi_strobe <= capture_gpi;
 
     always @ *
         case (capture_data[31:28])
-        4'h0: capture_byte = '0';
-        4'h1: capture_byte = '1';
-        4'h2: capture_byte = '2';
-        4'h3: capture_byte = '3';
-        4'h4: capture_byte = '4';
-        4'h5: capture_byte = '5';
-        4'h6: capture_byte = '6';
-        4'h7: capture_byte = '7';
-        4'h8: capture_byte = '8';
-        4'h9: capture_byte = '9';
-        4'hA: capture_byte = 'A';
-        4'hB: capture_byte = 'B';
-        4'hC: capture_byte = 'C';
-        4'hD: capture_byte = 'D';
-        4'hE: capture_byte = 'E';
-        default: capture_byte = 'F';
+        4'h0: capture_byte = "0";
+        4'h1: capture_byte = "1";
+        4'h2: capture_byte = "2";
+        4'h3: capture_byte = "3";
+        4'h4: capture_byte = "4";
+        4'h5: capture_byte = "5";
+        4'h6: capture_byte = "6";
+        4'h7: capture_byte = "7";
+        4'h8: capture_byte = "8";
+        4'h9: capture_byte = "9";
+        4'hA: capture_byte = "A";
+        4'hB: capture_byte = "B";
+        4'hC: capture_byte = "C";
+        4'hD: capture_byte = "D";
+        4'hE: capture_byte = "E";
+        default: capture_byte = "F";
         endcase
 
     reg [4:0] state;
@@ -287,7 +287,7 @@ module rcn_spdr
         update_addr = 1'b0;
         inc_addr = 1'b0;
         update_size = 1'b0;
-        update_data = 1'b0;
+        update_wdata = 1'b0;
         update_gpo = 1'b0;
         capture_rdata = 1'b0;
         capture_gpi = 1'b0;
@@ -298,17 +298,17 @@ module rcn_spdr
         5'd0:
             if (!rx_empty)
             begin
-                rx_pop = 1''b1;
+                rx_pop = 1'b1;
                 tx_byte = rx_byte;
                 tx_push = 1'b1;
                 case (rx_byte)
-                '@': next_state = 5'd1;
-                '#': next_state = 5'd2;
-                '=': next_state = 5'd3;
-                '?': next_state = 5'd6;
-                '%': next_state = 5'd8;
-                '/': next_state = 5'd9:
-                '!': next_state = 5'd10;
+                "@": next_state = 5'd1;
+                "#": next_state = 5'd2;
+                "=": next_state = 5'd3;
+                "?": next_state = 5'd6;
+                "%": next_state = 5'd8;
+                "/": next_state = 5'd9;
+                "!": next_state = 5'd10;
                 default: tx_push = 1'b0;
                 endcase
             end
@@ -320,7 +320,7 @@ module rcn_spdr
         5'd1:
             if (!rx_empty)
             begin
-                rx_pop = 1''b1;
+                rx_pop = 1'b1;
                 tx_byte = rx_byte;
                 tx_push = 1'b1;
 
@@ -339,7 +339,7 @@ module rcn_spdr
         5'd2:
             if (!rx_empty)
             begin
-                rx_pop = 1''b1;
+                rx_pop = 1'b1;
                 tx_byte = rx_byte;
                 tx_push = 1'b1;
                 update_size = 1'b1;
@@ -353,7 +353,7 @@ module rcn_spdr
         5'd3:
             if (!rx_empty)
             begin
-                rx_pop = 1''b1;
+                rx_pop = 1'b1;
                 tx_byte = rx_byte;
                 tx_push = 1'b1;
 
@@ -404,7 +404,7 @@ module rcn_spdr
         5'd8:
             if (!rx_empty)
             begin
-                rx_pop = 1''b1;
+                rx_pop = 1'b1;
                 tx_byte = rx_byte;
                 tx_push = 1'b1;
 
@@ -519,7 +519,7 @@ module rcn_spdr
         5'd30:
             if (!tx_full)
             begin
-                tx_byte = '\r';
+                tx_byte = 8'h0D;
                 tx_push = 1'b1;
                 next_state = state + 5'd1;
             end
@@ -527,7 +527,7 @@ module rcn_spdr
         5'd31:
             if (!tx_full)
             begin
-                tx_byte = '\r';
+                tx_byte = 8'h0A;
                 tx_push = 1'b1;
                 next_state = 5'd0;
             end

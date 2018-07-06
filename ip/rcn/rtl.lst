@@ -16,3 +16,4 @@ rcn_testregs.v
 rcn_fifo_byte_async.v
 rcn_uart_framer.v
 rcn_uart.v
+rcn_spdr.v

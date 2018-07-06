@@ -1,9 +1,9 @@
 
 TOOLS_PATH = ../../../../ip/tawas/tools/
 
-SIM_DEFS = -DMAX_CLOCKS=6000 -DSIM
+SIM_DEFS = -DMAX_CLOCKS=60000 -DSIM
 
-SRC = uart_test.ta lib/test.ta lib/rcn_dma.ta
+SRC = uart_test.ta lib/test.ta lib/rcn_dma.ta lib/string.ta lib/uart.ta
 INC = -Iinclude/
 
 all: irom.hex dram.hex

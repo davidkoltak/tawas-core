@@ -37,34 +37,73 @@ stub:
     call test_progress_inc
     jmp test_pass_wait
 
+.string set_addr "@0E0000 "
+.string set_size "#w"
+.string get_addr "!"
+.string write_data0 "=12348765 "
+.string write_data1 "=AA "
+.string read_data "?"
+.string set_gpo "%ABCD4321 "
+.string get_gpi "/"
+
+.alloc str_buf b 128
+
 uart_test:
     ldi r0 RCN_UART0_BASE
-    ldi r1 RCN_UART1_BASE
+    ldi r1 set_addr
+    call uart_send_str
+    ldi r1 str_buf
+    ldi r2 128
+    call uart_recv_str
+    
+    ldi r1 set_size
+    call uart_send_str
+    ldi r1 str_buf
+    ldi r2 128
+    call uart_recv_str
+    
+    ldi r1 write_data0
+    call uart_send_str
+    ldi r1 str_buf
+    ldi r2 128
+    call uart_recv_str
+    
+    ldi r1 write_data1
+    call uart_send_str
+    ldi r1 str_buf
+    ldi r2 128
+    call uart_recv_str
+    
+    ldi r1 get_addr
+    call uart_send_str
+    ldi r1 str_buf
+    ldi r2 128
+    call uart_recv_str
+    
+    ldi r1 set_addr
+    call uart_send_str
+    ldi r1 str_buf
+    ldi r2 128
+    call uart_recv_str
 
-// SEND 8 BYTES
-    mvi r2 0xA0
-send_loop:
-    ld b r3 r0 [0]
-    btst r3 0
-    br nz send_loop
-    inc r2
-    st b r2 r0 [1]
-    cmpi r2 0xA9
-    br ne send_loop
-
-// RECEIVE 8 BYTES
-    mvi r2 0xA0
-recv_loop:
-    ld b r3 r1 [0]
-    btst r3 1
-    br nz recv_loop
-    inc r2
-    ld b r3 r1 [1]
-    cmp r2 r3
-    br ne recv_fail
-    cmpi r2 0xA9
-    br ne recv_loop
-
+    ldi r1 read_data
+    call uart_send_str
+    ldi r1 str_buf
+    ldi r2 128
+    call uart_recv_str
+    
+    ldi r1 set_gpo
+    call uart_send_str
+    ldi r1 str_buf
+    ldi r2 128
+    call uart_recv_str
+    
+    ldi r1 get_gpi
+    call uart_send_str
+    ldi r1 str_buf
+    ldi r2 128
+    call uart_recv_str
+    
 recv_pass:
     jmp test_pass_now
 

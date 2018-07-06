@@ -5,7 +5,7 @@
 // RCN bus UART
 //
 // Registers -
-//  0: Status : [rx_empty, tx_full]
+//  0: Status : [rx_empty, rx_full, tx_empty, tx_full]
 //  1: Data   : 8-bit read/write
 //
 
@@ -97,8 +97,13 @@ module rcn_uart
 
     wire [7:0] rdata_byte;
     wire rx_empty;
+    wire rx_full;
 
-    assign rdata = {16'd0, rdata_byte, 6'd0, rx_empty, tx_full};
+    reg tx_empty_sync;
+    reg rx_full_sync;
+        
+    assign rdata = {16'd0, rdata_byte, 4'd0, rx_empty, rx_full_sync, 
+                                             tx_empty_sync, tx_full};
     assign rx_req = !rx_empty;
 
     rcn_fifo_byte_async rx_fifo
@@ -109,11 +114,18 @@ module rcn_uart
 
         .din(rx_data),
         .push(rx_vld),
-        .full(),
+        .full(rx_full),
 
         .dout(rdata_byte),
         .pop(cs && !wr && mask[1]),
         .empty(rx_empty)
     );
 
+
+    always @ (posedge clk)
+    begin
+        rx_full_sync <= rx_full;
+        tx_empty_sync <= tx_empty;
+    end
+    
 endmodule

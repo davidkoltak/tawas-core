@@ -199,7 +199,7 @@ module ip_test_top
         .rcn_out(rcn_22)
     );
 
-    rcn_uart #(.ADDR_BASE(24'h1FFFB8), .SAMPLE_CLK_DIV(6'd3)) uart_1
+    rcn_spdr #(.MASTER_ID(9), .SAMPLE_CLK_DIV(6'd3)) spdr_1
     (
         .clk(clk_slow),
         .clk_50(clk_50),
@@ -208,8 +208,10 @@ module ip_test_top
         .rcn_in(rcn_22),
         .rcn_out(rcn_23),
 
-        .tx_req(uart_1_tx_req),
-        .rx_req(uart_1_rx_req),
+        .gpi(32'hDEADBEEF),
+        .gpi_strobe(),
+        .gpo(),
+        .gpo_strobe(),
 
         .uart_tx(uart_1_tx),
         .uart_rx(uart_1_rx)
