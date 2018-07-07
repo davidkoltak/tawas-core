@@ -45,7 +45,7 @@ module rcn_spdr
     reg wr;
     reg [3:0] mask;
     reg [31:0] addr;
-    reg [31:0] wdata;
+    reg [31:0] wdata_final;
 
     wire rdone;
     wire wdone;
@@ -65,7 +65,7 @@ module rcn_spdr
         .wr(wr),
         .mask(mask),
         .addr(addr[23:0]),
-        .wdata(wdata),
+        .wdata(wdata_final),
 
         .rdone(rdone),
         .wdone(wdone),
@@ -206,6 +206,7 @@ module rcn_spdr
             endcase
 
     reg update_wdata;
+    reg [31:0] wdata;
 
     always @ (posedge clk or posedge rst)
         if (rst)
@@ -224,6 +225,7 @@ module rcn_spdr
     always @ (posedge clk)
         gpo_strobe <= update_gpo;
 
+    reg [31:0] rdata_final;
     reg capture_rdata;
     reg capture_gpi;
     reg capture_addr;
@@ -235,7 +237,7 @@ module rcn_spdr
         if (rst)
             capture_data <= 32'd0;
         else if (capture_rdata)
-            capture_data <= rsp_data;
+            capture_data <= rdata_final;
         else if (capture_gpi)
             capture_data <= gpi;
         else if (capture_addr)
@@ -394,7 +396,7 @@ module rcn_spdr
             begin
                 inc_addr = 1'b1;
                 capture_rdata = 1'b1;
-                next_state = 5'd22;
+                next_state = 5'd16;
             end
 
         //
@@ -437,7 +439,65 @@ module rcn_spdr
         end
 
         //
-        // Send capture register
+        // Send capture based on size
+        //
+
+        5'd16:
+            if (!tx_full)
+            begin
+                capture_shift = 1'b1;
+                tx_byte = capture_byte;
+                tx_push = size[2];
+                next_state = state + 5'd1;
+            end
+
+        5'd17:
+            if (!tx_full)
+            begin
+                capture_shift = 1'b1;
+                tx_byte = capture_byte;
+                tx_push = size[2];
+                next_state = state + 5'd1;
+            end
+
+        5'd18:
+            if (!tx_full)
+            begin
+                capture_shift = 1'b1;
+                tx_byte = capture_byte;
+                tx_push = size[2];
+                next_state = state + 5'd1;
+            end
+
+        5'd19:
+            if (!tx_full)
+            begin
+                capture_shift = 1'b1;
+                tx_byte = capture_byte;
+                tx_push = size[2];
+                next_state = state + 5'd1;
+            end
+
+        5'd20:
+            if (!tx_full)
+            begin
+                capture_shift = 1'b1;
+                tx_byte = capture_byte;
+                tx_push = |size[2:1];
+                next_state = state + 5'd1;
+            end
+
+        5'd21:
+            if (!tx_full)
+            begin
+                capture_shift = 1'b1;
+                tx_byte = capture_byte;
+                tx_push = |size[2:1];
+                next_state = 5'd28;
+            end
+
+        //
+        // Send all of capture data register
         //
 
         5'd22:
@@ -538,18 +598,50 @@ module rcn_spdr
 
     always @ *
         if (size == 3'b001) // byte
+        begin
+            wdata_final = {4{wdata[7:0]}};
             case (addr[1:0])
-            2'b00: mask = 4'b0001;
-            2'b01: mask = 4'b0010;
-            2'b10: mask = 4'b0100;
-            default: mask = 4'b1000;
+            2'b00:
+            begin
+                mask = 4'b0001;
+                rdata_final = {24'd0, rsp_data[7:0]};
+            end
+            2'b01:
+            begin
+                mask = 4'b0010;
+                rdata_final = {24'd0, rsp_data[15:8]};
+            end
+            2'b10:
+            begin
+                mask = 4'b0100;
+                rdata_final = {24'd0, rsp_data[23:16]};
+            end
+            default:
+            begin
+                mask = 4'b1000;
+                rdata_final = {24'd0, rsp_data[31:24]};
+            end
             endcase
+        end
         else if (size == 3'b010) // half
+        begin
+            wdata_final = {2{wdata[15:0]}};
             if (!addr[1])
+            begin
                 mask = 4'b0011;
+                   rdata_final = {16'd0, rsp_data[15:0]};
+            end
             else
+            begin
                 mask = 4'b1100;
+                rdata_final = {16'd0, rsp_data[31:16]};
+            end
+        end
         else
+        begin
             mask = 4'b1111;
+            wdata_final = wdata;
+            rdata_final = rsp_data;
+        end
 
 endmodule

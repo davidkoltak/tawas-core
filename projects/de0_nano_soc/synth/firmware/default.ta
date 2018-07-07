@@ -21,10 +21,16 @@ _t3_reset:
 stub:
     halt
 
+.string header "\r\n\r\nDefault firmware for "
 .string device_name DEVICE_NAME
+.string footer "\r\n\r\n"
 
 print_devname:
     ldi r0 RCN_UART_BASE
+    ldi r1 header
+    call uart_send_str
     ldi r1 device_name
+    call uart_send_str
+    ldi r1 footer
     call uart_send_str
     halt
