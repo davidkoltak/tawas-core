@@ -307,8 +307,31 @@ for filename in infiles:
 
                 dsize[dctv[1]] = len(s) + 1
                 dlabels[dctv[1]] = dc
+                in_escape = 0;
                 for x in s:
-                    value = ord(x)
+                    if (in_escape == 1):
+                        in_escape = 0
+                        if x == 'n':
+                            value = ord('\n')
+                        elif x == 'r':
+                            value = ord('\r')
+                        elif x == 'b':
+                            value = ord('\b')
+                        elif x == 't':
+                            value = ord('\t')
+                        elif x == 'v':
+                            value = ord('\v')
+                        elif x == '\\':
+                            value = ord('\\')
+                        else:
+                            value = ord('_')
+                    else:
+                        if (x == '\\'):
+                            in_escape = 1
+                            continue
+                        else:
+                            value = ord(x)
+
                     if (dc & 3) == 0:
                         data.append(value & 0x000000FF)
                     elif (dc & 3) == 1:

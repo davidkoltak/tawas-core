@@ -184,6 +184,7 @@ module rcn_spdr
     reg update_addr;
     reg inc_addr;
     reg update_size;
+    reg [1:0] size_mode;
     reg [2:0] size;
 
     always @ (posedge clk or posedge rst)
@@ -196,13 +197,13 @@ module rcn_spdr
 
     always @ (posedge clk or posedge rst)
         if (rst)
-            size <= 3'd4;
+            size_mode <= 2'd0;
         else if (update_size)
             case (rx_byte)
-            "b": size <= 3'd1;
-            "h": size <= 3'd2;
-            "w": size <= 3'd4;
-            default: size <= 3'd0;
+            "b": size_mode <= 2'd2;
+            "h": size_mode <= 2'd1;
+            "w": size_mode <= 2'd0;
+            default: size_mode <= 2'd0;
             endcase
 
     reg update_wdata;
@@ -597,8 +598,9 @@ module rcn_spdr
     end
 
     always @ *
-        if (size == 3'b001) // byte
+        if (size_mode == 2'd2) // byte
         begin
+            size = 3'd1;
             wdata_final = {4{wdata[7:0]}};
             case (addr[1:0])
             2'b00:
@@ -623,8 +625,9 @@ module rcn_spdr
             end
             endcase
         end
-        else if (size == 3'b010) // half
+        else if (size_mode == 2'd1) // half
         begin
+            size = 3'd2;
             wdata_final = {2{wdata[15:0]}};
             if (!addr[1])
             begin
@@ -639,6 +642,7 @@ module rcn_spdr
         end
         else
         begin
+            size = 3'd4;
             mask = 4'b1111;
             wdata_final = wdata;
             rdata_final = rsp_data;
