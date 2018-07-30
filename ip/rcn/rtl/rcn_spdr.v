@@ -11,10 +11,11 @@
 //    ?     : Read data from address (and inc by size)
 //    %data : Write GPO
 //    /     : Read GPI
-//    !     : Read the current bus address
+//    !     : Read the current bus address/size
 //
 // All values are in hex and are padded with zero to proper size. Providing
-// too many hex digits is ignored as bytes are captured and shifted.
+// too many hex digits is ignored as bytes are captured and shifted A backspace
+// aborts commands with arguments (@,#,=,%).
 //
 // The SPDR modules echoes valid entries and prints CrLf after each command.
 // User terminals should select the remote echo option.
@@ -141,12 +142,14 @@ module rcn_spdr
     );
 
     reg rx_is_num;
+    reg rx_is_backspace;
     reg [3:0] rx_number;
     reg [31:0] rx_number_shift;
 
     always @ *
     begin
         rx_is_num = 1'b1;
+        rx_is_backspace = 1'b0;
         rx_number = 4'd0;
         case (rx_byte)
         "0": rx_number = 4'h0;
@@ -171,6 +174,11 @@ module rcn_spdr
         "d": rx_number = 4'hD;
         "e": rx_number = 4'hE;
         "f": rx_number = 4'hF;
+        8'h08:
+        begin
+            rx_is_num = 1'b0;
+            rx_is_backspace = 1'b1;
+        end
         default: rx_is_num = 1'b0;
         endcase
     end
@@ -269,6 +277,16 @@ module rcn_spdr
         default: capture_byte = "F";
         endcase
 
+    reg [15:0] bus_timer;
+    reg bus_timer_rst;
+    wire bus_timeout = (bus_timer[15:4] == 12'hFFF);
+
+    always @ (posedge clk)
+        if (bus_timer_rst)
+            bus_timer <= 16'd0;
+        else if (!bus_timeout)
+            bus_timer <= bus_timer + 16'd1;
+
     reg [4:0] state;
     reg [4:0] next_state;
 
@@ -283,6 +301,7 @@ module rcn_spdr
         next_state = state;
         cs = 1'b0;
         wr = 1'b0;
+        bus_timer_rst = 1'b0;
         rx_pop = 1'b0;
         tx_byte = 8'd0;
         tx_push = 1'b0;
@@ -330,7 +349,7 @@ module rcn_spdr
                 if (!rx_is_num)
                 begin
                     tx_push = 1'b0;
-                    update_addr = 1'b1;
+                    update_addr = !rx_is_backspace;
                     next_state = 5'd30;
                 end
             end
@@ -345,7 +364,7 @@ module rcn_spdr
                 rx_pop = 1'b1;
                 tx_byte = rx_byte;
                 tx_push = 1'b1;
-                update_size = 1'b1;
+                update_size = !rx_is_backspace;
                 next_state = 5'd30;
             end
 
@@ -363,14 +382,15 @@ module rcn_spdr
                 if (!rx_is_num)
                 begin
                     tx_push = 1'b0;
-                    update_wdata = 1'b1;
-                    next_state = state + 5'd1;
+                    update_wdata = !rx_is_backspace;
+                    next_state = (rx_is_backspace) ? 5'd30 : state + 5'd1;
                 end
             end
         5'd4:
         begin
             cs = 1'b1;
             wr = 1'b1;
+            bus_timer_rst = 1'b1;
             if (!busy)
                 next_state = state + 5'd1;
         end
@@ -380,6 +400,8 @@ module rcn_spdr
                 inc_addr = 1'b1;
                 next_state = 5'd30;
             end
+            else if (bus_timeout)
+                next_state = 5'd12;
 
         //
         // Read data
@@ -389,6 +411,7 @@ module rcn_spdr
         begin
             cs = 1'b1;
             wr = 1'b0;
+            bus_timer_rst = 1'b1;
             if (!busy)
                 next_state = state + 5'd1;
         end
@@ -399,6 +422,8 @@ module rcn_spdr
                 capture_rdata = 1'b1;
                 next_state = 5'd16;
             end
+            else if (bus_timeout)
+                next_state = 5'd12;
 
         //
         // Write gpo
@@ -414,7 +439,7 @@ module rcn_spdr
                 if (!rx_is_num)
                 begin
                     tx_push = 1'b0;
-                    update_gpo = 1'b1;
+                    update_gpo = !rx_is_backspace;
                     next_state = 5'd30;
                 end
             end
@@ -430,14 +455,66 @@ module rcn_spdr
         end
 
         //
-        // Read address
+        // Read addr/size
         //
 
         5'd10:
-        begin
-            capture_addr = 1'b1;
-            next_state = 5'd22;
-        end
+            if (!tx_full)
+            begin
+                case (size_mode)
+                2'd0: tx_byte = "w";
+                2'd1: tx_byte = "h";
+                default: tx_byte = "b";
+                endcase
+
+                tx_push = 1'b1;
+                next_state = state + 5'd1;
+            end
+
+        5'd11:
+            if (!tx_full)
+            begin
+                tx_byte = "-";
+                tx_push = 1'b1;
+                capture_addr = 1'b1;
+                next_state = 5'd22;
+            end
+
+        //
+        // Send Error Indicator
+        //
+
+        5'd12:
+            if (!tx_full)
+            begin
+                tx_byte = ":";
+                tx_push = 1'b1;
+                next_state = state + 5'd1;
+            end
+
+        5'd13:
+            if (!tx_full)
+            begin
+                tx_byte = "E";
+                tx_push = 1'b1;
+                next_state = state + 5'd1;
+            end
+
+        5'd14:
+            if (!tx_full)
+            begin
+                tx_byte = "r";
+                tx_push = 1'b1;
+                next_state = state + 5'd1;
+            end
+
+        5'd15:
+            if (!tx_full)
+            begin
+                tx_byte = "r";
+                tx_push = 1'b1;
+                next_state = 5'd30;
+            end
 
         //
         // Send capture based on size

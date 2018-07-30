@@ -172,7 +172,7 @@ module rcn_uart_framer
         end
         else if (sample_en)
         begin
-            tx_busy <= (tx_cnt == 4'd10) ? 1'b0 : 1'b1;
+            tx_busy <= (tx_cnt == 4'd12) ? 1'b0 : 1'b1;
 
             if (tx_bitclk_cnt == 3'd6)
             begin
