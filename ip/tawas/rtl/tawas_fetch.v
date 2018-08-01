@@ -2,16 +2,9 @@
 /* (c) Copyright 2018 David M. Koltak, all rights reserved. */
 
 //
-// Tawas Instruction Fetch:
+// Tawas Instruction Fetch
 //
-// Fetch instructions from the instruction ROM and execute
-// BR, CALL, and IMM instructions.  Generate AU and LS opcode
-// control output signals for four "slices" (threads).
-//
-// Slice 0 starts at instruction offset 0x000000
-// Slice 1 starts at instruction offset 0x000001
-// Slice 2 starts at instruction offset 0x000002
-// Slice 3 starts at instruction offset 0x000003
+//  Pick thread for each cycle and decode br and full word instructions.
 //
 
 module tawas_fetch
@@ -23,278 +16,230 @@ module tawas_fetch
     output [23:0] iaddr,
     input [31:0] idata,
 
-    output [1:0] slice,
-    input [7:0] au_flags,
-    input [3:0] rcn_stall,
+    output thread_start_en,
+    output [3:0] thread_start,
 
-    output pc_store,
-    output [23:0] pc_out,
-    output pc_restore,
+    input [7:0] au_flags,
     input [23:0] pc_rtn,
 
-    output rf_imm_vld,
-    output [2:0] rf_imm_sel,
+    output rf_imm_en,
+    output [2:0] rf_imm_reg,
     output [31:0] rf_imm,
 
-    output au_op_vld,
+    output ls_dir_en,
+    output ls_dir_store,
+    output [2:0] ls_dir_reg,
+    output [31:0] ls_dir_addr,
+    
+    output au_op_en,
     output [14:0] au_op,
 
-    output ls_op_vld,
+    output ls_op_en,
     output [14:0] ls_op,
 
-    output ls_dir_vld,
-    output ls_dir_store,
-    output [2:0] ls_dir_sel,
-    output [31:0] ls_dir_addr
+    input thread_retire_en,
+    input [3:0] thread_retire
 );
 
     //
-    // PC Generation and Redirection for two threads - BR/CALL Decode
+    // Thread PC's : 24-bit PC + 1-bit half-word-select
     //
 
-    reg au_cond_flag;
-    reg au_cond_true;
+    wire pc_update_en;
+    wire [3:0] pc_update_sel;
+    wire [23:0] pc_update_addr;
 
-    reg [23:0] pc_next;
-    reg [23:0] pc_inc;
-    reg pc_stall;
-    reg pc_store_en;
-    reg r7_push_en;
-    reg pc_restore_en;
+    reg [24:0] pc[15:0];
 
-    reg instr_vld;
-    reg [1:0] pc_sel;
-    reg fetch_stall;
-    reg fetch_stall_d1;
+    integer x1;
 
-    reg [23:0] pc;
-    reg [23:0] pc_0;
-    reg [23:0] pc_1;
-    reg [23:0] pc_2;
-    reg [23:0] pc_3;
-    reg pc_0_nop_loop;
-    reg pc_1_nop_loop;
-    reg pc_2_nop_loop;
-    reg pc_3_nop_loop;
-    reg series_cmd_0;
-    reg series_cmd_1;
-    reg series_cmd_2;
-    reg series_cmd_3;
+    always @ (posedge clk or posedge rst)
+        if (rst)
+            for (x1 = 0; x1 < 16; x1 = x1 + 1)
+                pc[x1] <= x1;
+        else if (pc_update_en)
+            pc[pc_update_sel] <= pc_update_addr;
 
-    assign slice = pc_sel[1:0];
+    //
+    // Choose thread to execute
+    //
 
-    assign pc_store = !fetch_stall_d1 && pc_store_en;
-    assign pc_out = pc_inc;
-    assign pc_restore = !fetch_stall_d1 && pc_restore_en;
+    reg [15:0] thread_busy;
+    reg [15:0] thread_done_mask;
+    reg [15:0] s1_sel_mask;
+    reg [3:0] s1_sel;
+    reg s1_en;
 
-    assign iaddr = pc;
-    assign ics = !fetch_stall;
-
-    wire cmd_is_nop_loop = instr_vld && (idata[31:0] == 32'hc0000000);
+    integer x2;
 
     always @ *
     begin
-        case (idata[25:23])
-        4'h0: au_cond_flag = au_flags[0];
-        4'h1: au_cond_flag = au_flags[1];
-        4'h2: au_cond_flag = au_flags[2];
-        4'h3: au_cond_flag = au_flags[3];
-        4'h4: au_cond_flag = au_flags[4];
-        4'h5: au_cond_flag = au_flags[5];
-        4'h6: au_cond_flag = au_flags[6];
-        default: au_cond_flag = au_flags[7];
-        endcase
-        au_cond_true = au_cond_flag ^ idata[26];
-    end
+        s1_sel_mask = 16'd0;
+        s1_sel = 4'd0;
+        s1_en = 1'b0;
 
-    always @ *
-    begin
-        case (pc_sel[1:0])
-        2'd0: pc_next = pc_3;
-        2'd1: pc_next = pc_0;
-        2'd2: pc_next = pc_1;
-        default: pc_next = pc_2;
-        endcase
-
-        case (pc_sel[1:0])
-        2'd0: pc_stall = rcn_stall[1] || pc_1_nop_loop;
-        2'd1: pc_stall = rcn_stall[2] || pc_2_nop_loop;
-        2'd2: pc_stall = rcn_stall[3] || pc_3_nop_loop;
-        default: pc_stall = rcn_stall[0] || pc_0_nop_loop;
-        endcase
-
-        pc_inc = pc_next + 24'd1;
-        pc_store_en = 1'b0;
-        r7_push_en = 1'b0;
-        pc_restore_en = 1'b0;
-
-        if (idata[31:25] == 7'b1111111)
-        begin
-            r7_push_en = idata[24];
-            pc_store_en = idata[24];
-            pc_next = idata[23:0];
-        end
-        else if (idata[31:29] == 3'b110)
-        begin
-            if (idata[27] == 1'b0)
-                pc_next = pc_next + {{12{idata[26]}}, idata[26:15]};
-            else if (idata[22:15] == 8'd1)
+        for (x2 = 0; x2 < 16; x2 = x2 + 1)
+            if (!thread_busy[x])
             begin
-                pc_restore_en = 1'b1;
-                pc_next = pc_rtn;
+                s1_sel_mask = (16'd1 << x2);
+                s1_sel = 4'd1 * x2;
+                s1_en = 1'b1;
+                break;
             end
-            else if (au_cond_true)
-                pc_next = pc_next + {{16{idata[22]}}, idata[22:15]};
-            else
-                pc_next = pc_inc;
-        end
-        else
-            pc_next = pc_inc;
+
+        if (thread_retire_en) thread_done_mask = (16'd1 << thread_retire);
+        else thread_done_mask = 16'd0;
     end
 
     always @ (posedge clk or posedge rst)
         if (rst)
-        begin
-            pc_sel <= 2'd0;
-            instr_vld <= 1'b0;
-            fetch_stall <= 1'b0;
-            fetch_stall_d1 <= 1'b0;
-        end
+            thread_busy <= 16'd0;
         else
+            thread_busy <= (thread_busy | s1_sel_mask) && ~thread_done_mask;
+
+    //
+    // En/Sel pipeline
+    //
+
+    reg s2_en;
+    reg [3:0] s2_sel;
+    reg [24:0] s2_pc;
+
+    reg s3_en;
+    reg [3:0] s3_sel;
+    reg [24:0] s3_pc;
+
+    reg s4_en;
+    reg [3:0] s4_sel;
+    reg [24:0] s4_pc;
+
+    assign ics = s2_en;
+    assign iaddr = s2_pc[23:0];
+
+    assign thread_start_en = s3_en;
+    assign thread_start = s3_sel;
+
+    reg [31:0] instr;
+
+    always @ (posedge clk)
+        if (s1_en)
         begin
-            pc_sel <= pc_sel + 2'd1;
-            instr_vld <= 1'b1;
-            fetch_stall <= pc_stall;
-            fetch_stall_d1 <= fetch_stall;
+            s2_pc <= pc[s1_sel];
+            s3_pc <= s2_pc;
+            s4_pc <= s3_pc;
         end
+
+    always @ (posedge clk)
+        if (s3_en)
+            instr <= idata;
 
     always @ (posedge clk or posedge rst)
         if (rst)
         begin
-            pc <= 24'd0;
-            pc_0 <= 24'd0;
-            pc_1 <= 24'd1;
-            pc_2 <= 24'd2;
-            pc_3 <= 24'd3;
-            pc_0_nop_loop <= 1'b0;
-            pc_1_nop_loop <= 1'b0;
-            pc_2_nop_loop <= 1'b0;
-            pc_3_nop_loop <= 1'b0;
-            series_cmd_0 <= 1'b0;
-            series_cmd_1 <= 1'b0;
-            series_cmd_2 <= 1'b0;
-            series_cmd_3 <= 1'b0;
+            s2_en <= 1'b0;
+            s2_sel <= 4'd0;
+
+            s3_en <= 1'b0;
+            s3_sel <= 4'd0;
+
+            s4_en <= 1'b0;
+            s4_sel <= 4'd0;
         end
-        else if (~instr_vld)
-            pc <= pc_1;
         else
         begin
-            case (pc_sel[1:0])
-            2'd0:
-            begin
-                pc <= pc_1;
+            s2_en <= s1_en;
+            s2_sel <= s1_sel;
 
-                if (fetch_stall_d1)
-                    pc_3 <= pc_3;
-                else if (cmd_is_nop_loop)
-                    pc_3_nop_loop <= 1'b1;
-                else if (!idata[31] && !series_cmd_3)
-                    series_cmd_3 <= 1'b1;
-                else
-                begin
-                    pc_3 <= pc_next;
-                    series_cmd_3 <= 1'b0;
-                end
-            end
+            s3_en <= s2_en;
+            s3_sel <= s2_sel;
 
-            2'd1:
-            begin
-                pc <= pc_2;
-
-                if (fetch_stall_d1)
-                    pc_0 <= pc_0;
-                else if (cmd_is_nop_loop)
-                    pc_0_nop_loop <= 1'b1;
-                else if (!idata[31] && !series_cmd_0)
-                    series_cmd_0 <= 1'b1;
-                else
-                begin
-                    pc_0 <= pc_next;
-                    series_cmd_0 <= 1'b0;
-                end
-            end
-
-            2'd2:
-            begin
-                pc <= pc_3;
-
-                if (fetch_stall_d1)
-                    pc_1 <= pc_1;
-                else if (cmd_is_nop_loop)
-                    pc_1_nop_loop <= 1'b1;
-                else if (!idata[31] && !series_cmd_1)
-                    series_cmd_1 <= 1'b1;
-                else
-                begin
-                    pc_1 <= pc_next;
-                    series_cmd_1 <= 1'b0;
-                end
-            end
-
-            default:
-            begin
-                pc <= pc_0;
-
-                if (fetch_stall_d1)
-                    pc_2 <= pc_2;
-                else if (cmd_is_nop_loop)
-                    pc_2_nop_loop <= 1'b1;
-                else if (!idata[31] && !series_cmd_2)
-                    series_cmd_2 <= 1'b1;
-                else
-                begin
-                    pc_2 <= pc_next;
-                    series_cmd_2 <= 1'b0;
-                end
-            end
-            endcase
+            s4_en <= s3_en;
+            s4_sel <= s3_sel;
         end
 
     //
-    // Pick opcodes from instruction words
+    // Decode Instructions
     //
 
-    reg au_upper;
-    wire ls_upper;
+    wire [14:0] op_high = instr[29:15];
+    wire [14:0] op_low = instr[14:0];
+    wire [12:0] op_br = instr[27:15];
 
-    always @ *
-    case (pc_sel[1:0])
-    2'd0: au_upper = series_cmd_3;
-    2'd1: au_upper = series_cmd_0;
-    2'd2: au_upper = series_cmd_1;
-    default: au_upper = series_cmd_2;
-    endcase
+    wire op_high_vld = !instr[31] || !instr[30];
+    wire op_high_au = (instr[31:30] == 2'b00);
 
-    assign ls_upper = au_upper || (idata[31:30] == 2'b10);
+    wire op_low_vld = !instr[31] || !instr[30] || !instr[29];
+    wire op_low_au = (instr[31:30] == 2'b00) || instr[31];
 
-    assign au_op_vld = !fetch_stall_d1 && ((idata[31:30] == 2'b00) ||
-                       (idata[31:30] == 2'b10) || (idata[31:28] == 4'b1100));
+    wire op_serial = !instr[31];
+    
+    wire op_br_vld = (instr[31:29] == 3'b110);
 
-    assign au_op = (au_upper) ? idata[29:15] : idata[14:0];
+    wire op_is_br = op_br_vld && !op_br[12];
+    wire op_br_iaddr = s4_pc + {{12{op_br[11]}}, op_br[11:0]};
 
-    assign rf_imm_vld = !fetch_stall_d1 && (idata[31:28] == 4'b1110);
-    assign rf_imm_sel = idata[27:25];
-    assign rf_imm = {{8{idata[24]}}, idata[23:0]};
+    wire op_is_halt = op_br_vld && (op_br[12:0] == 13'd0);
 
-    assign ls_dir_vld = !fetch_stall_d1 && (idata[31:27] == 5'b11110);
-    assign ls_dir_store = idata[26];
-    assign ls_dir_sel = idata[25:23];
-    assign ls_dir_addr = {{8{idata[22]}}, idata[21:0], 2'd0};
+    wire op_is_br_cond = op_br_vld && op_br[12];
+    wire op_br_cond_true = (op_br[11]) ? !au_flags[op_br[10:8]] : au_flags[op_br[10:8]];
+    wire op_br_cond_iaddr = s4_pc + {{16{op_br[7]}}, op_br[7:0]};
 
-    assign ls_op_vld = !fetch_stall_d1 && (r7_push_en ||
-                       (idata[31:30] == 2'b01) || (idata[31:30] == 2'b10) ||
-                       (idata[31:28] == 4'b1101));
-    assign ls_op = (r7_push_en) ? {4'he, 5'h1f, 3'd6, 3'd7} :
-                     (ls_upper) ? idata[29:15] : idata[14:0];
+    wire op_is_rtn = op_br_vld && op_br[12] && (op_br[7:0] == 8'd1);
 
+    wire op_is_imm = (instr[31:28] == 4'b1110);
+    wire [2:0] op_imm_reg = instr[27:25];
+    wire [31:0] op_imm = {{8{instr[24]}}, instr[23:0]};
+
+    wire op_is_dir_ld = (instr[31:26] == 6'b111100);
+    wire op_is_dir_st = (instr[31:26] == 6'b111101);
+    wire [2:0] op_dir_reg = instr[25:23];
+    wire [31:0] op_daddr = {{8{instr[22]}}, instr[21:0], 2'b00};
+
+    wire op_is_jmp = (instr[31:24] == 8'b11111110);
+    wire op_is_call = (instr[31:24] == 8'b11111111);
+    wire [23:0] op_iaddr = instr[23:0];
+
+    //
+    // PC Update
+    //
+
+    wire [24:0] pc_next = (op_serial && !s4_pc[24]) ? {1'b1, s4_pc}
+                                                    : {1'b0, s4_pc + 24'b1};
+
+    assign pc_update_en = s4_en;
+    assign pc_update_sel = s4_sel;
+    assign pc_update_addr = (op_is_call || op_is_jmp) ? op_iaddr :
+                            (op_is_rtn) ? pc_rtn :
+                            (op_is_br) ? op_br_iaddr :
+                            (op_is_br_cond && op_br_cond_true) ? op_br_cond_iaddr
+                                                               : pc_next;
+
+    //
+    // Imm/Dir data loads
+    //
+    
+    assign rf_imm_en = s4_en && (op_is_imm || op_is_call);
+    assign rf_imm_reg = (op_is_imm) ? op_imm_reg : 3'd7;
+    assign rf_imm = (op_is_imm) ? op_imm : {8'd0, s4_pc + 24'b1};
+    
+    assign ls_dir_en = s4_en && (op_is_dir_ld || op_is_dir_st);
+    assign ls_dir_store = op_is_dir_st;
+    assign ls_dir_reg = op_dir_reg;
+    assign ls_dir_addr = op_daddr;
+    
+    //
+    // LS/AU Ops
+    //
+    
+    wire do_low = (op_serial) ? !s4_pc[24] : op_low_vld;
+    wire do_high = (op_serial) ? s4_pc[24] : op_high_vld;
+    
+    assign au_op_en = s4_en && ((do_high && op_high_au) || (do_low && op_low_au));
+    assign au_op = (do_high && op_high_au) ? op_high : op_low;
+
+    assign ls_op_en = s4_en && 
+                    ((do_high && !op_high_au) || (do_log && !op_low_au) || op_is_call);
+    assign ls_op = (op_is_call) ? 15'h77F7 : 
+                   (do_high && !op_high_au) ? op_high : op_low;
+       
 endmodule

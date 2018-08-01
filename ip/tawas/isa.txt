@@ -7,23 +7,22 @@
 // - Notes on instruction set and machine instruction binary format
 //
 
-Symetrical Quad-threaded (25% clocks each)
- - Hides IROM fetch latency and pipeline delays
+Symetrical Multi-threaded - 
+ - One instruction in pipeline per thread at a time, multiple threads active
+ - Simple priority selecting next thread
+ - Avoid interlocks (ld->st/au, or au->flags->br)
  - Chose this over pipeline stalls because of better IPC
- - Chose this over branch delay slot because of easier programming
- - Reduced single thread performance, so need to keep all threads busy
+ - Chose this over branch delay slot (i.e. MIPS) because of easier programming
+ - Reduced single thread performance, so need to keep pipeline busy
  - Also provides natural TX/RX, Read/Write, or Consumer/Producer thread separation
  - All threads share same IROM, but start at different offsets
+ - Think of it as "hardware RTOS" - many+ threads sharing CPU time
 
-Each thread has 8 x 32-bit registers. With four threads, a core contains 32 x 32-bit
-registers. All registers can be used in AU operations, but there are limitation
-for bus load/store commands.
+Each thread has 8 x 32-bit registers.  The r7 register is used as call/rtn link,
+and r6 is inferred as the stack pointer for all push/pop insructions.
 
-The r7 register is used as call/rtn link, and r6 is inferred as the stack
-pointer for all push/pop insructions.
-
-Dedicated Instruction and Local Data busses.  Connects to system through
-an "RCN Bus", a 32-bit ring style multi-master bus.
+Dedicated Instruction and Fast Data busses.  Connects to slower system space 
+through an "RCN Bus", a 32-bit ring style multi-master bus.
 
 32-bit instruction words formated as follows...
 ___________________________________________

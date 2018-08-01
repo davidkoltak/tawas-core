@@ -5,7 +5,7 @@
 // Tawas Module Toplevel: A simple multi-threaded RISC core.
 //
 
-`define RTL_VERSION 32'hA0010001
+`define RTL_VERSION 32'hB0010001
 
 module tawas
 (
@@ -28,31 +28,30 @@ module tawas
 );
     parameter MASTER_ID = 0;
 
-    wire pc_store;
-    wire [23:0] pc_out;
-    wire pc_restore;
+    wire thread_start_en;
+    wire [3:0] thread_start;
+
+    wire [7:0] au_flags;
     wire [23:0] pc_rtn;
 
-    wire rf_imm_vld;
-    wire [2:0] rf_imm_sel;
+    wire rf_imm_en;
+    wire [2:0] rf_imm_reg;
     wire [31:0] rf_imm;
 
-    wire [1:0] slice;
-    wire [7:0] au_flags;
-
-    wire au_op_vld;
+    wire ls_dir_en;
+    wire ls_dir_store;
+    wire [2:0] ls_dir_reg;
+    wire [31:0] ls_dir_addr;
+    
+    wire au_op_en;
     wire [14:0] au_op;
 
-    wire ls_op_vld;
+    wire ls_op_en;
     wire [14:0] ls_op;
 
-    wire ls_dir_vld;
-    wire ls_dir_store;
-    wire [2:0] ls_dir_sel;
-    wire [31:0] ls_dir_addr;
-
-    wire [3:0] rcn_stall;
-
+    wire thread_retire_en;
+    wire [3:0] thread_retire;
+        
     tawas_fetch tawas_fetch
     (
         .clk(clk),
@@ -62,66 +61,100 @@ module tawas
         .iaddr(iaddr),
         .idata(idata),
 
-        .slice(slice),
-        .au_flags(au_flags),
-        .rcn_stall(rcn_stall),
+        .thread_start_en(thread_start_en),
+        .thread_start(thread_start),
 
-        .pc_store(pc_store),
-        .pc_out(pc_out),
-        .pc_restore(pc_restore),
+        .au_flags(au_flags),
         .pc_rtn(pc_rtn),
 
-        .rf_imm_vld(rf_imm_vld),
-        .rf_imm_sel(rf_imm_sel),
+        .rf_imm_en(rf_imm_en),
+        .rf_imm_reg(rf_imm_reg),
         .rf_imm(rf_imm),
 
-        .au_op_vld(au_op_vld),
+        .ls_dir_en(ls_dir_en),
+        .ls_dir_store(ls_dir_store),
+        .ls_dir_reg(ls_dir_reg),
+        .ls_dir_addr(ls_dir_addr),
+        
+        .au_op_en(au_op_en),
         .au_op(au_op),
 
-        .ls_op_vld(ls_op_vld),
+        .ls_op_en(ls_op_en),
         .ls_op(ls_op),
 
-        .ls_dir_vld(ls_dir_vld),
-        .ls_dir_store(ls_dir_store),
-        .ls_dir_sel(ls_dir_sel),
-        .ls_dir_addr(ls_dir_addr)
+        .thread_retire_en(thread_retire_en),
+        .thread_retire(thread_retire)
     );
 
-    wire [7:0] au_flags_rtn;
+    wire [255:0] regdata;
+    assign pc_rtn = regdata[255:224];
 
-    wire [2:0] au_ra_sel;
-    wire [31:0] au_ra;
+    wire [3:0] wb_thread;
 
-    wire [2:0] au_rb_sel;
-    wire [31:0] au_rb;
+    wire wb_au_en;
+    wire [2:0] wb_au_reg;
+    wire [31:0] wb_au_data;
 
-    wire au_rc_vld;
-    wire [2:0] au_rc_sel;
-    wire [31:0] au_rc;
+    wire wb_au_flags_en;
+    wire [7:0] wb_au_flags;
 
-    tawas_au #(.RTL_VERSION(`RTL_VERSION)) tawas_au
+    wire wb_ptr_en;
+    wire [2:0] wb_ptr_reg;
+    wire [31:0] wb_ptr_data;
+
+    wire wb_store_en;
+    wire [2:0] wb_store_reg;
+    wire [31:0] wb_store_data;
+        
+    tawas_regfile tawas_regfile
     (
         .clk(clk),
         .rst(rst),
 
-        .slice(slice),
+        .thread_start_en(thread_start_en),
+        .thread_start(thread_start),
+
+        .regdata(regdata),
         .au_flags(au_flags),
 
-        .pc_restore(pc_restore),
-        .au_flags_rtn(au_flags_rtn),
+        .wb_thread(wb_thread),
 
-        .au_op_vld(au_op_vld),
+        .wb_au_en(wb_au_en),
+        .wb_au_reg(wb_au_reg),
+        .wb_au_data(wb_au_data),
+
+        .wb_au_flags_en(wb_au_flags_en),
+        .wb_au_flags(wb_au_flags),
+
+        .wb_ptr_en(wb_ptr_en),
+        .wb_ptr_reg(wb_ptr_reg),
+        .wb_ptr_data(wb_ptr_data),
+
+        .wb_store_en(wb_store_en),
+        .wb_store_reg(wb_store_reg),
+        .wb_store_data(wb_store_data)
+    );
+
+    tawas_au tawas_au
+    (
+        .clk(clk),
+        .rst(rst),
+        
+        .regdata(regdata),
+
+        .rf_imm_en(rf_imm_en),
+        .rf_imm_reg(rf_imm_reg),
+        .rf_imm(rf_imm),
+
+        .au_op_en(au_op_en),
         .au_op(au_op),
+        
+        .wb_au_en(wb_au_en),
+        .wb_au_reg(wb_au_reg),
+        .wb_au_data(wb_au_data),
 
-        .au_ra_sel(au_ra_sel),
-        .au_ra(au_ra),
-
-        .au_rb_sel(au_rb_sel),
-        .au_rb(au_rb),
-
-        .au_rc_vld(au_rc_vld),
-        .au_rc_sel(au_rc_sel),
-        .au_rc(au_rc)
+        .wb_au_flags_en(wb_au_flags_en),
+        .wb_au_flags(wb_au_flags)
     );
 
     wire rcn_cs;
@@ -131,25 +164,21 @@ module tawas
     wire [2:0] rcn_wbreg;
     wire [3:0] rcn_mask;
     wire [31:0] rcn_wdata;
-
-    wire [2:0] ls_ptr_sel;
-    wire [31:0] ls_ptr;
-
-    wire [2:0] ls_store_sel;
-    wire [31:0] ls_store;
-
-    wire ls_ptr_upd_vld;
-    wire [2:0] ls_ptr_upd_sel;
-    wire [31:0] ls_ptr_upd;
-
-    wire ls_load_vld;
-    wire [2:0] ls_load_sel;
-    wire [31:0] ls_load;
-
+        
     tawas_ls tawas_ls
     (
         .clk(clk),
         .rst(rst),
+
+        .regdata(regdata),
+        
+        .ls_dir_en(ls_dir_en),
+        .ls_dir_store(ls_dir_store),
+        .ls_dir_reg(ls_dir_reg),
+        .ls_dir_addr(ls_dir_addr),
+        
+        .ls_op_en(ls_op_en),
+        .ls_op(ls_op),
 
         .dcs(dcs),
         .dwr(dwr),
@@ -166,105 +195,13 @@ module tawas
         .rcn_mask(rcn_mask),
         .rcn_wdata(rcn_wdata),
 
-        .ls_op_vld(ls_op_vld),
-        .ls_op(ls_op),
+        .wb_ptr_en(wb_ptr_en),
+        .wb_ptr_reg(wb_ptr_reg),
+        .wb_ptr_data(wb_ptr_data),
 
-        .ls_dir_vld(ls_dir_vld),
-        .ls_dir_store(ls_dir_store),
-        .ls_dir_sel(ls_dir_sel),
-        .ls_dir_addr(ls_dir_addr),
-
-        .ls_ptr_sel(ls_ptr_sel),
-        .ls_ptr(ls_ptr),
-
-        .ls_store_sel(ls_store_sel),
-        .ls_store(ls_store),
-
-        .ls_ptr_upd_vld(ls_ptr_upd_vld),
-        .ls_ptr_upd_sel(ls_ptr_upd_sel),
-        .ls_ptr_upd(ls_ptr_upd),
-
-        .ls_load_vld(ls_load_vld),
-        .ls_load_sel(ls_load_sel),
-        .ls_load(ls_load)
-    );
-
-    wire rcn_load_vld;
-    wire [1:0] rcn_load_slice;
-    wire [2:0] rcn_load_sel;
-    wire [31:0] rcn_load;
-
-    tawas_rcn #(.MASTER_ID(MASTER_ID)) tawas_rcn
-    (
-        .clk(clk),
-        .rst(rst),
-
-        .slice(slice),
-        .rcn_stall(rcn_stall),
-
-        .rcn_cs(rcn_cs),
-        .rcn_xch(rcn_xch),
-        .rcn_wr(rcn_wr),
-        .rcn_addr(rcn_addr),
-        .rcn_wbreg(rcn_wbreg),
-        .rcn_mask(rcn_mask),
-        .rcn_wdata(rcn_wdata),
-
-        .rcn_load_vld(rcn_load_vld),
-        .rcn_load_slice(rcn_load_slice),
-        .rcn_load_sel(rcn_load_sel),
-        .rcn_load(rcn_load),
-
-        .rcn_in(rcn_in),
-        .rcn_out(rcn_out)
-    );
-
-    tawas_regfile tawas_regfile
-    (
-        .clk(clk),
-        .rst(rst),
-
-        .slice(slice),
-
-        .pc_store(pc_store),
-        .pc_in(pc_out),
-        .au_flags(au_flags),
-
-        .pc_rtn(pc_rtn),
-        .au_flags_rtn(au_flags_rtn),
-
-        .rf_imm_vld(rf_imm_vld),
-        .rf_imm_sel(rf_imm_sel),
-        .rf_imm(rf_imm),
-
-        .au_ra_sel(au_ra_sel),
-        .au_ra(au_ra),
-
-        .au_rb_sel(au_rb_sel),
-        .au_rb(au_rb),
-
-        .au_rc_vld(au_rc_vld),
-        .au_rc_sel(au_rc_sel),
-        .au_rc(au_rc),
-
-        .ls_ptr_sel(ls_ptr_sel),
-        .ls_ptr(ls_ptr),
-
-        .ls_store_sel(ls_store_sel),
-        .ls_store(ls_store),
-
-        .ls_ptr_upd_vld(ls_ptr_upd_vld),
-        .ls_ptr_upd_sel(ls_ptr_upd_sel),
-        .ls_ptr_upd(ls_ptr_upd),
-
-        .ls_load_vld(ls_load_vld),
-        .ls_load_sel(ls_load_sel),
-        .ls_load(ls_load),
-
-        .rcn_load_vld(rcn_load_vld),
-        .rcn_load_slice(rcn_load_slice),
-        .rcn_load_sel(rcn_load_sel),
-        .rcn_load(rcn_load)
+        .wb_store_en(wb_store_en),
+        .wb_store_reg(wb_store_reg),
+        .wb_store_data(wb_store_data)
     );
 
 endmodule
