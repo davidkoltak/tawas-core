@@ -10,13 +10,20 @@ module tawas_regfile
     input clk,
     input rst,
 
-    input thread_start_en,
-    input [3:0] thread_start,
+    input thread_load_en,
+    input [4:0] thread_load,
+    
+    output [31:0] reg0,
+    output [31:0] reg1,
+    output [31:0] reg2,
+    output [31:0] reg3,
+    output [31:0] reg4,
+    output [31:0] reg5,
+    output [31:0] reg6,
+    output [31:0] reg7,
+    output [7:0] au_flags,
 
-    output reg [255:0] regdata,
-    output reg [7:0] au_flags,
-
-    input [3:0] wb_thread,
+    input [4:0] wb_thread,
 
     input wb_au_en,
     input [2:0] wb_au_reg,
@@ -34,14 +41,25 @@ module tawas_regfile
     input [31:0] wb_store_data
 );
 
-    reg [263:0] regfile[15:0];
-
+    reg [263:0] regfile[31:0];
+    reg [263:0] regdata;
+    
+    assign reg0 = regdata[31:0];
+    assign reg1 = regdata[63:32];
+    assign reg2 = regdata[95:64];
+    assign reg3 = regdata[127:96];
+    assign reg4 = regdata[159:128];
+    assign reg5 = regdata[191:160];
+    assign reg6 = regdata[223:192];
+    assign reg7 = regdata[255:224];
+    assign au_flags = regdata[263:256];
+    
     always @ (posedge clk)
-        if (thread_start_en) {au_flags, regdata} <= regfile[thread_start];
+        if (thread_load_en) regdata <= regfile[thread_load];
 
-    wire wb_en_any = (wb_au_en || wb_ptr_en || wb_pc_en || wb_store_en || wb_bus_en);
+    wire wb_en_any = (wb_au_en || wb_au_flags_en || wb_ptr_en || wb_store_en);
     reg wen;
-    reg [3:0] waddr;
+    reg [4:0] waddr;
     reg [255:0] wdata_calc;
     reg [255:0] wdata;
     reg [255:0] wmask_calc;
@@ -77,7 +95,7 @@ module tawas_regfile
         end
     end
 
-    always (posedge clk or posedge rst)
+    always @ (posedge clk or posedge rst)
         if (rst) wen <= 1'b0;
         else wen <= wb_en_any;
 

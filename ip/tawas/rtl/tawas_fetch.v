@@ -16,8 +16,10 @@ module tawas_fetch
     output [23:0] iaddr,
     input [31:0] idata,
 
-    output thread_start_en,
-    output [3:0] thread_start,
+    output thread_load_en,
+    output [4:0] thread_load,
+    output [4:0] thread_decode,
+    output [4:0] thread_store,
 
     input [7:0] au_flags,
     input [23:0] pc_rtn,
@@ -35,10 +37,7 @@ module tawas_fetch
     output [14:0] au_op,
 
     output ls_op_en,
-    output [14:0] ls_op,
-
-    input thread_retire_en,
-    input [3:0] thread_retire
+    output [14:0] ls_op
 );
 
     //
@@ -46,16 +45,16 @@ module tawas_fetch
     //
 
     wire pc_update_en;
-    wire [3:0] pc_update_sel;
+    wire [4:0] pc_update_sel;
     wire [23:0] pc_update_addr;
 
-    reg [24:0] pc[15:0];
+    reg [24:0] pc[31:0];
 
     integer x1;
 
     always @ (posedge clk or posedge rst)
         if (rst)
-            for (x1 = 0; x1 < 16; x1 = x1 + 1)
+            for (x1 = 0; x1 < 32; x1 = x1 + 1)
                 pc[x1] <= x1;
         else if (pc_update_en)
             pc[pc_update_sel] <= pc_update_addr;
@@ -64,70 +63,84 @@ module tawas_fetch
     // Choose thread to execute
     //
 
-    reg [15:0] thread_busy;
-    reg [15:0] thread_done_mask;
-    reg [15:0] s1_sel_mask;
-    reg [3:0] s1_sel;
+    reg [31:0] thread_busy;
+    reg [31:0] thread_done_mask;
+    reg [31:0] s1_sel_mask;
+    reg [4:0] s1_sel;
     reg s1_en;
 
+    wire thread_retire_en;
+    wire [4:0] thread_retire;
+    
     integer x2;
 
     always @ *
     begin
-        s1_sel_mask = 16'd0;
-        s1_sel = 4'd0;
+        s1_sel_mask = 32'd0;
+        s1_sel = 5'd0;
         s1_en = 1'b0;
 
-        for (x2 = 0; x2 < 16; x2 = x2 + 1)
-            if (!thread_busy[x])
+        for (x2 = 0; x2 < 32; x2 = x2 + 1)
+            if (!s1_en && !thread_busy[x2])
             begin
-                s1_sel_mask = (16'd1 << x2);
-                s1_sel = 4'd1 * x2;
+                s1_sel_mask = (32'd1 << x2);
+                s1_sel = x2;
                 s1_en = 1'b1;
-                break;
             end
 
-        if (thread_retire_en) thread_done_mask = (16'd1 << thread_retire);
-        else thread_done_mask = 16'd0;
+        if (thread_retire_en) thread_done_mask = (32'd1 << thread_retire);
+        else thread_done_mask = 32'd0;
     end
 
     always @ (posedge clk or posedge rst)
         if (rst)
-            thread_busy <= 16'd0;
+            thread_busy <= 32'd0;
         else
-            thread_busy <= (thread_busy | s1_sel_mask) && ~thread_done_mask;
+            thread_busy <= (thread_busy | s1_sel_mask) & ~thread_done_mask;
 
     //
     // En/Sel pipeline
     //
 
     reg s2_en;
-    reg [3:0] s2_sel;
+    reg [4:0] s2_sel;
     reg [24:0] s2_pc;
 
     reg s3_en;
-    reg [3:0] s3_sel;
+    reg [4:0] s3_sel;
     reg [24:0] s3_pc;
 
     reg s4_en;
-    reg [3:0] s4_sel;
+    reg [4:0] s4_sel;
     reg [24:0] s4_pc;
 
+    reg s5_en;
+    reg [4:0] s5_sel;
+    
+    wire s6_halt;
+    reg s6_en;
+    reg [4:0] s6_sel;
+
+    reg [4:0] s7_sel;
+    
     assign ics = s2_en;
     assign iaddr = s2_pc[23:0];
-
-    assign thread_start_en = s3_en;
-    assign thread_start = s3_sel;
-
+    
     reg [31:0] instr;
 
     always @ (posedge clk)
-        if (s1_en)
-        begin
-            s2_pc <= pc[s1_sel];
-            s3_pc <= s2_pc;
-            s4_pc <= s3_pc;
-        end
+    begin
+        s2_pc <= pc[s1_sel];
+        s3_pc <= s2_pc;
+        s4_pc <= s3_pc;
+        
+        s2_sel <= s1_sel;
+        s3_sel <= s2_sel;
+        s4_sel <= s3_sel;
+        s5_sel <= s4_sel;
+        s6_sel <= s5_sel;
+        s7_sel <= s6_sel;
+    end
 
     always @ (posedge clk)
         if (s3_en)
@@ -137,24 +150,18 @@ module tawas_fetch
         if (rst)
         begin
             s2_en <= 1'b0;
-            s2_sel <= 4'd0;
-
             s3_en <= 1'b0;
-            s3_sel <= 4'd0;
-
             s4_en <= 1'b0;
-            s4_sel <= 4'd0;
+            s5_en <= 1'b0;
+            s6_en <= 1'b0;
         end
         else
         begin
             s2_en <= s1_en;
-            s2_sel <= s1_sel;
-
             s3_en <= s2_en;
-            s3_sel <= s2_sel;
-
             s4_en <= s3_en;
-            s4_sel <= s3_sel;
+            s5_en <= s4_en;
+            s6_en <= s5_en && !s6_halt;
         end
 
     //
@@ -208,12 +215,35 @@ module tawas_fetch
 
     assign pc_update_en = s4_en;
     assign pc_update_sel = s4_sel;
-    assign pc_update_addr = (op_is_call || op_is_jmp) ? op_iaddr :
-                            (op_is_rtn) ? pc_rtn :
-                            (op_is_br) ? op_br_iaddr :
-                            (op_is_br_cond && op_br_cond_true) ? op_br_cond_iaddr
+    assign pc_update_addr = (op_is_call || op_is_jmp) ? {1'b0, op_iaddr} :
+                            (op_is_rtn) ? {1'b0, pc_rtn} :
+                            (op_is_br) ? {1'b0, op_br_iaddr} :
+                            (op_is_br_cond && op_br_cond_true) ? {1'b0, op_br_cond_iaddr}
                                                                : pc_next;
+    
+    //
+    // Load thread register context
+    //
+    
+    assign thread_load_en = s3_en;
+    assign thread_load = s3_sel;
+    
+    assign thread_decode = s4_sel;
+    assign thread_store = s7_sel;
 
+    //
+    // Retire thread
+    //
+    
+    reg op_is_halt_d1;
+    
+    always @ (posedge clk)
+        op_is_halt_d1 <= op_is_halt;
+        
+    assign s6_halt = op_is_halt_d1;
+    assign thread_retire_en = s6_en;
+    assign thread_retire = s6_sel;
+                                                 
     //
     // Imm/Dir data loads
     //

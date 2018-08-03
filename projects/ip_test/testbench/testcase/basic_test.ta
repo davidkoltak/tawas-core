@@ -5,6 +5,34 @@
 .global _t1_reset
 .global _t2_reset
 .global _t3_reset
+.global _t4_reset
+.global _t5_reset
+.global _t6_reset
+.global _t7_reset
+.global _t8_reset
+.global _t9_reset
+.global _t10_reset
+.global _t11_reset
+.global _t12_reset
+.global _t13_reset
+.global _t14_reset
+.global _t15_reset
+.global _t16_reset
+.global _t17_reset
+.global _t18_reset
+.global _t19_reset
+.global _t20_reset
+.global _t21_reset
+.global _t22_reset
+.global _t23_reset
+.global _t24_reset
+.global _t25_reset
+.global _t26_reset
+.global _t27_reset
+.global _t28_reset
+.global _t29_reset
+.global _t30_reset
+.global _t31_reset
 
 .alloc stack_0_bot w 127
 .data stack_0_top w 0xAAAAAAAA
@@ -16,85 +44,45 @@
 .data stack_3_top w 0xAAAAAAAA
 
 _t1_reset:
-    ldi sp stack_1_top
-    jmp stub
-
 _t2_reset:
-    ldi sp stack_2_top
-    jmp stub
-
 _t3_reset:
-    ldi sp stack_3_top
-    jmp stub
-
-stub:
-    rdcsr r0 thread
-    call test_progress_inc
-    jmp test_pass_wait
+_t4_reset:
+_t5_reset:
+_t6_reset:
+_t7_reset:
+_t8_reset:
+_t9_reset:
+_t10_reset:
+_t11_reset:
+_t12_reset:
+_t13_reset:
+_t14_reset:
+_t15_reset:
+_t16_reset:
+_t17_reset:
+_t18_reset:
+_t19_reset:
+_t20_reset:
+_t21_reset:
+_t22_reset:
+_t23_reset:
+_t24_reset:
+_t25_reset:
+_t26_reset:
+_t27_reset:
+_t28_reset:
+_t29_reset:
+_t30_reset:
+_t31_reset:
+dead_loop:
+    halt
+    jmp dead_loop
 
 _t0_reset:
     ldi sp stack_0_top
-
-    ldi r0 0x123456
-    cmpi r0 0
-    skip ne
-    jmp test_fail_now
-
-    ldi r1 0x54
-    cmpi r1 0x54
-    skip eq
-    jmp test_fail_now
-
-    ldi r2 0xFF123456
-    cmp r0 r2
-    skip ne
-    jmp test_fail_now
-
-    ldi r3 0xffffff
-    and r2 r3
-    cmp r0 r2
-    skip eq
-    jmp test_fail_now
-
-    ldi r5 0x7755
-    wrcsr r5 scratch
-    rdcsr r4 scratch
-    cmp r4 r5
-    skip eq
-    jmp test_fail_now
-
-.string test_str "Test String"
-    ldi r0 test_str
-    call strlen
-    cmpi r0 11
-    skip eq
-    jmp test_fail_now
-
-    rdcsr r5 ticks
-    rdcsr r5 ticks
-    rdcsr r5 ticks
-
-    ldi r3 stack_0_top
-    xch w r5 r3
-    xch w r5 r3
-
-    ldi r0 RCN_RAM1_BASE
-    st w r2 r0 [0]
-    \ inc r2
-    st w r2 r0 [1]
-    \ inc r2
-    st w r2 r0 [2]
-    \ inc r2
-    st w r2 r0 [3]
-    \ inc r2
-    st w r2 r0 [4]
-    \ inc r2
-
-    ld w r1 r0 [0]
-    ld w r2 r0 [1]
-    ld w r3 r0 [2]
-    ld w r4 r0 [3]
-    ld w r5 r0 [4]
-
-    jmp test_pass_wait
-
+    ldi r0 0x56
+    ldi r1 0x12345
+    st w r1 r0
+    ld h r2 r0 ++5
+    jmp dead_loop
+    

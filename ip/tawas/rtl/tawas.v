@@ -28,8 +28,10 @@ module tawas
 );
     parameter MASTER_ID = 0;
 
-    wire thread_start_en;
-    wire [3:0] thread_start;
+    wire thread_load_en;
+    wire [4:0] thread_load;
+    wire [4:0] thread_decode;
+    wire [4:0] thread_store;
 
     wire [7:0] au_flags;
     wire [23:0] pc_rtn;
@@ -48,9 +50,6 @@ module tawas
 
     wire ls_op_en;
     wire [14:0] ls_op;
-
-    wire thread_retire_en;
-    wire [3:0] thread_retire;
         
     tawas_fetch tawas_fetch
     (
@@ -61,8 +60,10 @@ module tawas
         .iaddr(iaddr),
         .idata(idata),
 
-        .thread_start_en(thread_start_en),
-        .thread_start(thread_start),
+        .thread_load_en(thread_load_en),
+        .thread_load(thread_load),
+        .thread_decode(thread_decode),
+        .thread_store(thread_store),
 
         .au_flags(au_flags),
         .pc_rtn(pc_rtn),
@@ -80,16 +81,21 @@ module tawas
         .au_op(au_op),
 
         .ls_op_en(ls_op_en),
-        .ls_op(ls_op),
-
-        .thread_retire_en(thread_retire_en),
-        .thread_retire(thread_retire)
+        .ls_op(ls_op)
     );
+    
+    wire [31:0] reg0;
+    wire [31:0] reg1;
+    wire [31:0] reg2;
+    wire [31:0] reg3;
+    wire [31:0] reg4;
+    wire [31:0] reg5;
+    wire [31:0] reg6;
+    wire [31:0] reg7;
+    
+    assign pc_rtn = reg7[23:0];
 
-    wire [255:0] regdata;
-    assign pc_rtn = regdata[255:224];
-
-    wire [3:0] wb_thread;
+    wire [4:0] wb_thread;
 
     wire wb_au_en;
     wire [2:0] wb_au_reg;
@@ -111,10 +117,17 @@ module tawas
         .clk(clk),
         .rst(rst),
 
-        .thread_start_en(thread_start_en),
-        .thread_start(thread_start),
+        .thread_load_en(thread_load_en),
+        .thread_load(thread_load),
 
-        .regdata(regdata),
+        .reg0(reg0),
+        .reg1(reg1),
+        .reg2(reg2),
+        .reg3(reg3),
+        .reg4(reg4),
+        .reg5(reg5),
+        .reg6(reg6),
+        .reg7(reg7),
         .au_flags(au_flags),
 
         .wb_thread(wb_thread),
@@ -140,7 +153,14 @@ module tawas
         .clk(clk),
         .rst(rst),
         
-        .regdata(regdata),
+        .reg0(reg0),
+        .reg1(reg1),
+        .reg2(reg2),
+        .reg3(reg3),
+        .reg4(reg4),
+        .reg5(reg5),
+        .reg6(reg6),
+        .reg7(reg7),
 
         .rf_imm_en(rf_imm_en),
         .rf_imm_reg(rf_imm_reg),
@@ -170,7 +190,14 @@ module tawas
         .clk(clk),
         .rst(rst),
 
-        .regdata(regdata),
+        .reg0(reg0),
+        .reg1(reg1),
+        .reg2(reg2),
+        .reg3(reg3),
+        .reg4(reg4),
+        .reg5(reg5),
+        .reg6(reg6),
+        .reg7(reg7),
         
         .ls_dir_en(ls_dir_en),
         .ls_dir_store(ls_dir_store),
@@ -203,5 +230,12 @@ module tawas
         .wb_store_reg(wb_store_reg),
         .wb_store_data(wb_store_data)
     );
-
+    
+    //
+    // NO RCN YET - IN TESTING PHASE
+    //
+    
+    assign wb_thread = thread_store;
+    assign rcn_out = 69'd0;
+    
 endmodule

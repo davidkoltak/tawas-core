@@ -97,10 +97,13 @@ if dram_out == '':
 #
 
 plabels = {}
-pc = 4
-prog = [0xFE000000, 0xFE000000, 0xFE000000, 0xFE000000]
-pfixup = ['0:abs24:_t0_reset:builtin:0', '1:abs24:_t1_reset:builtin:0',
-                    '2:abs24:_t2_reset:builtin:0', '3:abs24:_t3_reset:builtin:0']
+pc = 32
+prog = []
+pfixup = []
+
+for x in range(32):
+    prog.append(0xFE000000)
+    pfixup.append(str(x)+':abs24:_t'+str(x)+'_reset:builtin:0')
 
 dlabels = {}
 dc = 0
