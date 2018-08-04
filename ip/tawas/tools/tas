@@ -394,9 +394,9 @@ for filename in infiles:
 fw_cmds = ['call', 'rtn', 'jmp', 'halt', 'ldi', 'ldd', 'std']
 br_cmds = ['br', 'jmpi', 'skip', 'skip2', 'br_nop']
 ls_cmds = ['ld', 'st', 'push', 'pop', 'xch']
-au_cmds = ['or', 'xor', 'cmp', 'add', 'sub', 'and', 'clr', 'tstz',
+au_cmds = ['or', 'xor', 'cmp', 'mtst', 'add', 'sub', 'and', 'clr', 'tstz',
            'bset', 'bclr', 'btst', 'rdcsr', 'wrcsr',
-           'lsl', 'lsr', 'asr', 'sxb', 'sxh',
+           'lsl', 'lsr', 'asr', 'not', 'neg', 'sxb', 'sxh', 'shl', 'shr',
            'mv', 'mvi', 'cmpi', 'addi', 'inc', 'dec', 'nop', 'au_nop']
 
 def decode_reg(reg):
@@ -428,9 +428,9 @@ def decode_reg(reg):
 def decode_csr(reg):
     if reg == 'version':
         return 0
-    elif reg == 'thread':
+    elif reg == 'thread_id':
         return 1
-    elif reg == 'interrupt':
+    elif reg == 'thread_mask':
         return 2
     elif reg == 'ticks':
         return 3
@@ -719,10 +719,11 @@ def decode_hw_op(pc, hw_op, upper):
         if opcode[0] == 'rdcsr':
             rtn = 0x23C0 | (csr << 3) | reg
         else:
-            rtn = 0x27C0 | (reg << 3) | csr
+            rtn = 0x27C0 | (csr << 3) | reg
 
     elif (opcode[0] == 'not') or (opcode[0] == 'neg') or (opcode[0] == 'cmp') or \
-         (opcode[0] == 'sxb') or (opcode[0] == 'sxh'):
+         (opcode[0] == 'sxb') or (opcode[0] == 'sxh') or (opcode[0] == 'mtst') or \
+         (opcode[0] == 'shl') or (opcode[0] == 'shr'):
         if opcode[0] == 'not':
             rtn = 0x2000
         elif opcode[0] == 'neg':
@@ -731,6 +732,12 @@ def decode_hw_op(pc, hw_op, upper):
             rtn = 0x2080
         elif opcode[0] == 'sxh':
             rtn = 0x20C0
+        elif opcode[0] == 'shl':
+            rtn = 0x2100
+        elif opcode[0] == 'shr':
+            rtn = 0x2140
+        elif opcode[0] == 'mtst':
+            rtn = 0x2740
         elif opcode[0] == 'cmp':
             rtn = 0x2780
         if len(opcode) == 3:

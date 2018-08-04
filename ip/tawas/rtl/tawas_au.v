@@ -20,7 +20,10 @@ module tawas_au
     input [31:0] reg5,
     input [31:0] reg6,
     input [31:0] reg7,
+    input [4:0] thread_decode,
 
+    output [31:0] thread_mask,
+    
     input rf_imm_en,
     input [2:0] rf_imm_reg,
     input [31:0] rf_imm,
@@ -53,25 +56,25 @@ module tawas_au
         else if (au_op_en)
         begin
             case (au_op[2:0])
-            3'd0: reg_a <= {reg0[31], reg0};
-            3'd1: reg_a <= {reg1[31], reg1};
-            3'd2: reg_a <= {reg2[31], reg2};
-            3'd3: reg_a <= {reg3[31], reg3};
-            3'd4: reg_a <= {reg4[31], reg4};
-            3'd5: reg_a <= {reg5[31], reg5};
-            3'd6: reg_a <= {reg6[31], reg6};
-            default: reg_a <= {reg7[31], reg7};
+            3'd0: reg_a <= {1'b0, reg0};
+            3'd1: reg_a <= {1'b0, reg1};
+            3'd2: reg_a <= {1'b0, reg2};
+            3'd3: reg_a <= {1'b0, reg3};
+            3'd4: reg_a <= {1'b0, reg4};
+            3'd5: reg_a <= {1'b0, reg5};
+            3'd6: reg_a <= {1'b0, reg6};
+            default: reg_a <= {1'b0, reg7};
             endcase
             
             case (au_op[5:3])
-            3'd0: reg_b <= {reg0[31], reg0};
-            3'd1: reg_b <= {reg1[31], reg1};
-            3'd2: reg_b <= {reg2[31], reg2};
-            3'd3: reg_b <= {reg3[31], reg3};
-            3'd4: reg_b <= {reg4[31], reg4};
-            3'd5: reg_b <= {reg5[31], reg5};
-            3'd6: reg_b <= {reg6[31], reg6};
-            default: reg_b <= {reg7[31], reg7};
+            3'd0: reg_b <= {1'b0, reg0};
+            3'd1: reg_b <= {1'b0, reg1};
+            3'd2: reg_b <= {1'b0, reg2};
+            3'd3: reg_b <= {1'b0, reg3};
+            3'd4: reg_b <= {1'b0, reg4};
+            3'd5: reg_b <= {1'b0, reg5};
+            3'd6: reg_b <= {1'b0, reg6};
+            default: reg_b <= {1'b0, reg7};
             endcase
         end
     
@@ -80,32 +83,54 @@ module tawas_au
     //
     
     reg rf_imm_en_d1;
-    reg [2:0] rm_imm_reg_d1;
+    reg [2:0] rf_imm_reg_d1;
     reg [14:0] au_op_d1;
+    reg [2:0] csr_sel_d1;
+    reg [4:0] csr_thread_id;
     
     always @ (posedge clk)
     begin
-        rf_imm_en_d1 <= rm_imm_en;
+        rf_imm_en_d1 <= rf_imm_en;
         rf_imm_reg_d1 <= rf_imm_reg;
         au_op_d1 <= au_op;
+        csr_sel_d1 <= au_op[5:3];
+        csr_thread_id <= thread_decode;
     end
     
+
     //
     // Perform operation (step 1)
     //
     
     reg [2:0] wbreg_d2;
     reg [32:0] au_result_d2;
+
+    reg [31:0] csr_thread_mask;
+    reg [31:0] csr_ticks;
+    reg [31:0] csr_scratch;
     
-    always @ (posedge clk)
-        if (rf_imm_en_d1)
+    assign thread_mask = csr_thread_mask;
+
+    always @ (posedge clk or posedge rst)
+        if (rst) csr_ticks <= 32'd0;
+        else csr_ticks <= csr_ticks + 32'd1;
+        
+    always @ (posedge clk or posedge rst)
+        if (rst)
+        begin
+            wbreg_d2 <= 3'd0;
+            au_result_d2 <= 33'd0;
+            csr_thread_mask <= 32'd1;
+            csr_scratch <= 32'd0;
+        end
+        else if (rf_imm_en_d1)
         begin
             wbreg_d2 <= rf_imm_reg_d1;
             au_result_d2 <= reg_a;
         end
         else if (au_op_d1[14:13] == 2'b00)
         begin
-            wbreg_d1 <= au_op_d1[8:6];
+            wbreg_d2 <= au_op_d1[8:6];
             case (au_op_d1[12:9])
             4'h0: au_result_d2 <= reg_a | reg_b;
             4'h1: au_result_d2 <= reg_a & reg_b;
@@ -117,30 +142,65 @@ module tawas_au
         end
         else if (au_op_d1[14:11] == 4'b0100)
         begin
-            wbreg_d1 <= au_op_d1[2:0];
+            wbreg_d2 <= au_op_d1[2:0];
             case (au_op_d1[10:6])
             5'h00: au_result_d2 <= ~reg_b;
             5'h01: au_result_d2 <= (~reg_b) + 33'd1;
             5'h02: au_result_d2 <= {{25{reg_b[7]}}, reg_b[7:0]};
             5'h03: au_result_d2 <= {{17{reg_b[15]}}, reg_b[15:0]};
-            5'h1E: au_result_d2 <= reg_a & reg_b;
-            5'h1F: au_result_d2 <= reg_a - reg_b;
+            5'h04: au_result_d2 <= (|reg_b[31:5]) ? 33'd0 : (reg_a << reg_b[4:0]);
+            5'h05: au_result_d2 <= (|reg_b[31:5]) ? 33'd0 : (reg_a >> reg_b[4:0]);
+            5'h0F:
+                case (csr_sel_d1)
+                3'd0: au_result_d2 <= {1'b0, RTL_VERSION};
+                3'd1: au_result_d2 <= {28'd0, csr_thread_id};
+                3'd2: au_result_d2 <= {1'b0, csr_thread_mask};
+                3'd3: au_result_d2 <= {1'b0, csr_ticks};
+                default: au_result_d2 <= 33'd0;
+                endcase
+            // NO STORE 1C-1F ...
+            5'h1D: au_result_d2 <= reg_a & reg_b;
+            5'h1E: au_result_d2 <= reg_a - reg_b;
+            5'h1F:
+            begin
+                au_result_d2 <= 33'd0;
+                case (csr_sel_d1)
+                3'd2: csr_thread_mask <= reg_a[31:0];
+                3'd7: csr_scratch <= reg_a[31:0];
+                default: ;
+                endcase
+            end
             default: au_result_d2 <= 33'd0;
             endcase
         end
         else if (au_op_d1[14:11] == 4'b0101)
         begin
-            wbreg_d1 <= au_op_d1[2:0];
+            wbreg_d2 <= au_op_d1[2:0];
             case (au_op_d1[10:8])
-            3'h0: au_result_d2 <= (reg_a & ~(33'd1 << au_op[7:3]));
-            3'h1: au_result_d2 <= (reg_a | (33'd1 << au_op[7:3]));
-            4'h4: au_result_d2 <= (reg_a << au_op[7:3]);
-            4'h5: au_result_d2 <= (reg_a >> au_op[7:3]);
-            4'h6: au_result_d2 <= (reg_a >>> au_op[7:3]);
+            3'h0: au_result_d2 <= {32'd0, reg_a[au_op_d1[7:3]]};
+            3'h1: au_result_d2 <= (reg_a & ~(33'd1 << au_op_d1[7:3]));
+            3'h2: au_result_d2 <= (reg_a | (33'd1 << au_op_d1[7:3]));
+            4'h4: au_result_d2 <= (reg_a << au_op_d1[7:3]);
+            4'h5: au_result_d2 <= (reg_a >> au_op_d1[7:3]);
+            4'h6: au_result_d2 <= ({reg_a[31], reg_a[31:0]} >>> au_op_d1[7:3]);
             default: au_result_d2 <= 33'd0;
             endcase
         end
-        
+        else if (au_op_d1[14:12] == 3'b011)
+        begin
+            wbreg_d2 <= au_op_d1[2:0];
+            au_result_d2 <= reg_a - {{24{au_op_d1[11]}}, au_op_d1[11:3]};
+        end
+        else if (au_op_d1[14:13] == 2'b10)
+        begin
+            wbreg_d2 <= au_op_d1[2:0];
+            au_result_d2 <= reg_a + {{23{au_op_d1[12]}}, au_op_d1[12:3]};
+        end
+        else if (au_op_d1[14:13] == 2'b11)
+        begin
+            wbreg_d2 <= au_op_d1[2:0];
+            au_result_d2 <= {{23{au_op_d1[12]}}, au_op_d1[12:3]};
+        end
     
     //
     // Perform operation (step 2) - nothing to do
@@ -163,7 +223,9 @@ module tawas_au
     reg wb_en_d2;
     reg wb_en_d3;
     
-    wire no_store_op = (au_op[14:10] == 5'h09) || (au_op[14:12] == 3'd011);
+    wire no_store_op = (au_op[14:8] == 7'b0100111) || 
+                       (au_op[14:12] == 3'b011) ||
+                       (au_op_d1[14:8] == 7'b0101000);
     
     always @ (posedge clk or posedge rst)
         if (rst)
@@ -187,7 +249,11 @@ module tawas_au
     // Store flags
     //
     
-    assign wb_au_flags_en = 1'b0;
-    assign wb_au_flags = 8'd0;
+    wire au_flag_zero = (au_result_d3 == 33'd0);
+    wire au_flag_neg = au_result_d3[31];
+    wire au_flag_ovfl = au_result_d3[32];
+    
+    assign wb_au_flags_en = wb_en_d3;
+    assign wb_au_flags = {5'd0, au_flag_ovfl, au_flag_neg, au_flag_zero};
     
 endmodule

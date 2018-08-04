@@ -105,9 +105,9 @@ module tawas_ls
             endcase
             
             case (ls_op_type)
-            2'd0: addr_inc = addr + {27'd0, ls_op_off};
-            2'd1: addr_inc = addr + {26'd0, ls_op_off, 1'b0};
-            default: addr_inc = addr + {25'd0, ls_op_off, 2'd0};
+            2'd0: addr_inc = addr + {{27{ls_op_off[4]}}, ls_op_off};
+            2'd1: addr_inc = addr + {{26{ls_op_off[4]}}, ls_op_off, 1'b0};
+            default: addr_inc = addr + {{25{ls_op_off[4]}}, ls_op_off, 2'd0};
             endcase
                        
         end

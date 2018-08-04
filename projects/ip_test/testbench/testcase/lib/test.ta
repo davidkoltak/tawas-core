@@ -78,14 +78,14 @@ test_progress_inc:
 
 .global test_fail_now
 test_fail_now:
-    rdcsr r0 thread
+    rdcsr r0 thread_id
     \ bset r0 8
     std r0 test_reg_fail_addr
     halt
 
 .global test_pass_now
 test_pass_now:
-    rdcsr r0 thread
+    rdcsr r0 thread_id
     \ bset r0 8
     std r0 test_reg_pass_addr
     halt
@@ -105,7 +105,7 @@ test_pass_wait:
 test_store_results:
     ldd r4 test_reg_progress_addr // all pending transactions are complete
     ldi r4 thread_results
-    rdcsr r1 thread
+    rdcsr r1 thread_id
     lsl r1 2
     \ add r4 r1
     st w r0 r4

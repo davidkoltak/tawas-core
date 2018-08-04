@@ -62,17 +62,30 @@ AU Opcodes: 15-bits
 
   00 : Not      (~b) -> a
   01 : Neg      (-b) -> a
-  02 : sxb     sign-extend(b, byte) -> a
-  03 : sxh     sign-extend(b, half) -> a
+  02 : sxb      sign-extend(b, byte) -> a
+  03 : sxh      sign-extend(b, half) -> a
+  04 : shl      (a << b) -> a
+  05 : shr      (a >> b) -> a
  ...
-  0F :
+  0F : rdcsr    (csr(b) -> a)
 
-(NO STORE CMDS 10-1F)
   10 :
- ...
-  1E : mtst     (a & b)
-  1F : Cmp      (a - b)
+ ... 
+  1B :
 
+(NO STORE CMDS 1C-1F)
+  1C :
+  1D : mtst     (a & b)
+  1E : Cmp      (a - b)
+  1F : wrcsr    (a -> csr(b))
+
+CSRs 
+  0: version
+  1: thread_id
+  2: thread_mask
+  3: ticks
+  7: scratch
+        
 0101 iii vvvvv aaa
 
   0 : bclr     (a & ~(1 << #v) -> a
@@ -81,7 +94,7 @@ AU Opcodes: 15-bits
   3 :
   4 : lsl      (a << #v) -> a
   5 : lsr      (a >> #v) -> a
-  6 : asr      (a >> #v) -> a
+  6 : asr      (a >>> #v) -> a
   7 :
 
 011 iiiiiiiii  aaa : cmpi a, [-256, 255]
@@ -172,6 +185,7 @@ std rx label
 br label
 br cond label
 skip cond
+skip 2 cond
 
 ld {b|h|w|post} rx ry #
 ld {b|h|w|post} rx ry ++/--#
@@ -205,14 +219,20 @@ tstz ra
 mv ra rb
 not ra rb
 neg ra rb
+sxb ra rb
+sxh ra rb
+shl ra rb
+shr ra rb
 
+wrcsr ra csr
+rdcsr ra csr
+ 
 bset ra bit
 bclr ra bit
 btst ra bit
 lsl ra bit
 lsr ra bit
 asr ra bit
-sx ra bit
 
 EXAMPLE CODE:
 

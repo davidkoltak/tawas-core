@@ -21,6 +21,8 @@ module tawas_fetch
     output [4:0] thread_decode,
     output [4:0] thread_store,
 
+    input [31:0] thread_mask,
+    
     input [7:0] au_flags,
     input [23:0] pc_rtn,
 
@@ -46,7 +48,7 @@ module tawas_fetch
 
     wire pc_update_en;
     wire [4:0] pc_update_sel;
-    wire [23:0] pc_update_addr;
+    wire [24:0] pc_update_addr;
 
     reg [24:0] pc[31:0];
 
@@ -64,6 +66,7 @@ module tawas_fetch
     //
 
     reg [31:0] thread_busy;
+    reg [31:0] thread_ready;
     reg [31:0] thread_done_mask;
     reg [31:0] s1_sel_mask;
     reg [4:0] s1_sel;
@@ -80,8 +83,10 @@ module tawas_fetch
         s1_sel = 5'd0;
         s1_en = 1'b0;
 
+        thread_ready = (~thread_busy) & thread_mask;
+        
         for (x2 = 0; x2 < 32; x2 = x2 + 1)
-            if (!s1_en && !thread_busy[x2])
+            if (!s1_en && thread_ready[x2])
             begin
                 s1_sel_mask = (32'd1 << x2);
                 s1_sel = x2;
@@ -210,8 +215,8 @@ module tawas_fetch
     // PC Update
     //
 
-    wire [24:0] pc_next = (op_serial && !s4_pc[24]) ? {1'b1, s4_pc}
-                                                    : {1'b0, s4_pc + 24'b1};
+    wire [24:0] pc_next = (op_serial && !s4_pc[24]) ? {1'b1, s4_pc[23:0]}
+                                                    : {1'b0, s4_pc[23:0] + 24'b1};
 
     assign pc_update_en = s4_en;
     assign pc_update_sel = s4_sel;

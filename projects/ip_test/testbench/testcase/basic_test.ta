@@ -36,12 +36,6 @@
 
 .alloc stack_0_bot w 127
 .data stack_0_top w 0xAAAAAAAA
-.alloc stack_1_bot w 127
-.data stack_1_top w 0xAAAAAAAA
-.alloc stack_2_bot w 127
-.data stack_2_top w 0xAAAAAAAA
-.alloc stack_3_bot w 127
-.data stack_3_top w 0xAAAAAAAA
 
 _t1_reset:
 _t2_reset:
@@ -83,6 +77,23 @@ _t0_reset:
     ldi r0 0x56
     ldi r1 0x12345
     st w r1 r0
-    ld h r2 r0 ++5
-    jmp dead_loop
+    \ ld h r2 r0 ++5
     
+    rdcsr r1 thread_id
+    \ mvi r2 1
+    shl r2 r1
+    or r0 r2
+    wrcsr r0 thread_mask
+    
+    jmp jump_target
+jump_return:
+    call call_target
+    nop
+    call test_pass_now
+    
+call_target:
+    inc r0
+    rtn
+
+jump_target:
+    jmp jump_return

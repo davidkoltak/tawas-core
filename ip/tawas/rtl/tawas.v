@@ -33,6 +33,8 @@ module tawas
     wire [4:0] thread_decode;
     wire [4:0] thread_store;
 
+    wire [31:0] thread_mask;
+
     wire [7:0] au_flags;
     wire [23:0] pc_rtn;
 
@@ -65,6 +67,8 @@ module tawas
         .thread_decode(thread_decode),
         .thread_store(thread_store),
 
+        .thread_mask(thread_mask),
+        
         .au_flags(au_flags),
         .pc_rtn(pc_rtn),
 
@@ -161,6 +165,9 @@ module tawas
         .reg5(reg5),
         .reg6(reg6),
         .reg7(reg7),
+        .thread_decode(thread_decode),
+
+        .thread_mask(thread_mask),
 
         .rf_imm_en(rf_imm_en),
         .rf_imm_reg(rf_imm_reg),
