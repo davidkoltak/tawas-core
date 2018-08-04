@@ -114,10 +114,10 @@ module tawas_fetch
     reg [4:0] s4_sel;
     reg [24:0] s4_pc;
 
+    wire s6_halt;
     reg s5_en;
     reg [4:0] s5_sel;
     
-    wire s6_halt;
     reg s6_en;
     reg [4:0] s6_sel;
 
@@ -160,8 +160,8 @@ module tawas_fetch
             s2_en <= s1_en;
             s3_en <= s2_en;
             s4_en <= s3_en;
-            s5_en <= s4_en;
-            s6_en <= s5_en && !s6_halt;
+            s5_en <= s4_en && !s5_halt;
+            s6_en <= s5_en;
         end
 
     //
@@ -176,20 +176,20 @@ module tawas_fetch
     wire op_high_au = (instr[31:30] == 2'b00);
 
     wire op_low_vld = !instr[31] || !instr[30] || !instr[29];
-    wire op_low_au = (instr[31:30] == 2'b00) || instr[31];
+    wire op_low_au = !instr[30] || (instr[31:28] == 4'b1100);
 
     wire op_serial = !instr[31];
     
     wire op_br_vld = (instr[31:29] == 3'b110);
 
     wire op_is_br = op_br_vld && !op_br[12];
-    wire op_br_iaddr = s4_pc + {{12{op_br[11]}}, op_br[11:0]};
+    wire [23:0] op_br_iaddr = s4_pc[23:0] + {{12{op_br[11]}}, op_br[11:0]};
 
     wire op_is_halt = op_br_vld && (op_br[12:0] == 13'd0);
 
     wire op_is_br_cond = op_br_vld && op_br[12];
     wire op_br_cond_true = (op_br[11]) ? !au_flags[op_br[10:8]] : au_flags[op_br[10:8]];
-    wire op_br_cond_iaddr = s4_pc + {{16{op_br[7]}}, op_br[7:0]};
+    wire [23:0] op_br_cond_iaddr = s4_pc[23:0] + {{16{op_br[7]}}, op_br[7:0]};
 
     wire op_is_rtn = op_br_vld && op_br[12] && (op_br[7:0] == 8'd1);
 
@@ -234,13 +234,8 @@ module tawas_fetch
     //
     // Retire thread
     //
-    
-    reg op_is_halt_d1;
-    
-    always @ (posedge clk)
-        op_is_halt_d1 <= op_is_halt;
         
-    assign s6_halt = op_is_halt_d1;
+    assign s5_halt = op_is_halt;
     assign thread_retire_en = s6_en;
     assign thread_retire = s6_sel;
                                                  
@@ -268,7 +263,7 @@ module tawas_fetch
     assign au_op = (do_high && op_high_au) ? op_high : op_low;
 
     assign ls_op_en = s4_en && 
-                    ((do_high && !op_high_au) || (do_log && !op_low_au) || op_is_call);
+                    ((do_high && !op_high_au) || (do_low && !op_low_au) || op_is_call);
     assign ls_op = (op_is_call) ? 15'h77F7 : 
                    (do_high && !op_high_au) ? op_high : op_low;
        

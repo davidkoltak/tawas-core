@@ -60,40 +60,65 @@ module tawas_regfile
     wire wb_en_any = (wb_au_en || wb_au_flags_en || wb_ptr_en || wb_store_en);
     reg wen;
     reg [4:0] waddr;
-    reg [255:0] wdata_calc;
-    reg [255:0] wdata;
-    reg [255:0] wmask_calc;
-    reg [255:0] wmask;
+    reg [263:0] wdata;
+    reg [263:0] wmask;
 
+    reg [263:0] wdata_au;
+    reg [263:0] wmask_au;
+    reg [263:0] wdata_flags;
+    reg [263:0] wmask_flags;
+    reg [263:0] wdata_ptr;
+    reg [263:0] wmask_ptr;
+    reg [263:0] wdata_store;
+    reg [263:0] wmask_store;
+    
     always @ *
-    begin
-        wdata_calc = 263'd0;
-        wmask_calc = 263'd0;
-
         if (wb_au_en)
         begin
-            wdata_calc = wdata_calc | ({232'd0, wb_au_data[31:0]} << (32 * wb_au_reg));
-            wmask_calc = wmask_calc | ({232'd0, 32'hFFFFFFFF} << (32 * wb_au_reg));
+            wdata_au = ({8'd0, {7{32'd0}}, wb_au_data[31:0]} << (32 * wb_au_reg));
+            wmask_au = ({8'd0, {7{32'd0}}, 32'hFFFFFFFF} << (32 * wb_au_reg));
+        end
+        else
+        begin
+            wdata_au = {8'd0, {8{32'd0}}};
+            wmask_au = {8'd0, {8{32'd0}}};
         end
 
+    always @ *
         if (wb_au_flags_en)
         begin
-            wdata_calc = wdata_calc | {wb_au_flags, 256'd0};
-            wmask_calc = wmask_calc | {8'hFF, 256'd0};
+            wdata_flags = {wb_au_flags, {8{32'd0}}};
+            wmask_flags = {8'hFF, {8{32'd0}}};
+        end
+        else
+        begin
+            wdata_flags = {8'd0, {8{32'd0}}};
+            wmask_flags = {8'd0, {8{32'd0}}};
         end
         
+    always @ *
         if (wb_ptr_en)
         begin
-            wdata_calc = wdata_calc | ({232'd0, wb_ptr_data[31:0]} << (32 * wb_ptr_reg));
-            wmask_calc = wmask_calc | ({232'd0, 32'hFFFFFFFF} << (32 * wb_ptr_reg));
+            wdata_ptr = ({8'd0, {7{32'd0}}, wb_ptr_data[31:0]} << (32 * wb_ptr_reg));
+            wmask_ptr = ({8'd0, {7{32'd0}}, 32'hFFFFFFFF} << (32 * wb_ptr_reg));
+        end
+        else
+        begin
+            wdata_ptr = {8'd0, {8{32'd0}}};
+            wmask_ptr = {8'd0, {8{32'd0}}};
         end
 
+    always @ *
         if (wb_store_en)
         begin
-            wdata_calc = wdata_calc | ({232'd0, wb_store_data[31:0]} << (32 * wb_store_reg));
-            wmask_calc = wmask_calc | ({232'd0, 32'hFFFFFFFF} << (32 * wb_store_reg));
+            wdata_store = ({8'd0, {7{32'd0}}, wb_store_data[31:0]} << (32 * wb_store_reg));
+            wmask_store = ({8'd0, {7{32'd0}}, 32'hFFFFFFFF} << (32 * wb_store_reg));
         end
-    end
+        else
+        begin
+            wdata_store = {8'd0, {8{32'd0}}};
+            wmask_store = {8'd0, {8{32'd0}}};
+        end
 
     always @ (posedge clk or posedge rst)
         if (rst) wen <= 1'b0;
@@ -103,8 +128,8 @@ module tawas_regfile
         if (wb_en_any)
         begin
             waddr <= wb_thread;
-            wdata <= wdata_calc;
-            wmask <= wmask_calc;
+            wdata <= wdata_au | wdata_flags | wdata_ptr | wdata_store;
+            wmask <= wmask_au | wmask_flags | wmask_ptr | wmask_store;
         end
 
     always @ (posedge clk)

@@ -938,7 +938,7 @@ for p in prog:
     if len(p) == 1:
         cmd0 = p[0].split()[0]
         if (cmd0 not in fw_cmds):
-            if (cmd0 in au_cmds):
+            if (cmd0 in au_cmds) or (cmd0 in ls_cmds):
                 p.append('br_nop @ n:0')
             else:
                 p.append('au_nop @ n:0')

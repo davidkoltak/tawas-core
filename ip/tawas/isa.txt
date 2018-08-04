@@ -65,28 +65,19 @@ AU Opcodes: 15-bits
   02 : sxb     sign-extend(b, byte) -> a
   03 : sxh     sign-extend(b, half) -> a
  ...
-  0F : RdCsr    CSR(b) -> a
+  0F :
 
+(NO STORE CMDS 10-1F)
   10 :
  ...
-  1E : Cmp      (a - b)
-  1F : WrCsr    b -> CSR(a)
-
-CSR
-  0 : version
-  1 : thread
-  2 : interrupt
-  3 : tick
-  4 :
-  5 :
-  6 :
-  7 : scratch
+  1E : mtst     (a & b)
+  1F : Cmp      (a - b)
 
 0101 iii vvvvv aaa
 
-  0 : btst     (a & (1 << #v)
-  1 : bclr     (a & ~(1 << #v) -> a
-  2 : bset     (a | (1 << #v) -> a
+  0 : bclr     (a & ~(1 << #v) -> a
+  1 : bset     (a | (1 << #v) -> a
+  2 :
   3 :
   4 : lsl      (a << #v) -> a
   5 : lsr      (a >> #v) -> a
