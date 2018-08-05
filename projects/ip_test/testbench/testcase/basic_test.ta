@@ -79,9 +79,15 @@ _t0_reset:
     st w r1 r0
     \ ld h r2 r0 ++5
     
+    wrcsr r1 scratch
+    \ rdcsr r4 scratch
+    
+    rdcsr r4 ticks
+    \ rdcsr r4 ticks
+
     rdcsr r1 thread_id
     \ mvi r2 1
-    shl r2 r1
+    lsl r2 r1
     or r0 r2
     wrcsr r0 thread_mask
     

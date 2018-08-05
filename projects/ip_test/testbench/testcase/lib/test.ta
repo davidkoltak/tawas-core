@@ -106,7 +106,7 @@ test_store_results:
     ldd r4 test_reg_progress_addr // all pending transactions are complete
     ldi r4 thread_results
     rdcsr r1 thread_id
-    lsl r1 2
+    blsl r1 2
     \ add r4 r1
     st w r0 r4
     tstz r1
@@ -136,9 +136,9 @@ wait_for_t3:
     or r4 r2
     \ or r4 r3
 
-    lsl r1 2
-    \ lsl r2 4
-    lsl r3 6
+    blsl r1 2
+    \ blsl r2 4
+    blsl r3 6
     \ or r0 r1
     or r0 r2
     \ or r0 r3

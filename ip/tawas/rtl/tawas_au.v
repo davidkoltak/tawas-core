@@ -85,7 +85,6 @@ module tawas_au
     reg rf_imm_en_d1;
     reg [2:0] rf_imm_reg_d1;
     reg [14:0] au_op_d1;
-    reg [2:0] csr_sel_d1;
     reg [4:0] csr_thread_id;
     
     always @ (posedge clk)
@@ -93,11 +92,19 @@ module tawas_au
         rf_imm_en_d1 <= rf_imm_en;
         rf_imm_reg_d1 <= rf_imm_reg;
         au_op_d1 <= au_op;
-        csr_sel_d1 <= au_op[5:3];
         csr_thread_id <= thread_decode;
     end
     
-
+    //
+    // Shifters
+    //
+    
+    wire [4:0] sh_bits = (au_op_d1[11]) ? au_op_d1[7:3] : reg_b[4:0];
+    
+    wire [31:0] sh_lsl = (reg_a[31:0] << sh_bits);
+    wire [31:0] sh_lsr = (reg_a[31:0] >> sh_bits);
+    wire [31:0] sh_asr = (reg_a[31:0] >>> sh_bits);
+    
     //
     // Perform operation (step 1)
     //
@@ -148,14 +155,17 @@ module tawas_au
             5'h01: au_result_d2 <= (~reg_b) + 33'd1;
             5'h02: au_result_d2 <= {{25{reg_b[7]}}, reg_b[7:0]};
             5'h03: au_result_d2 <= {{17{reg_b[15]}}, reg_b[15:0]};
-            5'h04: au_result_d2 <= (|reg_b[31:5]) ? 33'd0 : (reg_a << reg_b[4:0]);
-            5'h05: au_result_d2 <= (|reg_b[31:5]) ? 33'd0 : (reg_a >> reg_b[4:0]);
-            5'h0F:
-                case (csr_sel_d1)
+            5'h04: au_result_d2 <= (|reg_b[31:5]) ? 33'd0 : {sh_lsl[31], sh_lsl};
+            5'h05: au_result_d2 <= (|reg_b[31:5]) ? 33'd0 : {sh_lsr[31], sh_lsr};
+            5'h06: au_result_d2 <= (|reg_b[31:5]) ? {33{reg_a[31]}}
+                                                  : {sh_lsr[31], sh_asr};
+            5'h1B:
+                case (au_op_d1[5:3])
                 3'd0: au_result_d2 <= {1'b0, RTL_VERSION};
                 3'd1: au_result_d2 <= {28'd0, csr_thread_id};
                 3'd2: au_result_d2 <= {1'b0, csr_thread_mask};
                 3'd3: au_result_d2 <= {1'b0, csr_ticks};
+                3'd7: au_result_d2 <= {1'b0, csr_scratch};
                 default: au_result_d2 <= 33'd0;
                 endcase
             // NO STORE 1C-1F ...
@@ -164,7 +174,7 @@ module tawas_au
             5'h1F:
             begin
                 au_result_d2 <= 33'd0;
-                case (csr_sel_d1)
+                case (au_op_d1[5:3])
                 3'd2: csr_thread_mask <= reg_a[31:0];
                 3'd7: csr_scratch <= reg_a[31:0];
                 default: ;
@@ -180,9 +190,10 @@ module tawas_au
             3'h0: au_result_d2 <= {32'd0, reg_a[au_op_d1[7:3]]};
             3'h1: au_result_d2 <= (reg_a & ~(33'd1 << au_op_d1[7:3]));
             3'h2: au_result_d2 <= (reg_a | (33'd1 << au_op_d1[7:3]));
-            4'h4: au_result_d2 <= (reg_a << au_op_d1[7:3]);
-            4'h5: au_result_d2 <= (reg_a >> au_op_d1[7:3]);
-            4'h6: au_result_d2 <= ({reg_a[31], reg_a[31:0]} >>> au_op_d1[7:3]);
+            3'h3: au_result_d2 <= (reg_a ^ (33'd1 << au_op_d1[7:3]));
+            3'h4: au_result_d2 <= {sh_lsl[31], sh_lsl};
+            3'h5: au_result_d2 <= {sh_lsr[31], sh_lsr};
+            3'h6: au_result_d2 <= {sh_asr[31], sh_asr};
             default: au_result_d2 <= 33'd0;
             endcase
         end

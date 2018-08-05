@@ -395,8 +395,9 @@ fw_cmds = ['call', 'rtn', 'jmp', 'halt', 'ldi', 'ldd', 'std']
 br_cmds = ['br', 'jmpi', 'skip', 'skip2', 'br_nop']
 ls_cmds = ['ld', 'st', 'push', 'pop', 'xch']
 au_cmds = ['or', 'xor', 'cmp', 'mtst', 'add', 'sub', 'and', 'clr', 'tstz',
-           'bset', 'bclr', 'btst', 'rdcsr', 'wrcsr',
-           'lsl', 'lsr', 'asr', 'not', 'neg', 'sxb', 'sxh', 'shl', 'shr',
+           'bset', 'bclr', 'btst', 'bflip', 'blsl', 'blsr', 'basr', 
+           'rdcsr', 'wrcsr',
+           'lsl', 'lsr', 'asr', 'not', 'neg', 'sxb', 'sxh',
            'mv', 'mvi', 'cmpi', 'addi', 'inc', 'dec', 'nop', 'au_nop']
 
 def decode_reg(reg):
@@ -594,7 +595,9 @@ def decode_hw_op(pc, hw_op, upper):
                 print("ERROR: Invalid load/store address modifier: %s" % (hw_op))
                 exit(-1)
 
-    elif (opcode[0] == 'bset') or (opcode[0] == 'bclr') or (opcode[0] == 'btst'):
+    elif (opcode[0] == 'bset') or (opcode[0] == 'bclr') or (opcode[0] == 'btst') \
+         or (opcode[0] == 'bflip') or (opcode[0] == 'blsl') \
+         or (opcode[0] == 'blsr') or (opcode[0] == 'basr'):
         if len(opcode) != 3:
             print("ERROR: Bad opcode: %s" % (hw_op))
             exit(-1)
@@ -605,32 +608,13 @@ def decode_hw_op(pc, hw_op, upper):
             rtn |= (1 << 8)
         elif opcode[0] == 'bset':
             rtn |= (2 << 8)
-        reg = decode_reg(opcode[1])
-        rtn |= reg
-        if reg < 0:
-            print("ERROR: Bad register name: %s" % (hw_op))
-            exit(-1)
-        try:
-            value = int(opcode[2], 0)
-            if (value < 0) or (value > 31):
-                print("ERROR: Argument must be 0-31: %s" % (hw_op))
-                exit(-1)
-            rtn |= ((value & 0x0000001F) << 3)
-        except ValueError:
-            print("ERROR: Invalid immediate argument: %s" % (hw_op))
-            exit(-1)
-        return(rtn)
-
-    elif (opcode[0] == 'lsl') or (opcode[0] == 'lsr') or (opcode[0] == 'asr'):
-        if len(opcode) != 3:
-            print("ERROR: Bad opcode: %s" % (hw_op))
-            exit(-1)
-        rtn = 0x2800
-        if opcode[0] == 'lsl':
+        elif opcode[0] == 'bflip':
+            rtn |= (3 << 8)
+        elif opcode[0] == 'blsl':
             rtn |= (4 << 8)
-        elif opcode[0] == 'lsr':
+        elif opcode[0] == 'blsr':
             rtn |= (5 << 8)
-        elif opcode[0] == 'asr':
+        elif opcode[0] == 'basr':
             rtn |= (6 << 8)
         reg = decode_reg(opcode[1])
         rtn |= reg
@@ -717,13 +701,13 @@ def decode_hw_op(pc, hw_op, upper):
             print("ERROR: Bad csr name: %s" % (hw_op))
             exit(-1)
         if opcode[0] == 'rdcsr':
-            rtn = 0x23C0 | (csr << 3) | reg
+            rtn = 0x26C0 | (csr << 3) | reg
         else:
             rtn = 0x27C0 | (csr << 3) | reg
 
     elif (opcode[0] == 'not') or (opcode[0] == 'neg') or (opcode[0] == 'cmp') or \
          (opcode[0] == 'sxb') or (opcode[0] == 'sxh') or (opcode[0] == 'mtst') or \
-         (opcode[0] == 'shl') or (opcode[0] == 'shr'):
+         (opcode[0] == 'lsl') or (opcode[0] == 'lsr') or (opcode[0] == 'asr'):
         if opcode[0] == 'not':
             rtn = 0x2000
         elif opcode[0] == 'neg':
@@ -732,10 +716,12 @@ def decode_hw_op(pc, hw_op, upper):
             rtn = 0x2080
         elif opcode[0] == 'sxh':
             rtn = 0x20C0
-        elif opcode[0] == 'shl':
+        elif opcode[0] == 'lsl':
             rtn = 0x2100
-        elif opcode[0] == 'shr':
+        elif opcode[0] == 'lsr':
             rtn = 0x2140
+        elif opcode[0] == 'asr':
+            rtn = 0x2180
         elif opcode[0] == 'mtst':
             rtn = 0x2740
         elif opcode[0] == 'cmp':

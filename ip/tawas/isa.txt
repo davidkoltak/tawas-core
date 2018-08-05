@@ -64,14 +64,15 @@ AU Opcodes: 15-bits
   01 : Neg      (-b) -> a
   02 : sxb      sign-extend(b, byte) -> a
   03 : sxh      sign-extend(b, half) -> a
-  04 : shl      (a << b) -> a
-  05 : shr      (a >> b) -> a
+  04 : lsl      (a << b) -> a
+  05 : lsr      (a >> b) -> a
+  06 : asr      (a >>> b) -> a
  ...
-  0F : rdcsr    (csr(b) -> a)
+  0F :
 
   10 :
  ... 
-  1B :
+  1B : rdcsr    (csr(b) -> a)
 
 (NO STORE CMDS 1C-1F)
   1C :
@@ -88,13 +89,13 @@ CSRs
         
 0101 iii vvvvv aaa
 
-  0 : bclr     (a & ~(1 << #v) -> a
-  1 : bset     (a | (1 << #v) -> a
-  2 :
-  3 :
-  4 : lsl      (a << #v) -> a
-  5 : lsr      (a >> #v) -> a
-  6 : asr      (a >>> #v) -> a
+  0 : btst     (a & ~(1 << #v) -> a
+  1 : bclr     (a & ~(1 << #v) -> a
+  2 : bset     (a | (1 << #v) -> a
+  3 : bflip    (a ^ (1 << #v) -> a
+  4 : blsl     (a << #v) -> a
+  5 : blsr     (a >> #v) -> a
+  6 : basr     (a >>> #v) -> a
   7 :
 
 011 iiiiiiiii  aaa : cmpi a, [-256, 255]
@@ -175,54 +176,56 @@ ASM Instructions
 
 jmp label
 call label
-rtn
-jmpi
+jmpi (NOTE: Use R7 as addr, this is a half word op)
+rtn  (NOTE: Implemented as full word op -> jmpi & pop r7)
 
-ldi imm25
+ldi rx imm25
 ldd rx label
 std rx label
 
 br label
 br cond label
 skip cond
-skip 2 cond
+skip2 cond
 
-ld {b|h|w|post} rx ry #
-ld {b|h|w|post} rx ry ++/--#
-st {b|h|w|post} rx ry #
-st {b|h|w|post} rx ry ++/--#
+ld {b|h|w|xch} rx ry #
+ld {b|h|w|xch} rx ry ++/--#
+st {b|h|w|xch} rx ry #
+st {b|h|w|xch} rx ry ++/--#
 
 push rx
 pop rx
 
 mvi ra imm10
 cmpi ra imm9
+tstz ra
 addi ra imm10
 inc ra
 dec ra
 
-add rc ra rb
-sub rc ra rb
+mv ra rb
 or rc ra rb
 and rc ra rb
 xor rc ra rb
+clr ra
+add rc ra rb
+sub rc ra rb
 
 add ra rb
 sub ra rb
-cmp ra rb
 or ra rb
 and ra rb
 xor ra rb
-clr ra
-tstz ra
 
-mv ra rb
 not ra rb
 neg ra rb
 sxb ra rb
 sxh ra rb
-shl ra rb
-shr ra rb
+lsl ra rb
+lsr ra rb
+asr ra rb
+mtst ra rb
+cmp ra rb
 
 wrcsr ra csr
 rdcsr ra csr
@@ -230,9 +233,10 @@ rdcsr ra csr
 bset ra bit
 bclr ra bit
 btst ra bit
-lsl ra bit
-lsr ra bit
-asr ra bit
+bflip ra bit
+blsl ra bit
+blsr ra bit
+basr ra bit
 
 EXAMPLE CODE:
 
