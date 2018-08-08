@@ -84,12 +84,6 @@ _t0_reset:
     
     rdcsr r4 ticks
     \ rdcsr r4 ticks
-
-    rdcsr r1 thread_id
-    \ mvi r2 1
-    lsl r2 r1
-    or r0 r2
-    wrcsr r0 thread_mask
     
     jmp jump_target
 jump_return:
@@ -102,4 +96,6 @@ call_target:
     rtn
 
 jump_target:
+    std r1 0xfffe0000
+    ldd r5 0xfffe0000
     jmp jump_return

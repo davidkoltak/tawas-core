@@ -238,11 +238,40 @@ module tawas
         .wb_store_data(wb_store_data)
     );
     
+    wire rcn_load_en;
+    wire [4:0] rcn_load_thread;
+    wire [2:0] rcn_load_reg;
+    wire [31:0] rcn_load_data;
+
+tawas_rcn tawas_rcn
+(
+    .clk(clk),
+    .rst(rst),
+
+    .thread_store(thread_store),
+    .rcn_stall(rcn_stall),
+
+    .rcn_cs(rcn_cs),
+    .rcn_xch(rcn_xch),
+    .rcn_wr(rcn_wr),
+    .rcn_addr(rcn_addr),
+    .rcn_wbreg(rcn_wbreg),
+    .rcn_mask(rcn_mask),
+    .rcn_wdata(rcn_wdata),
+
+    .rcn_load_en(rcn_load_en),
+    .rcn_load_thread(rcn_load_thread),
+    .rcn_load_reg(rcn_load_reg),
+    .rcn_load_data(rcn_load_data),
+
+    .rcn_in(rcn_in),
+    .rcn_out(rcn_out)
+);
+    
     //
-    // NO RCN YET - IN TESTING PHASE
+    // NO RCN LOAD YET
     //
     
     assign wb_thread = thread_store;
-    assign rcn_out = 69'd0;
     
 endmodule

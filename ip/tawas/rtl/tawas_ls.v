@@ -194,7 +194,11 @@ module tawas_ls
             daddr <= bus_addr;
             dmask <= wmask;
             dout <= wdata;
-            
+        end
+    
+    always @ (posedge clk)
+        if (rcn_bus_en)
+        begin
             rcn_xch <= xchange;
             rcn_wr <= wren;
             rcn_addr <= bus_addr;
