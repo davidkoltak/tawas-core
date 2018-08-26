@@ -7,7 +7,7 @@
 // - Notes on instruction set and machine instruction binary format
 //
 
-Symetrical Multi-threaded - 
+Symetrical Multi-threaded -
  - One instruction in pipeline per thread at a time, multiple threads active
  - Simple priority selecting next thread
  - Avoid interlocks (ld->st/au, or au->flags->br)
@@ -21,7 +21,7 @@ Symetrical Multi-threaded -
 Each thread has 8 x 32-bit registers.  The r7 register is used as call/rtn link,
 and r6 is inferred as the stack pointer for all push/pop insructions.
 
-Dedicated Instruction and Fast Data busses.  Connects to slower system space 
+Dedicated Instruction and Fast Data busses.  Connects to slower system space
 through an "RCN Bus", a 32-bit ring style multi-master bus.
 
 32-bit instruction words formated as follows...
@@ -71,7 +71,7 @@ AU Opcodes: 15-bits
   0F :
 
   10 :
- ... 
+ ...
   1B : rdcsr    (csr(b) -> a)
 
 (NO STORE CMDS 1C-1F)
@@ -80,13 +80,13 @@ AU Opcodes: 15-bits
   1E : Cmp      (a - b)
   1F : wrcsr    (a -> csr(b))
 
-CSRs 
+CSRs
   0: version
   1: thread_id
   2: thread_mask
   3: ticks
   7: scratch
-        
+
 0101 iii vvvvv aaa
 
   0 : btst     (a & ~(1 << #v) -> a
@@ -229,7 +229,7 @@ cmp ra rb
 
 wrcsr ra csr
 rdcsr ra csr
- 
+
 bset ra bit
 bclr ra bit
 btst ra bit

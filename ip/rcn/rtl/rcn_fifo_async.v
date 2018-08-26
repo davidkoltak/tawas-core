@@ -20,16 +20,17 @@ module rcn_fifo_async
     input pop,
     output empty
 );
+    parameter DEPTH = 16; // max 64 (can hold DEPTH-1 before full)
 
     reg [1:0] cross_in;
-    reg [3:0] head_in;
-    reg [3:0] head_snapshot;
-    reg [3:0] tail_in;
+    reg [5:0] head_in;
+    reg [5:0] head_snapshot;
+    reg [5:0] tail_in;
 
     reg [1:0] cross_out;
-    reg [3:0] head_out;
-    reg [3:0] tail_out;
-    reg [3:0] tail_snapshot;
+    reg [5:0] head_out;
+    reg [5:0] tail_out;
+    reg [5:0] tail_snapshot;
 
     always @ (posedge clk_in)
         cross_in <= cross_out;
@@ -45,15 +46,15 @@ module rcn_fifo_async
             default: cross_out <= 2'b00;
             endcase
 
-    wire [3:0] head_in_next = head_in + 4'd1;
+    wire [5:0] head_in_next = (head_in == (DEPTH - 1)) ? 6'd0 : head_in + 6'd1;
     wire fifo_full = (head_in_next == tail_in);
 
     always @ (posedge clk_in or posedge rst_in)
         if (rst_in)
         begin
-            head_in <= 4'd0;
-            head_snapshot <= 4'd0;
-            tail_in <= 4'd0;
+            head_in <= 6'd0;
+            head_snapshot <= 6'd0;
+            tail_in <= 6'd0;
         end
         else
         begin
@@ -66,15 +67,15 @@ module rcn_fifo_async
             endcase
         end
 
-    wire [3:0] tail_out_next = tail_out + 4'd1;
+    wire [5:0] tail_out_next = (tail_out == (DEPTH - 1)) ? 6'd0 : tail_out + 6'd1;
     wire fifo_empty = (tail_out == head_out);
 
     always @ (posedge clk_out or posedge rst_in)
         if (rst_in)
         begin
-            head_out <= 4'd0;
-            tail_out <= 4'd0;
-            tail_snapshot <= 4'd0;
+            head_out <= 6'd0;
+            tail_out <= 6'd0;
+            tail_snapshot <= 6'd0;
         end
         else
         begin
@@ -87,7 +88,7 @@ module rcn_fifo_async
             endcase
         end
 
-    reg [67:0] fifo[15:0];
+    reg [67:0] fifo[(DEPTH - 1):0];
 
     always @ (posedge clk_in)
         if (push)

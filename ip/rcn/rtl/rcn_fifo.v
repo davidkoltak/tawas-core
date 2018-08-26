@@ -19,37 +19,38 @@ module rcn_fifo
     input pop,
     output empty
 );
+    parameter DEPTH = 4; // max 32
 
-    reg [1:0] head;
-    reg [1:0] tail;
-    reg [2:0] cnt;
-    
-    wire fifo_full = cnt[2];
-    wire fifo_empty = (cnt == 3'd0);
+    reg [4:0] head;
+    reg [4:0] tail;
+    reg [5:0] cnt;
+
+    wire fifo_full = (cnt == DEPTH);
+    wire fifo_empty = (cnt == 0);
 
     always @ (posedge clk or posedge rst)
         if (rst)
         begin
-            head <= 2'd0;
-            tail <= 2'd0;
-            cnt <= 3'd0;
+            head <= 5'd0;
+            tail <= 5'd0;
+            cnt <= 6'd0;
         end
         else
         begin
             if (push)
-                head <= head + 2'd1;
+                head <= (head == (DEPTH - 1)) ? 5'd0 : head + 5'd1;
 
             if (pop)
-                tail <= tail + 2'd1;
-            
+                tail <= (tail == (DEPTH - 1)) ? 5'd0 : tail + 5'd1;
+
             case ({push, pop})
-            2'b10: cnt <= cnt + 3'd1;
-            2'b01: cnt <= cnt - 3'd1;
+            2'b10: cnt <= cnt + 6'd1;
+            2'b01: cnt <= cnt - 6'd1;
             default: ;
             endcase
         end
 
-    reg [67:0] fifo[3:0];
+    reg [67:0] fifo[(DEPTH - 1):0];
 
     always @ (posedge clk)
         if (push)

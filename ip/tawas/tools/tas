@@ -167,6 +167,8 @@ for filename in infiles:
                 print("ERROR: Redefined label '%s' @ %s:%d" % (label, filename, linenum))
                 exit(-1)
             plabels[label] = pc
+            if label[0] == '_':
+                glabels.append(label)
             continue
 
         if line[0] == '.':
@@ -395,7 +397,7 @@ fw_cmds = ['call', 'rtn', 'jmp', 'halt', 'ldi', 'ldd', 'std']
 br_cmds = ['br', 'jmpi', 'skip', 'skip2', 'br_nop']
 ls_cmds = ['ld', 'st', 'push', 'pop', 'xch']
 au_cmds = ['or', 'xor', 'cmp', 'mtst', 'add', 'sub', 'and', 'clr', 'tstz',
-           'bset', 'bclr', 'btst', 'bflip', 'blsl', 'blsr', 'basr', 
+           'bset', 'bclr', 'btst', 'bflip', 'blsl', 'blsr', 'basr',
            'rdcsr', 'wrcsr',
            'lsl', 'lsr', 'asr', 'not', 'neg', 'sxb', 'sxh',
            'mv', 'mvi', 'cmpi', 'addi', 'inc', 'dec', 'nop', 'au_nop']

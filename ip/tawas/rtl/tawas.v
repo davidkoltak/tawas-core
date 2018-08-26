@@ -46,13 +46,13 @@ module tawas
     wire ls_dir_store;
     wire [2:0] ls_dir_reg;
     wire [31:0] ls_dir_addr;
-    
+
     wire au_op_en;
     wire [14:0] au_op;
 
     wire ls_op_en;
     wire [14:0] ls_op;
-        
+
     tawas_fetch tawas_fetch
     (
         .clk(clk),
@@ -68,7 +68,7 @@ module tawas
         .thread_store(thread_store),
 
         .thread_mask(thread_mask),
-        
+
         .au_flags(au_flags),
         .pc_rtn(pc_rtn),
 
@@ -80,14 +80,14 @@ module tawas
         .ls_dir_store(ls_dir_store),
         .ls_dir_reg(ls_dir_reg),
         .ls_dir_addr(ls_dir_addr),
-        
+
         .au_op_en(au_op_en),
         .au_op(au_op),
 
         .ls_op_en(ls_op_en),
         .ls_op(ls_op)
     );
-    
+
     wire [31:0] reg0;
     wire [31:0] reg1;
     wire [31:0] reg2;
@@ -96,7 +96,7 @@ module tawas
     wire [31:0] reg5;
     wire [31:0] reg6;
     wire [31:0] reg7;
-    
+
     assign pc_rtn = reg7[23:0];
 
     wire [4:0] wb_thread;
@@ -115,7 +115,7 @@ module tawas
     wire wb_store_en;
     wire [2:0] wb_store_reg;
     wire [31:0] wb_store_data;
-        
+
     tawas_regfile tawas_regfile
     (
         .clk(clk),
@@ -156,7 +156,7 @@ module tawas
     (
         .clk(clk),
         .rst(rst),
-        
+
         .reg0(reg0),
         .reg1(reg1),
         .reg2(reg2),
@@ -175,7 +175,7 @@ module tawas
 
         .au_op_en(au_op_en),
         .au_op(au_op),
-        
+
         .wb_au_en(wb_au_en),
         .wb_au_reg(wb_au_reg),
         .wb_au_data(wb_au_data),
@@ -191,7 +191,7 @@ module tawas
     wire [2:0] rcn_wbreg;
     wire [3:0] rcn_mask;
     wire [31:0] rcn_wdata;
-        
+
     tawas_ls tawas_ls
     (
         .clk(clk),
@@ -205,12 +205,12 @@ module tawas
         .reg5(reg5),
         .reg6(reg6),
         .reg7(reg7),
-        
+
         .ls_dir_en(ls_dir_en),
         .ls_dir_store(ls_dir_store),
         .ls_dir_reg(ls_dir_reg),
         .ls_dir_addr(ls_dir_addr),
-        
+
         .ls_op_en(ls_op_en),
         .ls_op(ls_op),
 
@@ -237,7 +237,7 @@ module tawas
         .wb_store_reg(wb_store_reg),
         .wb_store_data(wb_store_data)
     );
-    
+
     wire rcn_load_en;
     wire [4:0] rcn_load_thread;
     wire [2:0] rcn_load_reg;
@@ -267,11 +267,11 @@ tawas_rcn tawas_rcn
     .rcn_in(rcn_in),
     .rcn_out(rcn_out)
 );
-    
+
     //
     // NO RCN LOAD YET
     //
-    
+
     assign wb_thread = thread_store;
-    
+
 endmodule

@@ -2,10 +2,10 @@
 /* (c) Copyright 2018 David M. Koltak, all rights reserved. */
 
 /*
- * rcn bus master interface with 4 entry request buffer.
+ * rcn bus master interface with 8 entry request buffer.
  *
  * rcn bus vector definition =
- *   {valid, pending, id[3:0], seq[1:0], we[3:0], addr[19:0], data[31:0]}
+ *   {valid, pending, wr, id[5:0], mask[3:0], addr[23:2], seq[1:0], data[31:0]}
  */
 
 module rcn_master_buf
@@ -35,43 +35,43 @@ module rcn_master_buf
     output [31:0] rsp_data
 );
     parameter MASTER_ID = 0;
-
-    reg [60:0] req_buf[3:0];
-    reg [1:0] write_ptr;
-    reg [1:0] read_ptr;
-    reg [2:0] req_cnt;
-    assign busy = !req_cnt[2];
-    wire req_push = cs && !req_cnt[2];
+    parameter DEPTH = 8; // max 64
+    
+    reg [60:0] req_buf[(DEPTH - 1):0];
+    reg [5:0] write_ptr;
+    reg [5:0] read_ptr;
+    reg [6:0] req_cnt;
+    assign busy = (req_cnt == DEPTH);
+    wire req_push = cs && (req_cnt != DEPTH);
     wire req_pop;
 
     always @ (posedge clk or posedge rst)
         if (rst)
-            req_cnt <= 3'd0;
+            req_cnt <= 7'd0;
         else
             case ({req_push, req_pop})
-            2'b10: req_cnt <= req_cnt + 3'd1;
-            2'd01: req_cnt <= req_cnt - 3'd1;
+            2'b10: req_cnt <= req_cnt + 7'd1;
+            2'd01: req_cnt <= req_cnt - 7'd1;
             default: ;
             endcase
 
     always @ (posedge clk or posedge rst)
         if (rst)
-            write_ptr <= 2'd0;
+            write_ptr <= 6'd0;
         else if (req_push)
-            write_ptr <= write_ptr + 2'd1;
+            write_ptr <= (write_ptr == (DEPTH - 1)) ? 6'd0 : write_ptr + 6'd1;
 
     always @ (posedge clk or posedge rst)
         if (rst)
-            read_ptr <= 2'd0;
+            read_ptr <= 6'd0;
         else if (req_pop)
-            read_ptr <= read_ptr + 2'd1;
-
+            read_ptr <= (read_ptr == (DEPTH - 1)) ? 6'd0 : read_ptr + 6'd1;
 
     always @ (posedge clk)
         if (req_push)
             req_buf[write_ptr] <= {seq, wr, mask[3:0], addr[23:2], wdata[31:0]};
 
-  wire req_vld = (req_cnt[2:0] != 3'd0);
+  wire req_vld = (req_cnt != 0);
   wire [60:0] req = req_buf[read_ptr][60:0];
   wire req_busy;
 

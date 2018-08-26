@@ -1,76 +1,8 @@
 
 #include <platform.h>
 
-.global _t0_reset
-.global _t1_reset
-.global _t2_reset
-.global _t3_reset
-.global _t4_reset
-.global _t5_reset
-.global _t6_reset
-.global _t7_reset
-.global _t8_reset
-.global _t9_reset
-.global _t10_reset
-.global _t11_reset
-.global _t12_reset
-.global _t13_reset
-.global _t14_reset
-.global _t15_reset
-.global _t16_reset
-.global _t17_reset
-.global _t18_reset
-.global _t19_reset
-.global _t20_reset
-.global _t21_reset
-.global _t22_reset
-.global _t23_reset
-.global _t24_reset
-.global _t25_reset
-.global _t26_reset
-.global _t27_reset
-.global _t28_reset
-.global _t29_reset
-.global _t30_reset
-.global _t31_reset
-
 .alloc stack_0_bot w 127
 .data stack_0_top w 0xAAAAAAAA
-
-_t1_reset:
-_t2_reset:
-_t3_reset:
-_t4_reset:
-_t5_reset:
-_t6_reset:
-_t7_reset:
-_t8_reset:
-_t9_reset:
-_t10_reset:
-_t11_reset:
-_t12_reset:
-_t13_reset:
-_t14_reset:
-_t15_reset:
-_t16_reset:
-_t17_reset:
-_t18_reset:
-_t19_reset:
-_t20_reset:
-_t21_reset:
-_t22_reset:
-_t23_reset:
-_t24_reset:
-_t25_reset:
-_t26_reset:
-_t27_reset:
-_t28_reset:
-_t29_reset:
-_t30_reset:
-_t31_reset:
-dead_loop:
-    halt
-    jmp dead_loop
 
 _t0_reset:
     ldi sp stack_0_top
@@ -78,19 +10,19 @@ _t0_reset:
     ldi r1 0x12345
     st w r1 r0
     \ ld h r2 r0 ++5
-    
+
     wrcsr r1 scratch
     \ rdcsr r4 scratch
-    
+
     rdcsr r4 ticks
     \ rdcsr r4 ticks
-    
+
     jmp jump_target
 jump_return:
     call call_target
     nop
     call test_pass_now
-    
+
 call_target:
     inc r0
     rtn
