@@ -31,18 +31,18 @@ module tawas_rcn
     input [68:0] rcn_in,
     output [68:0] rcn_out
 );
-    parameter MASTER_ID = 0;
+    parameter MASTER_GROUP_8 = 0;
 
-    wire [1:0] seq = 2'd3;
+    wire [4:0] seq = thread_store;
     wire issue;
-    wire [1:0] iss_seq;
+    wire [4:0] iss_seq;
     wire rdone;
     wire wdone;
-    wire [1:0] rsp_seq;
+    wire [4:0] rsp_seq;
     wire [3:0] rsp_mask;
     wire [31:0] rsp_data;
 
-    rcn_master_buf #(.MASTER_ID(MASTER_ID)) rcn_master
+    tawas_rcn_master_buf #(.MASTER_GROUP_8(MASTER_GROUP_8)) rcn_master
     (
         .rst(rst),
         .clk(clk),
@@ -70,17 +70,10 @@ module tawas_rcn
     );
 
     //
-    // Counting pending transactions
-    //
-
-    //
-    // Core thread stalls
-    //
-
-    //
     // Read retire
     //
 
+    reg [31:0] wb_data
     wire [31:0] rsp_data_adj = (rsp_mask[3:0] == 4'b1111) ? rsp_data[31:0] :
                                (rsp_mask[3:2] == 2'b11) ? {16'd0, rsp_data[31:16]} :
                                (rsp_mask[1:0] == 2'b11) ? {16'd0, rsp_data[15:0]} :
@@ -96,4 +89,32 @@ module tawas_rcn
         rcn_load_data <= rsp_data_adj;
     end
 
+    //
+    // Count pending writes and stall when 6 are pending
+    //
+    
+    wire [31:0] wr_issue = (rcn_cs && rcn_wr) ? (1 << thread_store) : 32'd0;
+    wire [31:0] wr_done = (wdone) ? (1 << rsp_seq) : 32'd0;
+    reg [2:0] wr_pending[31:0];
+    reg [31:0] wr_stall;
+    integer pwc;
+    
+    always @ (posedge clk or posedge rst)
+        if (rst)
+        begin
+            wr_stall <= 32'd0;
+            for (pwc = 0; pwc < 32; pwc = pwc + 1)
+                wr_pending[pwc] <= 3'd0;
+        end
+        else
+            for (pwc = 0; pwc < 32; pwc = pwc + 1)
+            begin
+                case (wr_issue[pwc], wr_done[pwc])
+                2'b10: wr_pending[pwc] <= wr_pending[pwc] + 3'd1;
+                2'b01: wr_pending[pwc] <= wr_pending[pwc] - 3'd1;
+                default: ;
+                endcase
+                
+                wr_stall[pwc] <= (wr_pending[pwc][2:1] == 2'b11);
+            end
 endmodule

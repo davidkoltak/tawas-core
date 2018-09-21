@@ -2,5 +2,7 @@ tawas_au.v
 tawas_fetch.v
 tawas_ls.v
 tawas_rcn.v
+tawas_rcn_master.v
+tawas_rcn_master_buf.v
 tawas_regfile.v
 tawas.v
