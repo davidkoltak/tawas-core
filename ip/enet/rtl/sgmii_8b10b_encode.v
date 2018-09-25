@@ -23,27 +23,44 @@
 module sgmii_8b10b_encode
 (
     input clk,
+    input rst,
     
     input [7:0] eight_bit,
-    input current_rd,
     input is_k,
     
-    output reg [9:0] ten_bit
+    output [9:0] ten_bit
 );
 
+    reg [9:0] ov;
     reg [9:0] dx_crd_neg;
     reg [9:0] dx_crd_pos;
     reg [9:0] kx_crd_neg;
     reg [9:0] kx_crd_pos;
     
+    reg [3:0] current_rd;
+    wire [3:0] bit_cnt;
+    
+    assign bit_cnt = {3'd0, ov[9]} + {3'd0, ov[8]} + {3'd0, ov[7]} + 
+                     {3'd0, ov[6]} + {3'd0, ov[5]} + {3'd0, ov[4]} + 
+                     {3'd0, ov[3]} + {3'd0, ov[2]} + {3'd0, ov[1]} + 
+                     {3'd0, ov[0]};
+        
+    always @ (posedge clk or posedge rst)
+        if (rst)
+            current_rd <= 4'd0;
+        else
+            current_rd <= current_rd + (bit_cnt - 4'd5);
+
     always @ (posedge clk)
-        case (is_k, current_rd)
-        2'b00: ten_bit <= dx_crd_neg;
-        2'b01: ten_bit <= dx_crd_pos;
-        2'b10: ten_bit <= kx_crd_neg;
-        default: ten_bit <= kx_crd_pos;
+        case ({is_k, current_rd[3]})
+        2'b01: ov <= dx_crd_neg;
+        2'b00: ov <= dx_crd_pos;
+        2'b11: ov <= kx_crd_neg;
+        default: ov <= kx_crd_pos;
         endcase
 
+    assign ten_bit = ov;
+    
     always @ (posedge clk)
         case (eight_bit)
         8'h00: dx_crd_neg <= 10'b1001110100;
