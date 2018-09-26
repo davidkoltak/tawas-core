@@ -2,7 +2,8 @@
 /* (c) Copyright 2018 David M. Koltak, all rights reserved. */
 
 /*
- * Convert GMII bus to Ten Bit Interface (TBI) used in SGMII
+ * Convert GMII bus to Ten Bit Interface (TBI) used in SGMII.
+ * The TBI interface connects to a SERDES transceiver.
  */
 
 module sgmii_tbi
@@ -73,4 +74,62 @@ module sgmii_tbi
         config_reg <= sgmii_config;
     end
 
+    //
+    // Convert Rx SGMII to GMII and buffer non-idle cycles
+    //
+    
+    sgmii_rx_buf sgmii_rx_buf
+    (
+        .clk_125mhz(clk_125mhz),
+        .rst(rst),
+
+        .tbi_rx_rdy(tbi_rx_rdy),
+        .tbi_rx_clk(tbi_rx_clk),
+
+        .sgmii_autoneg_done(sgmii_autoneg_done),
+        .rx_byte(rx_byte),
+        .rx_is_k(rx_is_k),
+        
+        .gmii_rxd(gmii_rxd),
+        .gmii_rx_dv(gmii_rx_dv),
+        .gmii_rx_err(gmii_rx_err)
+    );
+
+    //
+    // Convert Tx GMII to SGMII and send autoneg cycles based on Rx
+    //
+    
+    wire [7:0] tx_byte;
+    wire tx_is_k;
+    
+    sgmii_tx_buf sgmii_tx_buf
+    (
+        .clk_125mhz(clk_125mhz),
+        .rst(rst),
+
+        .tbi_tx_rdy(tbi_tx_rdy),
+        .tbi_tx_clk(tbi_tx_clk),
+
+        .sgmii_autoneg_start(sgmii_autoneg_start),
+        .sgmii_autoneg_done(sgmii_autoneg_done),
+        
+        .gmii_txd(gmii_txd),
+        .gmii_tx_en(gmii_tx_en),
+        .gmii_tx_err(gmii_tx_err),
+        
+        .tx_byte(tx_byte),
+        .tx_is_k(tx_is_k)
+    );
+    
+    sgmii_8b10b_encode sgmii_8b10b_encode
+    (
+        .clk(tbi_tx_clk),
+        .rst(!tbi_tx_rdy),
+        
+        .eight_bit(tx_byte),
+        .is_k(tx_is_k),
+        
+        .ten_bit(tbi_tx)
+    );
+    
 endmodule
