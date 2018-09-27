@@ -57,22 +57,53 @@ module sgmii_rx_buf
         end
             
     //
-    // RX buffer write
+    // RX buffer
     //
+    
+    wire [8:0] fifo_in = {pkt_err, rx_byte};
+    wire fifo_push = !rx_is_k && pkt_vld;
+    wire [8:0] fifo_out;
+    reg fifo_pop;
+    wire fifo_empty;
     
     sgmii_fifo sgmii_fifo
     (
-        .rst_in(sgmii_autoneg_done),
+        .rst_in(!sgmii_autoneg_done),
         .clk_in(tbi_rx_clk),
         .clk_out(clk_125mhz),
 
-        .fifo_in({pkt_err, rx_byte}),
-        .push(),
+        .fifo_in(fifo_in),
+        .push(fifo_push),
         .full(),
 
-        .fifo_out(),
-        .pop(),
-        .empty()
+        .fifo_out(fifo_out),
+        .pop(fifo_pop),
+        .empty(fifo_empty)
     );
-        
+    
+    //
+    // Fifo hystoresis
+    //
+    
+    reg [2:0] cycle_cnt;
+    
+    always @ (posedge clk_125mhz)
+        fifo_pop <= &cycle_cnt[2];
+    
+    always @ (posedge tbi_rx_clk or negedge sgmii_autoneg_done)
+        if (!sgmii_autoneg_done)
+            cycle_cnt <= 3'd0;
+        else if (fifo_empty)
+            cycle_cnt <= 3'd0;
+        else if (fifo_push && !fifo_pop)
+            cycle_cnt <= cycle_cnt + 3'd1;
+    
+    //
+    // GMII out
+    //
+    
+    assign gmii_rxd = (fifo_pop) ? fifo_out[7:0] : 8'd0;
+    assign gmii_rx_dv = fifo_pop;
+    assign gmii_rx_err = (fifo_pop) ? fifo_out[8] : 1'b0;
+    
 endmodule

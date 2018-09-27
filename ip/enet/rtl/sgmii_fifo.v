@@ -2,7 +2,7 @@
 /* (c) Copyright 2018 David M. Koltak, all rights reserved. */
 
 /*
- * rcn transaction asynchronous fifo.
+ * S/GMII cycle asynchronous fifo.
  *
  */
 
@@ -27,6 +27,7 @@ module sgmii_fifo
     reg [5:0] head_snapshot;
     reg [5:0] tail_in;
 
+    reg [1:0] cross_in_sync;
     reg [1:0] cross_out;
     reg [5:0] head_out;
     reg [5:0] tail_out;
@@ -37,14 +38,20 @@ module sgmii_fifo
 
     always @ (posedge clk_out or posedge rst_in)
         if (rst_in)
+        begin
             cross_out <= 2'b00;
+            cross_in_sync <= 2'b00;
+        end
         else
-            case (cross_in)
+        begin
+            cross_in_sync <= cross_in;
+            case (cross_in_sync)
             2'b00: cross_out <= 2'b01;
             2'b01: cross_out <= 2'b11;
             2'b11: cross_out <= 2'b10;
             default: cross_out <= 2'b00;
             endcase
+        end
 
     wire [5:0] head_in_next = (head_in == (DEPTH - 1)) ? 6'd0 : head_in + 6'd1;
     wire fifo_full = (head_in_next == tail_in);
@@ -58,7 +65,7 @@ module sgmii_fifo
         end
         else
         begin
-            if (push)
+            if (push && !fifo_full)
                 head_in <= head_in_next;
 
             case (cross_in)
@@ -79,7 +86,7 @@ module sgmii_fifo
         end
         else
         begin
-            if (pop)
+            if (pop && !fifo_empty)
                 tail_out <= tail_out_next;
 
             case (cross_out)

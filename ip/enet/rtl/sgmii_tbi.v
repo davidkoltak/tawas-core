@@ -3,7 +3,9 @@
 
 /*
  * Convert GMII bus to Ten Bit Interface (TBI) used in SGMII.
- * The TBI interface connects to a SERDES transceiver.
+ * The TBI interface connects to a SERDES transceiver.  This is
+ * the top level module. It instantiates the decode/encode, autneg,
+ * and FIFO submodules.
  */
 
 module sgmii_tbi
