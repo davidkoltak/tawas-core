@@ -123,12 +123,10 @@ module testbench();
     wire gmii_tx_en_loop;
     wire gmii_tx_err_loop;
     
-    wire tbi_rx_rdy;
-    wire tbi_rx_clk;
+    wire tbi_rx_rdy = 1'b1;
     wire [9:0] tbi_rxd;
     
-    wire tbi_tx_rdy;
-    wire tbi_tx_clk;
+    wire tbi_tx_rdy = 1'b1;
     wire [9:0] tbi_txd;
     
     sgmii_tbi sgmii_tbi_main
@@ -165,16 +163,16 @@ module testbench();
         .autoneg_complete(autoneg_complete_loop),
         .config_reg(config_reg_loop),
         
-        .gmii_rxd(gmii_rxd_loop),
-        .gmii_rx_dv(gmii_rx_dv_loop),
-        .gmii_rx_err(gmii_rx_err_loop),
+        .gmii_rxd(gmii_txd_loop),
+        .gmii_rx_dv(gmii_tx_en_loop),
+        .gmii_rx_err(gmii_tx_err_loop),
         
-        .gmii_txd(gmii_rxd_loop),
-        .gmii_tx_en(gmii_rx_dv_loop),
-        .gmii_tx_err(gmii_rx_err_loop),
+        .gmii_txd(gmii_txd_loop),
+        .gmii_tx_en(gmii_tx_en_loop),
+        .gmii_tx_err(gmii_tx_err_loop),
         
         .tbi_rx_rdy(tbi_rx_rdy),
-        .tbi_rx_clk(clk_124mhz),
+        .tbi_rx_clk(clk_126mhz),
         .tbi_rxd(tbi_txd),
         
         .tbi_tx_rdy(tbi_tx_rdy),

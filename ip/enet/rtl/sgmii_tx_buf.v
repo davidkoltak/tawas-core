@@ -75,9 +75,9 @@ module sgmii_tx_buf
     reg [2:0] autoneg_state;
     reg [11:0] autoneg_cnt;
     wire autoneg_cnt_done = (autoneg_cnt == 12'd1000);
-    reg [15:0] autoneg_reg = (!autoneg_cnt_done) ? 16'd0 :
-                             (!sgmii_autoneg_ack) ? (CONFIG_REG | 16'h0001)
-                                                  : (CONFIG_REG | 16'h4001);
+    wire [15:0] autoneg_reg = (!autoneg_cnt_done) ? 16'd0 :
+                              (!sgmii_autoneg_ack) ? (CONFIG_REG | 16'h0001)
+                                                   : (CONFIG_REG | 16'h4001);
     reg [8:0] autoneg_out;
     
     always @ (posedge tbi_tx_clk or negedge tbi_tx_rdy)
@@ -97,19 +97,47 @@ module sgmii_tx_buf
     always @ (posedge tbi_tx_clk)
         case (autoneg_state)
         3'd1: autoneg_out <= {1'b1, 8'hBC};
-        3'd2: autneg_out <= {1'b0, autoneg_reg[7:0]};
-        3'd3: autneg_out <= {1'b0, autoneg_reg[15:8]};
+        3'd2: autoneg_out <= {1'b0, autoneg_reg[7:0]};
+        3'd3: autoneg_out <= {1'b0, autoneg_reg[15:8]};
         3'd5: autoneg_out <= {1'b1, 8'h42};
-        3'd6: autneg_out <= {1'b0, autoneg_reg[7:0]};
-        3'd7: autneg_out <= {1'b0, autoneg_reg[15:8]};
+        3'd6: autoneg_out <= {1'b0, autoneg_reg[7:0]};
+        3'd7: autoneg_out <= {1'b0, autoneg_reg[15:8]};
         default: autoneg_out <= {1'b1, 8'hBC};
         endcase
-        
+
+    //
+    // Encapsulation
+    //
+    
+    reg [3:0] encap_state;
+    reg [8:0] encap_out;
+    
+    always @ (posedge tbi_tx_clk or negedge tbi_tx_rdy)
+        if (!tbi_tx_rdy)
+            encap_state <= 4'd0;
+        else
+            case (encap_state)
+            4'd3: encap_state <= 4'd0;
+            default: encap_state <= encap_state + 4'd1;
+            endcase
+            
+    always @ (posedge tbi_tx_clk or negedge tbi_tx_rdy)
+        if (!tbi_tx_rdy)
+            encap_out <= 9'd0;
+        else
+            case (encap_state)
+            4'd0: encap_out <= {1'b1, 8'hBC};
+            4'd1: encap_out <= {1'b0, 8'hC5};
+            4'd2: encap_out <= {1'b1, 8'hBC};
+            4'd3: encap_out <= {1'b0, 8'hC5};
+            default: encap_out <= 9'd0;
+            endcase
+
     //
     // TBI out
     //
     
-    assign tx_byte = (sgmii_autoneg_done) ? : autoneg_out[7:0];
-    assign tx_is_k = (sgmii_autoneg_done) ? : autoneg_out[8];
+    assign tx_byte = (sgmii_autoneg_done) ? encap_out[7:0] : autoneg_out[7:0];
+    assign tx_is_k = (sgmii_autoneg_done) ? encap_out[8] : autoneg_out[8];
     
 endmodule

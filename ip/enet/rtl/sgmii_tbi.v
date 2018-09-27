@@ -131,7 +131,7 @@ module sgmii_tbi
         .eight_bit(tx_byte),
         .is_k(tx_is_k),
         
-        .ten_bit(tbi_tx)
+        .ten_bit(tbi_txd)
     );
     
 endmodule
