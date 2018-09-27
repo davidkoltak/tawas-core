@@ -14,6 +14,7 @@ module sgmii_tx_buf
     input tbi_tx_clk,
 
     input sgmii_autoneg_start,
+    input sgmii_autoneg_ack,
     input sgmii_autoneg_done,
     
     input [7:0] gmii_txd,
@@ -23,7 +24,8 @@ module sgmii_tx_buf
     output [7:0] tx_byte,
     output tx_is_k
 );
-
+    parameter CONFIG_REG = 16'h01A0;
+    
     //
     // TX buffer write
     //
@@ -67,10 +69,47 @@ module sgmii_tx_buf
             cycle_cnt <= cycle_cnt + 3'd1;
 
     //
+    // Autogen sequence
+    //
+    
+    reg [2:0] autoneg_state;
+    reg [11:0] autoneg_cnt;
+    wire autoneg_cnt_done = (autoneg_cnt == 12'd1000)
+    reg [15:0] autoneg_reg = (!autoneg_cnt_done) ? 16'd0 :
+                             (!sgmii_autoneg_ack) ? (CONFIG_REG | 16'h0001)
+                                                  : (CONFIG_REG | 16'h4001);
+    reg [8:0] autoneg_out;
+    
+    always @ (posedge tbi_tx_clk or negedge tbi_tx_rdy)
+        if (!tbi_tx_rdy)
+            autoneg_state <= 3'd0;
+        else
+            autoneg_state <= autoneg_state + 3'd1;
+    
+    always @ (posedge tbi_tx_clk or negedge tbi_tx_rdy)
+        if (!tbi_tx_rdy)
+            autoneg_cnt <= 12'd0;
+        else if (!sgmii_autoneg_start)
+            autoneg_cnt <= 12'd0;
+        else if (!autoneg_cnt_done)
+            autoneg_cnt <= autoneg_cnt + 12'd1;
+
+    always @ (posedge tbi_tx_clk)
+        case (autoneg_state)
+        3'd1: autoneg_out <= {1'b1, 8'hBC};
+        3'd2: autneg_out <= {1'b0, autoneg_reg[7:0]};
+        3'd3: autneg_out <= {1'b0, autoneg_reg[15:8]};
+        3'd5: autoneg_out <= {1'b1, 8'h42};
+        3'd6: autneg_out <= {1'b0, autoneg_reg[7:0]};
+        3'd7: autneg_out <= {1'b0, autoneg_reg[15:8]};
+        default: autoneg_out <= {1'b1, 8'hBC};
+        endcase
+        
+    //
     // TBI out
     //
     
-    assign tx_byte
-    assign tx_is_k
+    assign tx_byte = (sgmii_autoneg_done) ? : autoneg_out[7:0];
+    assign tx_is_k = (sgmii_autoneg_done) ? : autoneg_out[8];
     
 endmodule
