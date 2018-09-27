@@ -88,45 +88,55 @@ module testbench();
     //
     
     integer tstate;
-    
+    reg tbi_rx_rdy;
+    reg tbi_tx_rdy;
+    reg [7:0] gmii_txd_main;
+    reg gmii_tx_en_main;
+    reg gmii_tx_err_main;
+    wire [7:0] gmii_rxd_main;
+    wire gmii_rx_dv_main;
+    wire gmii_rx_err_main;
+    wire autoneg_complete_main;
+    wire [15:0] config_reg_main;
+    wire autoneg_complete_loop;
+    wire [15:0] config_reg_loop;
+
+    always @ (posedge clk_125mhz or posedge rst)
+        if (rst)
+            tstate <= 0;
+        else
+            case (tstate)
+            default: tstate <= tstate + 1;
+            endcase
+            
     always @ (posedge clk_125mhz or posedge rst)
         if (rst)
         begin
-            tstate <= 0;
+            tbi_rx_rdy <= 1'b0;
+            tbi_tx_rdy <= 1'b0;
+            gmii_txd_main <= 8'd0;
+            gmii_tx_en_main <= 1'b0;
+            gmii_tx_err_main <= 1'b0;
         end
         else
             case (tstate)
             
-            1000: $finish();
-            default: tstate <= tstate + 1;
+            10: tbi_rx_rdy <= 1'b1;
+            15: tbi_tx_rdy <= 1'b1;
+            
+            10000: $finish();
+            default: ;
             endcase
 
     //
     // DUT instance - loopback one to the other
     //
     
-    wire autoneg_complete_main;
-    wire [15:0] config_reg_main;
-    
-    wire autoneg_complete_loop;
-    wire [15:0] config_reg_loop;
-    
-    wire [7:0] gmii_rxd_main;
-    wire gmii_rx_dv_main;
-    wire gmii_rx_err_main;
-    
-    wire [7:0] gmii_txd_main;
-    wire gmii_tx_en_main;
-    wire gmii_tx_err_main;
-    
     wire [7:0] gmii_txd_loop;
     wire gmii_tx_en_loop;
     wire gmii_tx_err_loop;
     
-    wire tbi_rx_rdy = 1'b1;
     wire [9:0] tbi_rxd;
-    
-    wire tbi_tx_rdy = 1'b1;
     wire [9:0] tbi_txd;
     
     sgmii_tbi sgmii_tbi_main

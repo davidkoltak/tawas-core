@@ -41,6 +41,8 @@ module sgmii_tbi
     wire rx_is_k;
     wire rx_disp_err;
     wire sgmii_autoneg_start;
+    wire sgmii_autoneg_ack;
+    wire sgmii_autoneg_idle;
     wire sgmii_autoneg_done;
     wire [15:0] sgmii_config;
     
@@ -64,8 +66,11 @@ module sgmii_tbi
         
         .rx_byte(rx_byte),
         .rx_is_k(rx_is_k),
+        .rx_disp_err(rx_disp_err),
         
         .sgmii_autoneg_start(sgmii_autoneg_start),
+        .sgmii_autoneg_ack(sgmii_autoneg_ack),
+        .sgmii_autoneg_idle(sgmii_autoneg_idle),
         .sgmii_autoneg_done(sgmii_autoneg_done),
         .sgmii_config(sgmii_config)
     );
@@ -113,6 +118,8 @@ module sgmii_tbi
         .tbi_tx_clk(tbi_tx_clk),
 
         .sgmii_autoneg_start(sgmii_autoneg_start),
+        .sgmii_autoneg_ack(sgmii_autoneg_ack),
+        .sgmii_autoneg_idle(sgmii_autoneg_idle),
         .sgmii_autoneg_done(sgmii_autoneg_done),
         
         .gmii_txd(gmii_txd),

@@ -31,6 +31,7 @@ module sgmii_8b10b_encode
     output [9:0] ten_bit
 );
 
+    reg is_k_d1;
     reg [9:0] ov;
     reg [9:0] dx_crd_neg;
     reg [9:0] dx_crd_pos;
@@ -52,7 +53,10 @@ module sgmii_8b10b_encode
             current_rd <= current_rd + (bit_cnt - 4'd5);
 
     always @ (posedge clk)
-        case ({is_k, current_rd[3]})
+        is_k_d1 <= is_k;
+        
+    always @ (posedge clk)
+        case ({is_k_d1, current_rd[3]})
         2'b01: ov <= dx_crd_neg;
         2'b00: ov <= dx_crd_pos;
         2'b11: ov <= kx_crd_neg;

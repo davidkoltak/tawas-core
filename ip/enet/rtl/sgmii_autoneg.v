@@ -16,6 +16,7 @@ module sgmii_autoneg
 
     output sgmii_autoneg_start,
     output sgmii_autoneg_ack,
+    output sgmii_autoneg_idle,
     output sgmii_autoneg_done,
     output [15:0] sgmii_config
 );
@@ -28,6 +29,7 @@ module sgmii_autoneg
     wire [5:0] rx_state_next = (rx_state + 6'd1);
     reg rx_state_start;
     reg rx_state_ack;
+    reg rx_state_idle;
     reg rx_state_complete;
     reg [11:0] rx_cfg_cnt;
     reg [15:0] rx_cfg1;
@@ -38,6 +40,7 @@ module sgmii_autoneg
     
     assign sgmii_autoneg_start = rx_state_start;
     assign sgmii_autoneg_ack = rx_state_ack;
+    assign sgmii_autoneg_idle = rx_state_idle;
     assign sgmii_autoneg_done = rx_state_complete;
     assign sgmii_config = rx_cfg;
     
@@ -47,6 +50,7 @@ module sgmii_autoneg
             rx_state <= 6'd0;
             rx_state_start <= 1'b0;
             rx_state_ack <= 1'b0;
+            rx_state_idle <= 1'b0;
             rx_state_complete <= 1'b0;
             rx_cfg_cnt <= 12'd0;
             rx_cfg1 <= 16'd0;
@@ -60,6 +64,7 @@ module sgmii_autoneg
                 rx_state <= 6'd1;
                 rx_state_start <= 1'b0;
                 rx_state_ack <= 1'b0;
+                rx_state_idle <= 1'b0;
                 rx_state_complete <= 1'b0;
                 rx_cfg_cnt <= 12'd0;
                 rx_cfg1 <= 16'd0;
@@ -69,17 +74,17 @@ module sgmii_autoneg
 
             // Search for first CFG1/2
             6'd1: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd1;
-            6'd2: rx_state <= (rx_is_k && (rx_byte == 8'hB5)) ? rx_state_next : 6'd1;
+            6'd2: rx_state <= (!rx_is_k && (rx_byte == 8'hB5)) ? rx_state_next : 6'd1;
             6'd3: rx_state <= (rx_is_k) ? 6'd0 : rx_state_next;
             6'd4: rx_state <= (rx_is_k) ? 6'd0 : rx_state_next;
             6'd5: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd0;
-            6'd6: rx_state <= (rx_is_k && (rx_byte == 8'h42)) ? rx_state_next : 6'd0;
+            6'd6: rx_state <= (!rx_is_k && (rx_byte == 8'h42)) ? rx_state_next : 6'd0;
             6'd7: rx_state <= (rx_is_k) ? 6'd0 : rx_state_next;
             6'd8: rx_state <= (rx_is_k) ? 6'd0 : 6'd11;
             
             // Continue to count 1000 x CFG1/2
             6'd11: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd0;
-            6'd12: rx_state <= (rx_is_k && (rx_byte == 8'hB5)) ? rx_state_next : 6'd0;
+            6'd12: rx_state <= (!rx_is_k && (rx_byte == 8'hB5)) ? rx_state_next : 6'd0;
             6'd13:
             begin
                 rx_state_start <= 1'b1;
@@ -93,7 +98,7 @@ module sgmii_autoneg
                 rx_state <= (rx_is_k) ? 6'd0 : rx_state_next;
             end
             6'd15: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd0;
-            6'd16: rx_state <= (rx_is_k && (rx_byte == 8'h42)) ? rx_state_next : 6'd0;
+            6'd16: rx_state <= (!rx_is_k && (rx_byte == 8'h42)) ? rx_state_next : 6'd0;
             6'd17:
             begin
                 rx_cfg2[7:0] <= rx_byte;
@@ -108,7 +113,7 @@ module sgmii_autoneg
             
             // Wait for non-zero CFG, check CFG1 == CFG2 from now on
             6'd21: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd0;
-            6'd22: rx_state <= (rx_is_k && (rx_byte == 8'hB5)) ? rx_state_next : 6'd0;
+            6'd22: rx_state <= (!rx_is_k && (rx_byte == 8'hB5)) ? rx_state_next : 6'd0;
             6'd23:
             begin
                 rx_cfg1[7:0] <= rx_byte;
@@ -120,7 +125,7 @@ module sgmii_autoneg
                 rx_state <= (rx_is_k) ? 6'd0 : rx_state_next;
             end
             6'd25: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd0;
-            6'd26: rx_state <= (rx_is_k && (rx_byte == 8'h42)) ? rx_state_next : 6'd0;
+            6'd26: rx_state <= (!rx_is_k && (rx_byte == 8'h42)) ? rx_state_next : 6'd0;
             6'd27:
             begin
                 rx_cfg2[7:0] <= rx_byte;
@@ -136,7 +141,7 @@ module sgmii_autoneg
  
              // Wait for ACK, check CFG1 == CFG2 from now on
             6'd31: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd0;
-            6'd32: rx_state <= (rx_is_k && (rx_byte == 8'hB5)) ? rx_state_next : 6'd0;
+            6'd32: rx_state <= (!rx_is_k && (rx_byte == 8'hB5)) ? rx_state_next : 6'd0;
             6'd33:
             begin
                 rx_state_ack <= 1'b1;
@@ -149,7 +154,7 @@ module sgmii_autoneg
                 rx_state <= (rx_is_k) ? 6'd0 : rx_state_next;
             end
             6'd35: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd0;
-            6'd36: rx_state <= (rx_is_k && (rx_byte == 8'h42)) ? rx_state_next : 6'd0;
+            6'd36: rx_state <= (!rx_is_k && (rx_byte == 8'h42)) ? rx_state_next : 6'd0;
             6'd37:
             begin
                 rx_cfg2[7:0] <= rx_byte;
@@ -160,12 +165,12 @@ module sgmii_autoneg
                 rx_cfg2[15:8] <= rx_byte;
                 rx_cfg <= rx_cfg1;
                 rx_state <= (rx_is_k) ? 6'd0 : 
-                            (rx_cfg1[14] && rx_cfg1[0]) ? 6'd41 : (!rx_cfg1[0]) ? 6'd0 : 6'd31;
+                            (rx_cfg2[14] && rx_cfg2[0]) ? 6'd41 : (!rx_cfg1[0]) ? 6'd0 : 6'd31;
             end
             
             // Continue to count 3 more x CFG1/2, must match previous non-zero value
             6'd41: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd0;
-            6'd42: rx_state <= (rx_is_k && (rx_byte == 8'hB5)) ? rx_state_next : 6'd0;
+            6'd42: rx_state <= (!rx_is_k && (rx_byte == 8'hB5)) ? rx_state_next : 6'd0;
             6'd43:
             begin
                 rx_cfg_cnt <= rx_cfg_cnt + 12'd1;
@@ -178,7 +183,7 @@ module sgmii_autoneg
                 rx_state <= (rx_is_k) ? 6'd0 : rx_state_next;
             end
             6'd45: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd0;
-            6'd46: rx_state <= (rx_is_k && (rx_byte == 8'h42)) ? rx_state_next : 6'd0;
+            6'd46: rx_state <= (!rx_is_k && (rx_byte == 8'h42)) ? rx_state_next : 6'd0;
             6'd47:
             begin
                 rx_cfg2[7:0] <= rx_byte;
@@ -188,18 +193,22 @@ module sgmii_autoneg
             begin
                 rx_cfg2[15:8] <= rx_byte;
                 rx_state <= (rx_is_k) ? 6'd0 : 
-                            (rx_cfg_cnt == 12'd1003) ? 6'd51 : 6'd11;
+                            (rx_cfg_cnt == 12'd1003) ? 6'd51 : 6'd41;
             end
             
             // Wait for 2 x IDLE1/2
-            6'd51: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd41;
-            6'd52: rx_state <= (rx_is_k && (rx_byte == 8'hC5)) ? rx_state_next : 6'd41;
-            6'd53: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd41;
-            6'd54: rx_state <= (rx_is_k && (rx_byte == 8'h50)) ? rx_state_next : 6'd41;
-            6'd55: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd41;
-            6'd56: rx_state <= (rx_is_k && (rx_byte == 8'hC5)) ? rx_state_next : 6'd41;
-            6'd57: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd41;
-            6'd58: rx_state <= (rx_is_k && (rx_byte == 8'h50)) ? 6'd51 : 6'd41;
+            6'd51: 
+            begin
+                rx_state_idle <= 1'b1;
+                rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd51;
+            end
+            6'd52: rx_state <= (!rx_is_k && (rx_byte == 8'hC5)) ? rx_state_next : 6'd51;
+            6'd53: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd51;
+            6'd54: rx_state <= (!rx_is_k && (rx_byte == 8'h50)) ? rx_state_next : 6'd51;
+            6'd55: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd51;
+            6'd56: rx_state <= (!rx_is_k && (rx_byte == 8'hC5)) ? rx_state_next : 6'd51;
+            6'd57: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd51;
+            6'd58: rx_state <= (!rx_is_k && (rx_byte == 8'h50)) ? 6'd61 : 6'd51;
             
             // Done receiving CFG - restart on error or seeing another CFG sequence
             6'd61:
@@ -212,7 +221,7 @@ module sgmii_autoneg
                             (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : rx_state;
             6'd63:
                 rx_state <= (rx_error) ? 6'd0 : 
-                            (rx_is_k && ((rx_byte == 8'hB5) || (rx_byte == 8'h42))) ? 6'd0 : 6'd42;
+                            (!rx_is_k && ((rx_byte == 8'hB5) || (rx_byte == 8'h42))) ? 6'd0 : 6'd62;
             
             default: rx_state <= 6'd0;
             endcase

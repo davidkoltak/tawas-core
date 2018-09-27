@@ -15,6 +15,7 @@ module sgmii_tx_buf
 
     input sgmii_autoneg_start,
     input sgmii_autoneg_ack,
+    input sgmii_autoneg_idle,
     input sgmii_autoneg_done,
     
     input [7:0] gmii_txd,
@@ -72,38 +73,185 @@ module sgmii_tx_buf
     // Autogen sequence
     //
     
-    reg [2:0] autoneg_state;
+    wire [15:0] autoneg_config = CONFIG_REG;
+    reg [4:0] autoneg_state;
+    wire [4:0] autoneg_state_next = autoneg_state + 5'd1;
     reg [11:0] autoneg_cnt;
-    wire autoneg_cnt_done = (autoneg_cnt == 12'd1000);
-    wire [15:0] autoneg_reg = (!autoneg_cnt_done) ? 16'd0 :
-                              (!sgmii_autoneg_ack) ? (CONFIG_REG | 16'h0001)
-                                                   : (CONFIG_REG | 16'h4001);
     reg [8:0] autoneg_out;
+    reg autoneg_done;
     
     always @ (posedge tbi_tx_clk or negedge tbi_tx_rdy)
         if (!tbi_tx_rdy)
-            autoneg_state <= 3'd0;
+        begin
+            autoneg_state <= 5'd0;
+            autoneg_cnt <= 12'd0;
+            autoneg_out <= 9'd0;
+            autoneg_done <= 1'b0;
+        end
         else
-            autoneg_state <= autoneg_state + 3'd1;
-    
-    always @ (posedge tbi_tx_clk or negedge tbi_tx_rdy)
-        if (!tbi_tx_rdy)
-            autoneg_cnt <= 12'd0;
-        else if (!sgmii_autoneg_start)
-            autoneg_cnt <= 12'd0;
-        else if (!autoneg_cnt_done)
-            autoneg_cnt <= autoneg_cnt + 12'd1;
+            case (autoneg_state)
+            // 1000 x CFG1/2 of zero
+            5'd0:
+            begin
+                autoneg_done <= 1'b0;
+                if (!sgmii_autoneg_start) autoneg_cnt <= 12'd0;
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b1, 8'hBC};
+            end
+            5'd1:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b0, 8'hB5};
+            end
+            5'd2:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b0, 8'h00};
+            end
+            5'd3:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b0, 8'h00};
+            end
+            5'd4:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b1, 8'hBC};
+            end
+            5'd5:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b0, 8'h42};
+            end
+            5'd6:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b0, 8'h00};
+                autoneg_cnt <= autoneg_cnt + 12'd1;
+            end
+            5'd7:
+            begin
+                autoneg_state <= (autoneg_cnt == 12'd1000) ? autoneg_state_next : 5'd0;
+                autoneg_out <= {1'b0, 8'h00};
+            end
 
-    always @ (posedge tbi_tx_clk)
-        case (autoneg_state)
-        3'd1: autoneg_out <= {1'b1, 8'hBC};
-        3'd2: autoneg_out <= {1'b0, autoneg_reg[7:0]};
-        3'd3: autoneg_out <= {1'b0, autoneg_reg[15:8]};
-        3'd5: autoneg_out <= {1'b1, 8'h42};
-        3'd6: autoneg_out <= {1'b0, autoneg_reg[7:0]};
-        3'd7: autoneg_out <= {1'b0, autoneg_reg[15:8]};
-        default: autoneg_out <= {1'b1, 8'hBC};
-        endcase
+            // Send non-ACK with CONFIG_REG
+            5'd8:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b1, 8'hBC};
+            end
+            5'd9:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b0, 8'hB5};
+            end
+            5'd10:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b0, autoneg_config[7:0] | 8'h01};
+            end
+            5'd11:
+            begin
+                autoneg_state <= (!sgmii_autoneg_start) ? 5'd0 : autoneg_state_next;
+                autoneg_out <= {1'b0, autoneg_config[15:8]};
+            end
+            5'd12:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b1, 8'hBC};
+            end
+            5'd13:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b0, 8'h42};
+            end
+            5'd14:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b0, autoneg_config[7:0] | 8'h01};
+                autoneg_cnt <= autoneg_cnt + 12'd1;
+            end
+            5'd15:
+            begin
+                autoneg_state <= (sgmii_autoneg_ack) ? autoneg_state_next : 5'd8;
+                autoneg_out <= {1'b0, autoneg_config[15:8]};
+            end
+  
+            // Send ACK with CONFIG_REG
+            5'd16:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b1, 8'hBC};
+            end
+            5'd17:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b0, 8'hB5};
+            end
+            5'd18:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b0, autoneg_config[7:0] | 8'h01};
+            end
+            5'd19:
+            begin
+                autoneg_state <= (!sgmii_autoneg_start) ? 5'd0 : autoneg_state_next;
+                autoneg_out <= {1'b0, autoneg_config[15:8] | 8'h40};
+            end
+            5'd20:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b1, 8'hBC};
+            end
+            5'd21:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b0, 8'h42};
+            end
+            5'd22:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b0, autoneg_config[7:0] | 8'h01};
+                autoneg_cnt <= autoneg_cnt + 12'd1;
+            end
+            5'd23:
+            begin
+                autoneg_state <= (sgmii_autoneg_idle) ? autoneg_state_next : 5'd16;
+                autoneg_out <= {1'b0, autoneg_config[15:8] | 8'h40};
+            end
+ 
+             // Send IDLE
+            5'd24:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b1, 8'hBC};
+            end
+            5'd25:
+            begin
+                autoneg_state <= (!sgmii_autoneg_start) ? 5'd0 : autoneg_state_next;
+                autoneg_out <= {1'b0, 8'hC5};
+            end
+            5'd26:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b1, 8'hBC};
+            end
+            5'd27:
+            begin
+                autoneg_state <= autoneg_state_next;
+                autoneg_out <= {1'b0, 8'h50};
+            end
+            5'd28:
+            begin
+                autoneg_done <= 1'b1;
+                if (!sgmii_autoneg_start || !sgmii_autoneg_ack || !sgmii_autoneg_ack)
+                    autoneg_state <= 5'd0;
+            end
+            
+            default: autoneg_state <= 5'd0;
+            endcase
+
 
     //
     // Encapsulation
@@ -114,6 +262,8 @@ module sgmii_tx_buf
     
     always @ (posedge tbi_tx_clk or negedge tbi_tx_rdy)
         if (!tbi_tx_rdy)
+            encap_state <= 4'd0;
+        else if (autoneg_state == 5'd27)
             encap_state <= 4'd0;
         else
             case (encap_state)
@@ -129,7 +279,7 @@ module sgmii_tx_buf
             4'd0: encap_out <= {1'b1, 8'hBC};
             4'd1: encap_out <= {1'b0, 8'hC5};
             4'd2: encap_out <= {1'b1, 8'hBC};
-            4'd3: encap_out <= {1'b0, 8'hC5};
+            4'd3: encap_out <= {1'b0, 8'h50};
             default: encap_out <= 9'd0;
             endcase
 
@@ -137,7 +287,7 @@ module sgmii_tx_buf
     // TBI out
     //
     
-    assign tx_byte = (sgmii_autoneg_done) ? encap_out[7:0] : autoneg_out[7:0];
-    assign tx_is_k = (sgmii_autoneg_done) ? encap_out[8] : autoneg_out[8];
+    assign tx_byte = (autoneg_done) ? encap_out[7:0] : autoneg_out[7:0];
+    assign tx_is_k = (autoneg_done) ? encap_out[8] : autoneg_out[8];
     
 endmodule
