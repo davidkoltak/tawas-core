@@ -34,7 +34,7 @@ module sgmii_tx_buf
     wire [8:0] fifo_in = {gmii_tx_err, gmii_txd};
     wire fifo_push = gmii_tx_en && sgmii_autoneg_done;
     wire [8:0] fifo_out;
-    reg fifo_pop;
+    wire fifo_pop;
     wire fifo_empty;
     
     sgmii_fifo sgmii_fifo
@@ -51,23 +51,6 @@ module sgmii_tx_buf
         .pop(fifo_pop),
         .empty(fifo_empty)
     );
-
-    //
-    // Fifo hystoresis
-    //
-    
-    reg [2:0] cycle_cnt;
-    
-    always @ (posedge tbi_tx_clk)
-        fifo_pop <= &cycle_cnt[2];
-    
-    always @ (posedge clk_125mhz or posedge rst)
-        if (rst)
-            cycle_cnt <= 3'd0;
-        else if (fifo_empty)
-            cycle_cnt <= 3'd0;
-        else if (fifo_push && !fifo_pop)
-            cycle_cnt <= cycle_cnt + 3'd1;
 
     //
     // Autogen sequence
@@ -257,18 +240,21 @@ module sgmii_tx_buf
     // Encapsulation
     //
     
-    reg [3:0] encap_state;
+    reg [2:0] encap_state;
     reg [8:0] encap_out;
+    assign fifo_pop = (encap_state == 3'd5);
     
     always @ (posedge tbi_tx_clk or negedge tbi_tx_rdy)
         if (!tbi_tx_rdy)
-            encap_state <= 4'd0;
+            encap_state <= 3'd0;
         else if (autoneg_state == 5'd27)
-            encap_state <= 4'd0;
+            encap_state <= 3'd0;
         else
             case (encap_state)
-            4'd3: encap_state <= 4'd0;
-            default: encap_state <= encap_state + 4'd1;
+            3'd3: encap_state <= (!fifo_empty) ? 3'd4 : 3'd0;
+            3'd5: encap_state <= (fifo_empty) ? 3'd6 : 3'd5;
+            3'd6: encap_state <= 3'd0;
+            default: encap_state <= encap_state + 3'd1;
             endcase
             
     always @ (posedge tbi_tx_clk or negedge tbi_tx_rdy)
@@ -276,10 +262,15 @@ module sgmii_tx_buf
             encap_out <= 9'd0;
         else
             case (encap_state)
-            4'd0: encap_out <= {1'b1, 8'hBC};
-            4'd1: encap_out <= {1'b0, 8'hC5};
-            4'd2: encap_out <= {1'b1, 8'hBC};
-            4'd3: encap_out <= {1'b0, 8'h50};
+            3'd0: encap_out <= {1'b1, 8'hBC};
+            3'd1: encap_out <= {1'b0, 8'hC5};
+            3'd2: encap_out <= {1'b1, 8'hBC};
+            3'd3: encap_out <= {1'b0, 8'h50};
+            
+            3'd4: encap_out <= {1'b1, 8'hFB};
+            3'd5: encap_out <= (fifo_empty) ? {1'b1, 8'hFD} : 
+                               (fifo_out[8]) ? {1'b1, 8'hFE} : {1'b0, fifo_out[7:0]};
+            3'd6: encap_out <= {1'b1, 8'hF7};
             default: encap_out <= 9'd0;
             endcase
 

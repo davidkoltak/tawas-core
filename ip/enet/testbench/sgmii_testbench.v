@@ -106,6 +106,8 @@ module testbench();
             tstate <= 0;
         else
             case (tstate)
+            20: if (autoneg_complete_main) tstate <= tstate + 1;
+            25: if (autoneg_complete_loop) tstate <= tstate + 1;
             default: tstate <= tstate + 1;
             endcase
             
@@ -123,6 +125,85 @@ module testbench();
             
             10: tbi_rx_rdy <= 1'b1;
             15: tbi_tx_rdy <= 1'b1;
+            
+            40:
+            begin
+                gmii_txd_main <= 8'h77;
+                gmii_tx_en_main <= 1'b1;
+            end
+            41: gmii_txd_main <= 8'h88;
+            42: gmii_txd_main <= 8'h99;
+            43: gmii_txd_main <= 8'h50;
+            44: gmii_txd_main <= 8'h51;
+            45: gmii_txd_main <= 8'h52;
+            46: gmii_tx_en_main <= 1'b0;
+
+
+            60:
+            begin
+                gmii_txd_main <= 8'h99;
+                gmii_tx_en_main <= 1'b1;
+            end
+            61: gmii_txd_main <= 8'h88;
+            62: gmii_txd_main <= 8'h77;
+            63: gmii_txd_main <= 8'h20;
+            64:
+            begin
+                gmii_txd_main <= 8'h21;
+                gmii_tx_err_main <= 1'b1;
+            end
+            65:
+            begin
+                gmii_txd_main <= 8'h22;
+                gmii_tx_err_main <= 1'b0;
+            end
+            66: gmii_tx_en_main <= 1'b0;
+            
+            100:
+            begin
+                gmii_txd_main <= 8'd0;
+                gmii_tx_en_main <= 1'b1;
+            end
+            101: gmii_txd_main <= 8'd1;
+            102: gmii_txd_main <= 8'd2;
+            103: gmii_txd_main <= 8'd3;
+            104: gmii_txd_main <= 8'd4;
+            105: gmii_txd_main <= 8'd5;
+            106: gmii_txd_main <= 8'd6;
+            107: gmii_txd_main <= 8'd7;
+            108: gmii_txd_main <= 8'd8;
+            109: gmii_txd_main <= 8'd9;
+            110: gmii_txd_main <= 8'd10;
+            111: gmii_txd_main <= 8'd11;
+            112: gmii_txd_main <= 8'd12;
+            113: gmii_txd_main <= 8'd13;
+            114: gmii_txd_main <= 8'd14;
+            115: gmii_txd_main <= 8'd15;
+            116: gmii_txd_main <= 8'd16;
+            117: gmii_txd_main <= 8'd17;
+            118: gmii_txd_main <= 8'd18;
+            119: gmii_txd_main <= 8'd19;
+            120: gmii_txd_main <= 8'd20;
+            121: gmii_txd_main <= 8'd21;
+            122: gmii_txd_main <= 8'd22;
+            123: gmii_txd_main <= 8'd23;
+            124: gmii_txd_main <= 8'd24;
+            125: gmii_txd_main <= 8'd25;
+            126: gmii_txd_main <= 8'd26;
+            127: gmii_txd_main <= 8'd27;
+            128: gmii_txd_main <= 8'd28;
+            129: gmii_txd_main <= 8'd29;
+            130: gmii_txd_main <= 8'd30;
+            131: gmii_txd_main <= 8'd31;
+            132: gmii_txd_main <= 8'd32;
+            133: gmii_txd_main <= 8'd33;
+            134: gmii_txd_main <= 8'd34;
+            135: gmii_txd_main <= 8'd35;
+            136: gmii_txd_main <= 8'd36;
+            137: gmii_txd_main <= 8'd37;
+            138: gmii_txd_main <= 8'd38;
+            139: gmii_txd_main <= 8'd39;
+            140: gmii_tx_en_main <= 1'b0;
             
             10000: $finish();
             default: ;

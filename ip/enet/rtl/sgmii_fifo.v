@@ -20,38 +20,43 @@ module sgmii_fifo
     input pop,
     output empty
 );
-    parameter DEPTH = 16; // max 64 (can hold DEPTH-1 before full)
-
+    parameter DEPTH = 32; // max 64 (can hold DEPTH-1 before full)
+    parameter TRIG_DEPTH = 12; // Hold sync until push stops or X in a row
+    
+    reg [5:0] trig_cnt;
+    wire trig_en = (!push || (trig_cnt == TRIG_DEPTH));
+    
+    always @ (posedge clk_in or posedge rst_in)
+        if (rst_in)
+            trig_cnt <= 6'd0;
+        else if (!push)
+            trig_cnt <= 6'd0;
+        else if (!trig_en)
+            trig_cnt <= trig_cnt + 6'd1;
+    
     reg [1:0] cross_in;
     reg [5:0] head_in;
     reg [5:0] head_snapshot;
     reg [5:0] tail_in;
 
-    reg [1:0] cross_in_sync;
     reg [1:0] cross_out;
     reg [5:0] head_out;
     reg [5:0] tail_out;
     reg [5:0] tail_snapshot;
 
     always @ (posedge clk_in)
-        cross_in <= cross_out;
+        cross_in <= (trig_en) ? cross_out : 2'd0;
 
     always @ (posedge clk_out or posedge rst_in)
         if (rst_in)
-        begin
             cross_out <= 2'b00;
-            cross_in_sync <= 2'b00;
-        end
         else
-        begin
-            cross_in_sync <= cross_in;
-            case (cross_in_sync)
+            case (cross_in)
             2'b00: cross_out <= 2'b01;
             2'b01: cross_out <= 2'b11;
             2'b11: cross_out <= 2'b10;
             default: cross_out <= 2'b00;
             endcase
-        end
 
     wire [5:0] head_in_next = (head_in == (DEPTH - 1)) ? 6'd0 : head_in + 6'd1;
     wire fifo_full = (head_in_next == tail_in);

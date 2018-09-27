@@ -26,7 +26,6 @@ module rcn_fifo_byte_async
     reg [3:0] head_snapshot;
     reg [3:0] tail_in;
 
-    reg [1:0] cross_in_sync;
     reg [1:0] cross_out;
     reg [3:0] head_out;
     reg [3:0] tail_out;
@@ -37,20 +36,14 @@ module rcn_fifo_byte_async
 
     always @ (posedge clk_out or posedge rst_in)
         if (rst_in)
-        begin
             cross_out <= 2'b00;
-            cross_in_sync <= 2'b00;
-        end
         else
-        begin
-            cross_in_sync <= cross_in;
-            case (cross_in_sync)
+            case (cross_in)
             2'b00: cross_out <= 2'b01;
             2'b01: cross_out <= 2'b11;
             2'b11: cross_out <= 2'b10;
             default: cross_out <= 2'b00;
             endcase
-        end
 
     wire [3:0] head_in_next = head_in + 4'd1;
     wire fifo_full = (head_in_next == tail_in);
