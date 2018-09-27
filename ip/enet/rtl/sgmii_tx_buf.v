@@ -74,7 +74,7 @@ module sgmii_tx_buf
     
     reg [2:0] autoneg_state;
     reg [11:0] autoneg_cnt;
-    wire autoneg_cnt_done = (autoneg_cnt == 12'd1000)
+    wire autoneg_cnt_done = (autoneg_cnt == 12'd1000);
     reg [15:0] autoneg_reg = (!autoneg_cnt_done) ? 16'd0 :
                              (!sgmii_autoneg_ack) ? (CONFIG_REG | 16'h0001)
                                                   : (CONFIG_REG | 16'h4001);

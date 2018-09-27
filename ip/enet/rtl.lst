@@ -1,2 +1,7 @@
 sgmii_8b10b_decode.v
 sgmii_8b10b_encode.v
+sgmii_autoneg.v
+sgmii_fifo.v
+sgmii_rx_buf.v
+sgmii_tbi.v
+sgmii_tx_buf.v

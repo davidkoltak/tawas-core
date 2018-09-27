@@ -37,7 +37,7 @@ module sgmii_autoneg
     wire rx_error = rx_disp_err || (rx_is_k && (rx_byte == 8'd0));
     
     assign sgmii_autoneg_start = rx_state_start;
-    assign sgmii_autoneg_ack <= rx_state_ack;
+    assign sgmii_autoneg_ack = rx_state_ack;
     assign sgmii_autoneg_done = rx_state_complete;
     assign sgmii_config = rx_cfg;
     
@@ -212,7 +212,7 @@ module sgmii_autoneg
                             (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : rx_state;
             6'd63:
                 rx_state <= (rx_error) ? 6'd0 : 
-                            (rx_is_k && ((rx_byte == 8'hB5) || (rx_byte == 8'h42)) ? 6'd0 : 6'd42;
+                            (rx_is_k && ((rx_byte == 8'hB5) || (rx_byte == 8'h42))) ? 6'd0 : 6'd42;
             
             default: rx_state <= 6'd0;
             endcase
