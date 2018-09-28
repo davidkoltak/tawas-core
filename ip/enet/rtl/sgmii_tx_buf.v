@@ -10,7 +10,6 @@ module sgmii_tx_buf
     input clk_125mhz,
     input rst,
 
-    input tbi_tx_rdy,
     input tbi_tx_clk,
 
     input sgmii_autoneg_start,
@@ -25,7 +24,9 @@ module sgmii_tx_buf
     output [7:0] tx_byte,
     output tx_is_k
 );
-    parameter CONFIG_REG = 16'h01A0;
+    parameter CONFIG_REG = 16'h0180; // Full Duplex, 1Gbps
+    //parameter CONFIG_REG = 16'h0140; // Full Duplex, 100Mbps
+    //parameter CONFIG_REG = 16'h0100; // Full Duplex, 10Mbps
     
     //
     // TX buffer write
@@ -63,8 +64,8 @@ module sgmii_tx_buf
     reg [8:0] autoneg_out;
     reg autoneg_done;
     
-    always @ (posedge tbi_tx_clk or negedge tbi_tx_rdy)
-        if (!tbi_tx_rdy)
+    always @ (posedge tbi_tx_clk or posedge rst)
+        if (rst)
         begin
             autoneg_state <= 5'd0;
             autoneg_cnt <= 12'd0;
@@ -244,8 +245,8 @@ module sgmii_tx_buf
     reg [8:0] encap_out;
     assign fifo_pop = (encap_state == 3'd5);
     
-    always @ (posedge tbi_tx_clk or negedge tbi_tx_rdy)
-        if (!tbi_tx_rdy)
+    always @ (posedge tbi_tx_clk or posedge rst)
+        if (rst)
             encap_state <= 3'd0;
         else if (autoneg_state == 5'd27)
             encap_state <= 3'd0;
@@ -257,8 +258,8 @@ module sgmii_tx_buf
             default: encap_state <= encap_state + 3'd1;
             endcase
             
-    always @ (posedge tbi_tx_clk or negedge tbi_tx_rdy)
-        if (!tbi_tx_rdy)
+    always @ (posedge tbi_tx_clk or posedge rst)
+        if (rst)
             encap_out <= 9'd0;
         else
             case (encap_state)

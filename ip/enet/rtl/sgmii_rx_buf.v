@@ -10,7 +10,6 @@ module sgmii_rx_buf
     input clk_125mhz,
     input rst,
 
-    input tbi_rx_rdy,
     input tbi_rx_clk,
 
     input sgmii_autoneg_done,
@@ -36,38 +35,26 @@ module sgmii_rx_buf
     wire k_eop = rx_is_k && (rx_byte == 8'hFD);
     wire k_err = rx_is_k && (rx_byte == 8'hFE);
     
-    always @ (posedge tbi_rx_clk or negedge tbi_rx_rdy)
-        if (!tbi_rx_rdy)
-        begin
-            skip_next <= 1'b0;
+    always @ (posedge tbi_rx_clk or posedge rst)
+        if (rst)
             pkt_vld <= 1'b0;
-            pkt_err <= 1'b0;
-        end
         else if (!sgmii_autoneg_done)
-        begin
-            skip_next <= 1'b0;
             pkt_vld <= 1'b0;
-            pkt_err <= 1'b0;
-        end
         else
-        begin
-            skip_next <= k_idle;
-            pkt_vld <= (pkt_vld || k_sop) && !k_eop;
-            pkt_err <= (pkt_err || k_err) && !k_eop;
-        end
+            pkt_vld <= (pkt_vld || k_sop) && !k_eop && !k_idle;
             
     //
     // RX buffer
     //
     
-    wire [8:0] fifo_in = {pkt_err, rx_byte};
-    wire fifo_push = !rx_is_k && pkt_vld;
+    wire [8:0] fifo_in = {k_err, rx_byte};
+    wire fifo_push = pkt_vld && !k_eop && !k_idle;
     wire [8:0] fifo_out;
     wire fifo_empty;
     
     sgmii_fifo sgmii_fifo
     (
-        .rst_in(!sgmii_autoneg_done),
+        .rst_in(rst),
         .clk_in(tbi_rx_clk),
         .clk_out(clk_125mhz),
 

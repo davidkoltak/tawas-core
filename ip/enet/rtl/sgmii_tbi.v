@@ -24,14 +24,15 @@ module sgmii_tbi
     input gmii_tx_en,
     input gmii_tx_err,
     
-    input tbi_rx_rdy,
     input tbi_rx_clk,
     input [9:0] tbi_rxd,
     
-    input tbi_tx_rdy,
     input tbi_tx_clk,
     output [9:0] tbi_txd
 );
+    parameter CONFIG_REG = 16'h0180; // Full Duplex, 1Gbps
+    //parameter CONFIG_REG = 16'h0140; // Full Duplex, 100Mbps
+    //parameter CONFIG_REG = 16'h0100; // Full Duplex, 10Mbps
 
     //
     // Decode incoming data stream and autonegotiate
@@ -61,7 +62,7 @@ module sgmii_tbi
 
     sgmii_autoneg sgmii_autoneg
     (
-        .tbi_rx_rdy(tbi_rx_rdy),
+        .rst(rst),
         .tbi_rx_clk(tbi_rx_clk),
         
         .rx_byte(rx_byte),
@@ -90,7 +91,6 @@ module sgmii_tbi
         .clk_125mhz(clk_125mhz),
         .rst(rst),
 
-        .tbi_rx_rdy(tbi_rx_rdy),
         .tbi_rx_clk(tbi_rx_clk),
 
         .sgmii_autoneg_done(sgmii_autoneg_done),
@@ -109,12 +109,11 @@ module sgmii_tbi
     wire [7:0] tx_byte;
     wire tx_is_k;
     
-    sgmii_tx_buf sgmii_tx_buf
+    sgmii_tx_buf #(.CONFIG_REG(CONFIG_REG)) sgmii_tx_buf
     (
         .clk_125mhz(clk_125mhz),
         .rst(rst),
 
-        .tbi_tx_rdy(tbi_tx_rdy),
         .tbi_tx_clk(tbi_tx_clk),
 
         .sgmii_autoneg_start(sgmii_autoneg_start),
@@ -133,7 +132,7 @@ module sgmii_tbi
     sgmii_8b10b_encode sgmii_8b10b_encode
     (
         .clk(tbi_tx_clk),
-        .rst(!tbi_tx_rdy),
+        .rst(rst),
         
         .eight_bit(tx_byte),
         .is_k(tx_is_k),

@@ -88,8 +88,6 @@ module testbench();
     //
     
     integer tstate;
-    reg tbi_rx_rdy;
-    reg tbi_tx_rdy;
     reg [7:0] gmii_txd_main;
     reg gmii_tx_en_main;
     reg gmii_tx_err_main;
@@ -114,8 +112,6 @@ module testbench();
     always @ (posedge clk_125mhz or posedge rst)
         if (rst)
         begin
-            tbi_rx_rdy <= 1'b0;
-            tbi_tx_rdy <= 1'b0;
             gmii_txd_main <= 8'd0;
             gmii_tx_en_main <= 1'b0;
             gmii_tx_err_main <= 1'b0;
@@ -123,8 +119,19 @@ module testbench();
         else
             case (tstate)
             
-            10: tbi_rx_rdy <= 1'b1;
-            15: tbi_tx_rdy <= 1'b1;
+            30:
+            if (config_reg_main != 16'h4181)
+            begin
+                $display(" !!! BAD AUTONEG Value from MAIN !!!");
+                $finish();
+            end
+            
+            31:
+            if (config_reg_loop != 16'h4181)
+            begin
+                $display(" !!! BAD AUTONEG Value from LOOP !!!");
+                $finish();
+            end
             
             40:
             begin
@@ -236,16 +243,13 @@ module testbench();
         .gmii_tx_en(gmii_tx_en_main),
         .gmii_tx_err(gmii_tx_err_main),
         
-        .tbi_rx_rdy(tbi_rx_rdy),
         .tbi_rx_clk(clk_124mhz),
         .tbi_rxd(tbi_rxd),
         
-        .tbi_tx_rdy(tbi_tx_rdy),
         .tbi_tx_clk(clk_126mhz),
         .tbi_txd(tbi_txd)
     );
 
-    
     sgmii_tbi sgmii_tbi_loopback
     (
         .clk_125mhz(clk_125mhz),
@@ -262,11 +266,9 @@ module testbench();
         .gmii_tx_en(gmii_tx_en_loop),
         .gmii_tx_err(gmii_tx_err_loop),
         
-        .tbi_rx_rdy(tbi_rx_rdy),
         .tbi_rx_clk(clk_126mhz),
         .tbi_rxd(tbi_txd),
         
-        .tbi_tx_rdy(tbi_tx_rdy),
         .tbi_tx_clk(clk_124mhz),
         .tbi_txd(tbi_rxd)
     );

@@ -7,7 +7,7 @@
  
 module sgmii_autoneg
 (
-    input tbi_rx_rdy,
+    input rst,
     input tbi_rx_clk,
 
     input [7:0] rx_byte,
@@ -44,8 +44,8 @@ module sgmii_autoneg
     assign sgmii_autoneg_done = rx_state_complete;
     assign sgmii_config = rx_cfg;
     
-    always @ (posedge tbi_rx_clk or negedge tbi_rx_rdy)
-        if (!tbi_rx_rdy)
+    always @ (posedge tbi_rx_clk or posedge rst)
+        if (rst)
         begin
             rx_state <= 6'd0;
             rx_state_start <= 1'b0;
