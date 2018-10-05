@@ -62,8 +62,19 @@ module sgmii_8b10b_encode
         2'b11: ov <= kx_crd_neg;
         default: ov <= kx_crd_pos;
         endcase
-
-    assign ten_bit = ov;
+        
+    reg [9:0] ov_d1;
+    reg [9:0] ov_d2;
+    reg [9:0] ov_d3;
+    
+    always @ (posedge clk)
+    begin
+        ov_d1 <= ov;
+        ov_d2 <= ov_d1;
+        ov_d3 <= ov_d2;
+    end
+    
+    assign ten_bit = ov_d3;
     
     always @ (posedge clk)
         case (eight_bit)

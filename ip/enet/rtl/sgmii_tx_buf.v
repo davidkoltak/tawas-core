@@ -24,9 +24,7 @@ module sgmii_tx_buf
     output [7:0] tx_byte,
     output tx_is_k
 );
-    parameter CONFIG_REG = 16'h0180; // Full Duplex, 1Gbps
-    //parameter CONFIG_REG = 16'h0140; // Full Duplex, 100Mbps
-    //parameter CONFIG_REG = 16'h0100; // Full Duplex, 10Mbps
+    parameter LINK_TIMER = 16'd40000;
     
     //
     // TX buffer write
@@ -57,10 +55,9 @@ module sgmii_tx_buf
     // Autogen sequence
     //
     
-    wire [15:0] autoneg_config = CONFIG_REG;
     reg [4:0] autoneg_state;
     wire [4:0] autoneg_state_next = autoneg_state + 5'd1;
-    reg [11:0] autoneg_cnt;
+    reg [15:0] autoneg_cnt;
     reg [8:0] autoneg_out;
     reg autoneg_done;
     
@@ -68,17 +65,17 @@ module sgmii_tx_buf
         if (rst)
         begin
             autoneg_state <= 5'd0;
-            autoneg_cnt <= 12'd0;
+            autoneg_cnt <= 16'd0;
             autoneg_out <= 9'd0;
             autoneg_done <= 1'b0;
         end
         else
             case (autoneg_state)
-            // 1000 x CFG1/2 of zero
+            // LinkTimer x CFG1/2 of zero
             5'd0:
             begin
                 autoneg_done <= 1'b0;
-                if (!sgmii_autoneg_start) autoneg_cnt <= 12'd0;
+                if (!sgmii_autoneg_start) autoneg_cnt <= 16'd0;
                 autoneg_state <= autoneg_state_next;
                 autoneg_out <= {1'b1, 8'hBC};
             end
@@ -111,11 +108,11 @@ module sgmii_tx_buf
             begin
                 autoneg_state <= autoneg_state_next;
                 autoneg_out <= {1'b0, 8'h00};
-                autoneg_cnt <= autoneg_cnt + 12'd1;
+                autoneg_cnt <= autoneg_cnt + 16'd1;
             end
             5'd7:
             begin
-                autoneg_state <= (autoneg_cnt == 12'd1000) ? autoneg_state_next : 5'd0;
+                autoneg_state <= (autoneg_cnt == LINK_TIMER) ? autoneg_state_next : 5'd0;
                 autoneg_out <= {1'b0, 8'h00};
             end
 
@@ -133,12 +130,12 @@ module sgmii_tx_buf
             5'd10:
             begin
                 autoneg_state <= autoneg_state_next;
-                autoneg_out <= {1'b0, autoneg_config[7:0] | 8'h01};
+                autoneg_out <= {1'b0, 8'h01};
             end
             5'd11:
             begin
                 autoneg_state <= (!sgmii_autoneg_start) ? 5'd0 : autoneg_state_next;
-                autoneg_out <= {1'b0, autoneg_config[15:8]};
+                autoneg_out <= {1'b0, 8'h00};
             end
             5'd12:
             begin
@@ -153,13 +150,12 @@ module sgmii_tx_buf
             5'd14:
             begin
                 autoneg_state <= autoneg_state_next;
-                autoneg_out <= {1'b0, autoneg_config[7:0] | 8'h01};
-                autoneg_cnt <= autoneg_cnt + 12'd1;
+                autoneg_out <= {1'b0, 8'h01};
             end
             5'd15:
             begin
                 autoneg_state <= (sgmii_autoneg_ack) ? autoneg_state_next : 5'd8;
-                autoneg_out <= {1'b0, autoneg_config[15:8]};
+                autoneg_out <= {1'b0, 8'h00};
             end
   
             // Send ACK with CONFIG_REG
@@ -176,12 +172,12 @@ module sgmii_tx_buf
             5'd18:
             begin
                 autoneg_state <= autoneg_state_next;
-                autoneg_out <= {1'b0, autoneg_config[7:0] | 8'h01};
+                autoneg_out <= {1'b0, 8'h01};
             end
             5'd19:
             begin
                 autoneg_state <= (!sgmii_autoneg_start) ? 5'd0 : autoneg_state_next;
-                autoneg_out <= {1'b0, autoneg_config[15:8] | 8'h40};
+                autoneg_out <= {1'b0, 8'h40};
             end
             5'd20:
             begin
@@ -196,13 +192,13 @@ module sgmii_tx_buf
             5'd22:
             begin
                 autoneg_state <= autoneg_state_next;
-                autoneg_out <= {1'b0, autoneg_config[7:0] | 8'h01};
+                autoneg_out <= {1'b0, 8'h01};
                 autoneg_cnt <= autoneg_cnt + 12'd1;
             end
             5'd23:
             begin
                 autoneg_state <= (sgmii_autoneg_idle) ? autoneg_state_next : 5'd16;
-                autoneg_out <= {1'b0, autoneg_config[15:8] | 8'h40};
+                autoneg_out <= {1'b0, 8'h40};
             end
  
              // Send IDLE

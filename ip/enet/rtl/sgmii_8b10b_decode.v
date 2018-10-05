@@ -34,13 +34,24 @@ module sgmii_8b10b_decode
     output reg disp_err
 );
 
+    reg [9:0] ten_bit_d1;
+    reg [9:0] ten_bit_d2;
+    reg [9:0] ten_bit_d3;
+    
+    always @ (posedge clk)
+    begin
+        ten_bit_d1 <= ten_bit;
+        ten_bit_d2 <= ten_bit_d1;
+        ten_bit_d3 <= ten_bit_d2;
+    end
+    
     reg [4:0] current_rd;
     wire [3:0] bit_cnt;
     
-    assign bit_cnt = {3'd0, ten_bit[9]} + {3'd0, ten_bit[8]} + {3'd0, ten_bit[7]} + 
-                     {3'd0, ten_bit[6]} + {3'd0, ten_bit[5]} + {3'd0, ten_bit[4]} + 
-                     {3'd0, ten_bit[3]} + {3'd0, ten_bit[2]} + {3'd0, ten_bit[1]} + 
-                     {3'd0, ten_bit[0]};
+    assign bit_cnt = {3'd0, ten_bit_d3[9]} + {3'd0, ten_bit_d3[8]} + {3'd0, ten_bit_d3[7]} + 
+                     {3'd0, ten_bit_d3[6]} + {3'd0, ten_bit_d3[5]} + {3'd0, ten_bit_d3[4]} + 
+                     {3'd0, ten_bit_d3[3]} + {3'd0, ten_bit_d3[2]} + {3'd0, ten_bit_d3[1]} + 
+                     {3'd0, ten_bit_d3[0]};
         
     always @ (posedge clk or posedge rst)
         if (rst)
@@ -57,9 +68,9 @@ module sgmii_8b10b_decode
             disp_err <= 1'b0;
         else
             disp_err <= disp_err | (current_rd[4]);
-
+    
     always @ (posedge clk)
-        case (ten_bit)
+        case (ten_bit_d3)
         10'b0001010101: {is_k, eight_bit} <= {1'b0, 8'h57};
         10'b0001010110: {is_k, eight_bit} <= {1'b0, 8'hD7};
         10'b0001010111: {is_k, eight_bit} <= {1'b1, 8'hF7};
