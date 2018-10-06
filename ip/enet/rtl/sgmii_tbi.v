@@ -33,7 +33,7 @@ module sgmii_tbi
     output [31:0] dbg_rx,
     output [31:0] dbg_tx
 );
-    parameter CONFIG_REG = 16'h0000;
+    parameter LINK_TIMER = 16'd40000;
 
     //
     // Decode incoming data stream and autonegotiate
@@ -68,7 +68,7 @@ module sgmii_tbi
         .disp_err(rx_disp_err)
     );
 
-    sgmii_autoneg sgmii_autoneg
+    sgmii_autoneg #(.LINK_TIMER(LINK_TIMER)) sgmii_autoneg
     (
         .rst(rst),
         .tbi_rx_clk(tbi_rx_clk),
@@ -138,7 +138,7 @@ module sgmii_tbi
                             gmii_txd[4], gmii_txd[5], gmii_txd[6], gmii_txd[7]};
     */
 
-    sgmii_tx_buf sgmii_tx_buf
+    sgmii_tx_buf #(.LINK_TIMER(LINK_TIMER)) sgmii_tx_buf
     (
         .clk_125mhz(clk_125mhz),
         .rst(rst),

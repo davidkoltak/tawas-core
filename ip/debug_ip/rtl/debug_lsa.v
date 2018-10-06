@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MIT */
+/* (c) Copyright 2018 David M. Koltak, all rights reserved. */
 
 /*
     Debug Logic State Analyzer

@@ -2,6 +2,8 @@
 # Thu Sep 20 16:12:13 CDT 2018
 # DO NOT MODIFY
 
+# SPDX-License-Identifier: MIT
+# (c) Copyright 2018 David M. Koltak, all rights reserved.
 
 #
 # debug_state "debug_state" v1.0

@@ -171,7 +171,8 @@ module sgmii_autoneg
             
             // Continue to count LINK_TIMER more x CFG1/2, must match previous non-zero value
             6'd41: rx_state <= (rx_is_k && (rx_byte == 8'hBC)) ? rx_state_next : 6'd0;
-            6'd42: rx_state <= (!rx_is_k && (rx_byte == 8'hB5)) ? rx_state_next : 6'd0;
+            6'd42: rx_state <= (rx_is_k) ? 6'd0 : (rx_byte == 8'hB5) ? rx_state_next :
+                               ((rx_byte == 8'hC5) || (rx_byte == 8'h50)) ? 6'd51 : 6'd0;
             6'd43:
             begin
                 rx_cfg_cnt <= rx_cfg_cnt + 16'd1;

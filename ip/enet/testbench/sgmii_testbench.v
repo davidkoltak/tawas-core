@@ -41,6 +41,11 @@ module testbench();
         begin
             #125 clk_125mhz_gen = ~clk_125mhz_gen;
             cycle_count = (clk_125mhz_gen) ? cycle_count : cycle_count + 1;
+            if (cycle_count > 35000)
+            begin
+                $display("*** ERROR: Cycle Count Max ***");
+                $finish();
+            end
         end
     end
 
@@ -77,7 +82,7 @@ module testbench();
     begin
         clk_124mhz_gen = 0;
         while (1)
-            #124 clk_124mhz_gen = ~clk_124mhz_gen;
+            #126 clk_124mhz_gen = ~clk_124mhz_gen;
     end
     
     always @ (clk_124mhz_gen)
@@ -120,14 +125,14 @@ module testbench();
             case (tstate)
             
             30:
-            if (config_reg_main != 16'h4181)
+            if (config_reg_main != 16'h4001)
             begin
                 $display(" !!! BAD AUTONEG Value from MAIN !!!");
                 $finish();
             end
             
             31:
-            if (config_reg_loop != 16'h4181)
+            if (config_reg_loop != 16'h4001)
             begin
                 $display(" !!! BAD AUTONEG Value from LOOP !!!");
                 $finish();
@@ -227,7 +232,7 @@ module testbench();
     wire [9:0] tbi_rxd;
     wire [9:0] tbi_txd;
     
-    sgmii_tbi sgmii_tbi_main
+    sgmii_tbi #(.LINK_TIMER(16'd1100)) sgmii_tbi_main
     (
         .clk_125mhz(clk_125mhz),
         .rst(rst),
@@ -250,7 +255,7 @@ module testbench();
         .tbi_txd(tbi_txd)
     );
 
-    sgmii_tbi sgmii_tbi_loopback
+    sgmii_tbi #(.LINK_TIMER(16'd1000)) sgmii_tbi_loopback
     (
         .clk_125mhz(clk_125mhz),
         .rst(rst),
