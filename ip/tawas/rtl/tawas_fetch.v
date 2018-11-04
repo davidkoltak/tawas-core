@@ -77,6 +77,9 @@ module tawas_fetch
     wire thread_retire_en;
     wire [4:0] thread_retire;
     
+    wire thread_abort_en;
+    wire [4:0] thread_abort;
+    
     integer x2;
 
     always @ *
@@ -86,7 +89,7 @@ module tawas_fetch
         s1_en = 1'b0;
         thread_done_mask = 32'd0;
 
-        thread_ready = (~thread_busy) & thread_mask & (!rcn_stall);
+        thread_ready = (~thread_busy) & thread_mask & (~rcn_stall);
         
         for (x2 = 0; x2 < 32; x2 = x2 + 1)
             if (!s1_en && thread_ready[x2])
@@ -236,7 +239,7 @@ module tawas_fetch
     // Load thread register context
     //
     
-    assign thread_load_en = s3_en;
+    assign thread_load_en = s3_en && !thread_abort_en;
     assign thread_load = s3_sel;
     
     assign thread_decode = s4_sel;

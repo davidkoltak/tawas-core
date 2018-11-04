@@ -134,12 +134,20 @@ module tawas_regfile
     
     reg rcn_load_en_d1;
     reg rcn_load_en_d2;
+    reg rcn_load_en_d3;
+    reg rcn_load_en_d4;
     reg [4:0] rcn_load_thread_d1;
     reg [4:0] rcn_load_thread_d2;
+    reg [4:0] rcn_load_thread_d3;
+    reg [4:0] rcn_load_thread_d4;
     reg [2:0] rcn_load_reg_d1;
     reg [2:0] rcn_load_reg_d2;
+    reg [2:0] rcn_load_reg_d3;
+    reg [2:0] rcn_load_reg_d4;
     reg [31:0] rcn_load_data_d1;
     reg [31:0] rcn_load_data_d2;
+    reg [31:0] rcn_load_data_d3;
+    reg [31:0] rcn_load_data_d4;
     reg [263:0] wdata_rcn;
     reg [263:0] wmask_rcn;
     
@@ -148,28 +156,38 @@ module tawas_regfile
         begin
             rcn_load_en_d1 <= 1'b0;
             rcn_load_en_d2 <= 1'b0;
+            rcn_load_en_d3 <= 1'b0;
+            rcn_load_en_d4 <= 1'b0;
         end
         else
         begin
             rcn_load_en_d1 <= rcn_load_en;
             rcn_load_en_d2 <= rcn_load_en_d1;
+            rcn_load_en_d3 <= rcn_load_en_d2;
+            rcn_load_en_d4 <= rcn_load_en_d3;
         end
     
     always @ (posedge clk)
         begin
             rcn_load_thread_d1 <= rcn_load_thread;
             rcn_load_thread_d2 <= rcn_load_thread_d1;
+            rcn_load_thread_d3 <= rcn_load_thread_d2;
+            rcn_load_thread_d4 <= rcn_load_thread_d3;
             rcn_load_reg_d1 <= rcn_load_reg;
             rcn_load_reg_d2 <= rcn_load_reg_d1;
+            rcn_load_reg_d3 <= rcn_load_reg_d2;
+            rcn_load_reg_d4 <= rcn_load_reg_d3;
             rcn_load_data_d1 <= rcn_load_data;
             rcn_load_data_d2 <= rcn_load_data_d1;
+            rcn_load_data_d3 <= rcn_load_data_d2;
+            rcn_load_data_d4 <= rcn_load_data_d3;
         end
 
     always @ *
-        if (rcn_load_en_d2)
+        if (rcn_load_en_d4)
         begin
-            wdata_rcn = ({8'd0, {7{32'd0}}, rcn_load_data_d2[31:0]} << (32 * rcn_load_reg_d2));
-            wmask_rcn = ({8'd0, {7{32'd0}}, 32'hFFFFFFFF} << (32 * rcn_load_reg_d2));
+            wdata_rcn = ({8'd0, {7{32'd0}}, rcn_load_data_d4[31:0]} << (32 * rcn_load_reg_d4));
+            wmask_rcn = ({8'd0, {7{32'd0}}, 32'hFFFFFFFF} << (32 * rcn_load_reg_d4));
         end
         else
         begin
@@ -182,7 +200,7 @@ module tawas_regfile
     //
     
     reg wen;
-    wire wb_en_any = (wb_au_en || wb_au_flags_en || wb_ptr_en || wb_store_en || rcn_load_reg_d2);
+    wire wb_en_any = (wb_au_en || wb_au_flags_en || wb_ptr_en || wb_store_en || rcn_load_en_d4);
     reg [4:0] waddr;
     reg [263:0] wdata;
     reg [263:0] wmask;
@@ -194,7 +212,7 @@ module tawas_regfile
     always @ (posedge clk)
         if (wb_en_any)
         begin
-            waddr <= (rcn_load_thread_d2) ? rcn_load_thread_d2 : wb_thread;
+            waddr <= (rcn_load_en_d4) ? rcn_load_thread_d4 : wb_thread;
             wdata <= wdata_au | wdata_flags | wdata_ptr | wdata_store | wdata_rcn;
             wmask <= wmask_au | wmask_flags | wmask_ptr | wmask_store | wmask_rcn;
         end

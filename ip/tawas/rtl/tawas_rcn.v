@@ -14,7 +14,7 @@ module tawas_rcn
     input clk,
     input rst,
 
-    input [4:0] thread_store,
+    input [4:0] thread_decode,
     output [31:0] rcn_stall,
 
     input rcn_cs,
@@ -35,7 +35,7 @@ module tawas_rcn
 );
     parameter MASTER_GROUP_8 = 0;
 
-    wire [4:0] seq = thread_store;
+    reg [4:0] seq;
     wire rdone;
     wire wdone;
     wire [4:0] rsp_seq;
@@ -43,6 +43,9 @@ module tawas_rcn
     wire [31:0] rsp_data;
     wire master_full;
     
+    always @ (posedge clk)
+        seq <= thread_decode;
+
     tawas_rcn_master_buf #(.MASTER_GROUP_8(MASTER_GROUP_8)) rcn_master
     (
         .rst(rst),
@@ -72,9 +75,32 @@ module tawas_rcn
     // Core thread stalls
     //
 
+    reg rdone_d1;
+    reg rdone_d2;
+    reg rdone_d3;
+    reg wdone_d1;
+    reg wdone_d2;
+    reg wdone_d3;
+    reg [4:0] rsp_seq_d1;
+    reg [4:0] rsp_seq_d2;
+    reg [4:0] rsp_seq_d3;
+    
+    always @ (posedge clk)
+    begin
+        rdone_d1 <= rdone;
+        rdone_d2 <= rdone_d1;
+        rdone_d3 <= rdone_d2;
+        wdone_d1 <= wdone;
+        wdone_d2 <= wdone_d1;
+        wdone_d3 <= wdone_d2;
+        rsp_seq_d1 <= rsp_seq;
+        rsp_seq_d2 <= rsp_seq_d1;
+        rsp_seq_d3 <= rsp_seq_d2;
+    end
+    
     reg [31:0] pending_stall;
     wire [31:0] set_pending_stall = (rcn_cs) ? (32'd1 << seq) : 32'd0;
-    wire [31:0] clr_pending_stall = (rdone || wdone) ? (32'd1 << rsp_seq) : 32'd0;
+    wire [31:0] clr_pending_stall = (rdone_d3 || wdone_d3) ? (32'd1 << rsp_seq_d3) : 32'd0;
 
     always @ (posedge clk or posedge rst)
         if (rst)
@@ -105,12 +131,12 @@ module tawas_rcn
                                (rsp_mask[2]) ? {24'd0, rsp_data[23:16]} :
                                (rsp_mask[1]) ? {24'd0, rsp_data[15:8]} : {24'd0, rsp_data[7:0]};
 
-    always @ (posedge clk)
+    always @ *
     begin
-        rcn_load_en <= rdone || (wdone && xch[rsp_seq]);
-        rcn_load_thread <= rsp_seq;
-        rcn_load_reg <= wbreg[rsp_seq];
-        rcn_load_data <= rsp_data_adj;
+        rcn_load_en = rdone || (wdone && xch[rsp_seq]);
+        rcn_load_thread = rsp_seq;
+        rcn_load_reg = wbreg[rsp_seq];
+        rcn_load_data = rsp_data_adj;
     end
     
 endmodule

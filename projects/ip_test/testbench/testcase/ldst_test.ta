@@ -1,0 +1,55 @@
+
+#include <platform.h>
+
+_t0_reset:
+    mvi r0 -1
+    wrcsr r0 thread_mask
+    nop
+    nop
+    nop
+    ldi r1 0x00012345
+    std r1 0xfffe0000
+    ldd r5 0xfffe0000
+    std r5 0xfffe0004
+    jmp test_pass_now
+
+_t1_reset:
+_t2_reset:
+_t3_reset:
+_t4_reset:
+_t5_reset:
+_t6_reset:
+_t7_reset:
+_t8_reset:
+_t9_reset:
+_t10_reset:
+_t11_reset:
+_t12_reset:
+_t13_reset:
+_t14_reset:
+_t15_reset:
+_t16_reset:
+_t17_reset:
+_t18_reset:
+_t19_reset:
+_t20_reset:
+_t21_reset:
+_t22_reset:
+_t23_reset:
+_t24_reset:
+_t25_reset:
+_t26_reset:
+_t27_reset:
+_t28_reset:
+_t29_reset:
+_t30_reset:
+_t31_reset:
+    ldi r0 1
+    ldi r1 2
+    ldi r2 3
+    ldi r3 4
+    ldi r4 5
+    ldi r5 6
+    ldi r6 7
+    ldi r7 8
+    halt

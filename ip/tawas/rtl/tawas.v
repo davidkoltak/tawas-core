@@ -254,7 +254,7 @@ module tawas
         .clk(clk),
         .rst(rst),
 
-        .thread_store(thread_store),
+        .thread_decode(thread_decode),
         .rcn_stall(rcn_stall),
 
         .rcn_cs(rcn_cs),
