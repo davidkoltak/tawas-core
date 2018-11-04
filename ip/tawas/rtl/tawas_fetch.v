@@ -22,6 +22,8 @@ module tawas_fetch
     output [4:0] thread_store,
 
     input [31:0] thread_mask,
+    input [31:0] rcn_stall,
+    input rcn_load_en,
     
     input [7:0] au_flags,
     input [23:0] pc_rtn,
@@ -82,8 +84,9 @@ module tawas_fetch
         s1_sel_mask = 32'd0;
         s1_sel = 5'd0;
         s1_en = 1'b0;
+        thread_done_mask = 32'd0;
 
-        thread_ready = (~thread_busy) & thread_mask;
+        thread_ready = (~thread_busy) & thread_mask & (!rcn_stall);
         
         for (x2 = 0; x2 < 32; x2 = x2 + 1)
             if (!s1_en && thread_ready[x2])
@@ -93,8 +96,11 @@ module tawas_fetch
                 s1_en = 1'b1;
             end
 
-        if (thread_retire_en) thread_done_mask = (32'd1 << thread_retire);
-        else thread_done_mask = 32'd0;
+        if (thread_retire_en) 
+            thread_done_mask = (32'd1 << thread_retire);
+            
+        if (thread_abort_en) 
+            thread_done_mask = (32'd1 << thread_abort);
     end
 
     always @ (posedge clk or posedge rst)
@@ -164,7 +170,7 @@ module tawas_fetch
         begin
             s2_en <= s1_en;
             s3_en <= s2_en;
-            s4_en <= s3_en;
+            s4_en <= s3_en && !thread_abort_en;
             s5_en <= s4_en && !s5_halt;
             s6_en <= s5_en;
         end
@@ -237,10 +243,14 @@ module tawas_fetch
     assign thread_store = s7_sel;
 
     //
-    // Retire thread
+    // Retire/abort/halt thread
     //
-        
+    
+    assign thread_abort_en = rcn_load_en;
+    assign thread_abort = s3_sel;
+
     assign s5_halt = op_is_halt;
+
     assign thread_retire_en = s6_en;
     assign thread_retire = s6_sel;
                                                  

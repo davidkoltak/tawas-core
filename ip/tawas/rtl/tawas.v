@@ -34,6 +34,8 @@ module tawas
     wire [4:0] thread_store;
 
     wire [31:0] thread_mask;
+    wire [31:0] rcn_stall;
+    wire rcn_load_en;
 
     wire [7:0] au_flags;
     wire [23:0] pc_rtn;
@@ -68,7 +70,9 @@ module tawas
         .thread_store(thread_store),
 
         .thread_mask(thread_mask),
-
+        .rcn_stall(rcn_stall),
+        .rcn_load_en(rcn_load_en),
+        
         .au_flags(au_flags),
         .pc_rtn(pc_rtn),
 
@@ -99,8 +103,6 @@ module tawas
 
     assign pc_rtn = reg7[23:0];
 
-    wire [4:0] wb_thread;
-
     wire wb_au_en;
     wire [2:0] wb_au_reg;
     wire [31:0] wb_au_data;
@@ -116,6 +118,10 @@ module tawas
     wire [2:0] wb_store_reg;
     wire [31:0] wb_store_data;
 
+    wire [4:0] rcn_load_thread;
+    wire [2:0] rcn_load_reg;
+    wire [31:0] rcn_load_data;
+    
     tawas_regfile tawas_regfile
     (
         .clk(clk),
@@ -134,7 +140,7 @@ module tawas
         .reg7(reg7),
         .au_flags(au_flags),
 
-        .wb_thread(wb_thread),
+        .wb_thread(thread_store),
 
         .wb_au_en(wb_au_en),
         .wb_au_reg(wb_au_reg),
@@ -149,7 +155,12 @@ module tawas
 
         .wb_store_en(wb_store_en),
         .wb_store_reg(wb_store_reg),
-        .wb_store_data(wb_store_data)
+        .wb_store_data(wb_store_data),
+        
+        .rcn_load_en(rcn_load_en),
+        .rcn_load_thread(rcn_load_thread),
+        .rcn_load_reg(rcn_load_reg),
+        .rcn_load_data(rcn_load_data)
     );
 
     tawas_au tawas_au
@@ -238,11 +249,6 @@ module tawas
         .wb_store_data(wb_store_data)
     );
 
-    wire rcn_load_en;
-    wire [4:0] rcn_load_thread;
-    wire [2:0] rcn_load_reg;
-    wire [31:0] rcn_load_data;
-
     tawas_rcn tawas_rcn
     (
         .clk(clk),
@@ -267,11 +273,5 @@ module tawas
         .rcn_in(rcn_in),
         .rcn_out(rcn_out)
     );
-
-    //
-    // NO RCN LOAD YET
-    //
-
-    assign wb_thread = thread_store;
 
 endmodule

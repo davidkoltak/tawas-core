@@ -4,7 +4,9 @@
 //
 // Tawas RCN bus interface:
 //
-// Perform load/store operations over RCN. Stall issueing thread while transaction is pending.
+// Perform load/store operations over RCN. 
+// Stall issueing thread while transaction is pending.
+// Stall all threads if bus backpressure fills issue buffer.
 //
 
 module tawas_rcn
@@ -34,14 +36,13 @@ module tawas_rcn
     parameter MASTER_GROUP_8 = 0;
 
     wire [4:0] seq = thread_store;
-    wire issue;
-    wire [4:0] iss_seq;
     wire rdone;
     wire wdone;
     wire [4:0] rsp_seq;
     wire [3:0] rsp_mask;
     wire [31:0] rsp_data;
-
+    wire master_full;
+    
     tawas_rcn_master_buf #(.MASTER_GROUP_8(MASTER_GROUP_8)) rcn_master
     (
         .rst(rst),
@@ -52,14 +53,12 @@ module tawas_rcn
 
         .cs(rcn_cs),
         .seq(seq),
-        .busy(),
         .wr(rcn_wr),
         .mask(rcn_mask),
         .addr(rcn_addr[23:0]),
         .wdata(rcn_wdata),
 
-        .issue(issue),
-        .iss_seq(iss_seq),
+        .full(master_full),
 
         .rdone(rdone),
         .wdone(wdone),
@@ -70,10 +69,35 @@ module tawas_rcn
     );
 
     //
+    // Core thread stalls
+    //
+
+    reg [31:0] pending_stall;
+    wire [31:0] set_pending_stall = (rcn_cs) ? (32'd1 << seq) : 32'd0;
+    wire [31:0] clr_pending_stall = (rdone || wdone) ? (32'd1 << rsp_seq) : 32'd0;
+
+    always @ (posedge clk or posedge rst)
+        if (rst)
+            pending_stall <= 32'd0;
+        else
+            pending_stall <= (pending_stall | set_pending_stall) & ~clr_pending_stall;
+
+    assign rcn_stall = pending_stall | {32{master_full}};
+
+    //
     // Read retire
     //
 
-    reg [31:0] wb_data
+    reg [2:0] wbreg[31:0];
+    reg xch[31:0];
+
+    always @ (posedge clk)
+        if (rcn_cs)
+        begin
+            wbreg[seq] <= rcn_wbreg;
+            xch[seq] <= rcn_wr && rcn_xch;
+        end
+
     wire [31:0] rsp_data_adj = (rsp_mask[3:0] == 4'b1111) ? rsp_data[31:0] :
                                (rsp_mask[3:2] == 2'b11) ? {16'd0, rsp_data[31:16]} :
                                (rsp_mask[1:0] == 2'b11) ? {16'd0, rsp_data[15:0]} :
@@ -83,38 +107,10 @@ module tawas_rcn
 
     always @ (posedge clk)
     begin
-        rcn_load_en <= rdone;
-        rcn_load_thread <= 5'd0;
-        rcn_load_reg <= 3'd0;
+        rcn_load_en <= rdone || (wdone && xch[rsp_seq]);
+        rcn_load_thread <= rsp_seq;
+        rcn_load_reg <= wbreg[rsp_seq];
         rcn_load_data <= rsp_data_adj;
     end
-
-    //
-    // Count pending writes and stall when 6 are pending
-    //
     
-    wire [31:0] wr_issue = (rcn_cs && rcn_wr) ? (1 << thread_store) : 32'd0;
-    wire [31:0] wr_done = (wdone) ? (1 << rsp_seq) : 32'd0;
-    reg [2:0] wr_pending[31:0];
-    reg [31:0] wr_stall;
-    integer pwc;
-    
-    always @ (posedge clk or posedge rst)
-        if (rst)
-        begin
-            wr_stall <= 32'd0;
-            for (pwc = 0; pwc < 32; pwc = pwc + 1)
-                wr_pending[pwc] <= 3'd0;
-        end
-        else
-            for (pwc = 0; pwc < 32; pwc = pwc + 1)
-            begin
-                case (wr_issue[pwc], wr_done[pwc])
-                2'b10: wr_pending[pwc] <= wr_pending[pwc] + 3'd1;
-                2'b01: wr_pending[pwc] <= wr_pending[pwc] - 3'd1;
-                default: ;
-                endcase
-                
-                wr_stall[pwc] <= (wr_pending[pwc][2:1] == 2'b11);
-            end
 endmodule

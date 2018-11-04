@@ -37,7 +37,7 @@ module tawas_rcn_master
 
     assign rcn_out = rout;
 
-    wire [2:0] my_id = MASTER_ID;
+    wire [2:0] my_id = MASTER_GROUP_8;
 
     wire my_resp = rin[68] && !rin[67] && (rin[65:63] == MASTER_GROUP_8);
 

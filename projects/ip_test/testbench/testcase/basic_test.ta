@@ -30,4 +30,5 @@ call_target:
 jump_target:
     std r1 0xfffe0000
     ldd r5 0xfffe0000
+    std r5 0xfffe0004
     jmp jump_return

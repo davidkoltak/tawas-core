@@ -16,14 +16,12 @@ module tawas_rcn_master_buf
 
     input cs,
     input [4:0] seq,
-    output busy,
     input wr,
     input [3:0] mask,
     input [23:0] addr,
     input [31:0] wdata,
 
-    output issue,
-    output [4:0] iss_seq,
+    output full,
 
     output rdone,
     output wdone,
@@ -33,13 +31,13 @@ module tawas_rcn_master_buf
     output [31:0] rsp_data
 );
     parameter MASTER_GROUP_8 = 0;
-    parameter DEPTH = 32; // max 64
+    parameter DEPTH = 16; // max 64
     
     reg [63:0] req_buf[(DEPTH - 1):0];
     reg [5:0] write_ptr;
     reg [5:0] read_ptr;
     reg [6:0] req_cnt;
-    assign busy = (req_cnt == DEPTH);
+    assign full = (req_cnt >= (DEPTH - 5));
     wire req_push = cs && (req_cnt != DEPTH);
     wire req_pop;
 
@@ -74,9 +72,6 @@ module tawas_rcn_master_buf
   wire req_busy;
 
   assign req_pop = req_vld && !req_busy;
-
-  assign issue = req_pop;
-  assign iss_seq = req[63:59];
 
   tawas_rcn_master #(.MASTER_GROUP_8(MASTER_GROUP_8)) rcn_master
   (
