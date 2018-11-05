@@ -1,0 +1,9 @@
+rtl/avalon2rcn_hw.tcl
+rtl/avalon2rcn.v
+rtl/debug_lsa_hw.tcl
+rtl/debug_lsa.v
+rtl/debug_state_hw.tcl
+rtl/debug_state.v
+rtl/spdr_fifo.v
+rtl/spdr_uart_framer.v
+rtl/spdr.v
