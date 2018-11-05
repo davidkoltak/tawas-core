@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: MIT */
+/* (c) Copyright 2018 David M. Koltak, all rights reserved. */
+
 /*
  * avalon to rcn bus master interface.
  *
