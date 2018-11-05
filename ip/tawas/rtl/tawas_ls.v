@@ -288,7 +288,7 @@ module tawas_ls
         else if (wmask_d3[1:0] == 2'b11)
             data_in_final = {16'd0, data_in[15:0]};
         else if (wmask_d3[3:2] == 2'b11)
-            data_in_final = {16'd0, data_in[15:0]};
+            data_in_final = {16'd0, data_in[31:16]};
         else if (wmask_d3[0])
             data_in_final = {24'd0, data_in[7:0]};
         else if (wmask_d3[1])
