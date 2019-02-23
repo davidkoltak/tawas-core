@@ -17,26 +17,54 @@ module dram
     output [31:0] dout
 );
     parameter DRAM_DATA_FILE = "dram.hex";
-  
-    reg [31:0] data_array[(1024 * 16)-1:0];
+
+    reg [31:0] data_array_32[(1024 * 16)-1:0];
+    reg [7:0] data_array_w0[(1024 * 16)-1:0];
+    reg [7:0] data_array_w1[(1024 * 16)-1:0];
+    reg [7:0] data_array_w2[(1024 * 16)-1:0];
+    reg [7:0] data_array_w3[(1024 * 16)-1:0];
     reg [31:0] data_out;
-    wire [31:0] bitmask;
+
+    integer x;
 
     initial
     begin
-        $readmemh(DRAM_DATA_FILE, data_array);
+        $readmemh(DRAM_DATA_FILE, data_array_32);
+
+        for (x = 0; x < (1024 * 16); x = x + 1)
+        begin
+            data_array_w0[x] = data_array_32[x][7:0];
+            data_array_w1[x] = data_array_32[x][15:8];
+            data_array_w2[x] = data_array_32[x][23:16];
+            data_array_w3[x] = data_array_32[x][31:24];
+        end
     end
 
-    assign bitmask = {{8{mask[3]}}, {8{mask[2]}}, {8{mask[1]}}, {8{mask[0]}}};
+    always @ (posedge clk)
+        if (cs && wr && mask[0])
+            data_array_w0[addr[15:2]] <= din[7:0];
 
     always @ (posedge clk)
-        if (cs && wr)
-            data_array[addr[15:2]] <= (data_array[addr[15:2]] & ~bitmask) | (din & bitmask);
+        if (cs && wr && mask[1])
+            data_array_w1[addr[15:2]] <= din[15:8];
+
+    always @ (posedge clk)
+        if (cs && wr && mask[2])
+            data_array_w2[addr[15:2]] <= din[23:16];
+
+    always @ (posedge clk)
+        if (cs && wr && mask[3])
+            data_array_w3[addr[15:2]] <= din[31:24];
 
     always @ (posedge clk)
         if (cs)
-            data_out <= data_array[addr[15:2]];
+        begin
+            data_out[7:0] <= data_array_w0[addr[15:2]];
+            data_out[15:8] <= data_array_w1[addr[15:2]];
+            data_out[23:16] <= data_array_w2[addr[15:2]];
+            data_out[31:24] <= data_array_w3[addr[15:2]];
+        end
 
     assign dout = data_out;
-  
+
 endmodule

@@ -38,19 +38,29 @@ module rcn_ram
         .rdata(rdata)
     );
 
-    reg [31:0] data_array[(1024 * 16)-1:0];
+    reg [7:0] byte_0[(1024 * 16)-1:0];
+    reg [7:0] byte_1[(1024 * 16)-1:0];
+    reg [7:0] byte_2[(1024 * 16)-1:0];
+    reg [7:0] byte_3[(1024 * 16)-1:0];
     reg [31:0] data_out;
-    wire [31:0] bitmask;
-
-    assign bitmask = {{8{mask[3]}}, {8{mask[2]}}, {8{mask[1]}}, {8{mask[0]}}};
 
     always @ (posedge clk)
         if (cs && wr)
-            data_array[addr[15:2]] <= (data_array[addr[15:2]] & ~bitmask) | (wdata & bitmask);
-
+        begin
+            if (mask[0])
+                byte_0[addr[15:2]] <= wdata[7:0];
+            if (mask[1])
+                byte_1[addr[15:2]] <= wdata[15:8];
+            if (mask[2])
+                byte_2[addr[15:2]] <= wdata[23:16];
+            if (mask[3])
+                byte_3[addr[15:2]] <= wdata[31:24];
+        end
+        
     always @ (posedge clk)
         if (cs)
-            data_out <= data_array[addr[15:2]];
+            data_out <= {byte_3[addr[15:2]], byte_2[addr[15:2]],
+                         byte_1[addr[15:2]], byte_0[addr[15:2]]};
 
     assign rdata = data_out;
 

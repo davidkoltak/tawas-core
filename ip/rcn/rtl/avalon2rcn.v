@@ -51,7 +51,7 @@ module avalon2rcn
     wire my_resp = rin[68] && !rin[67] && (rin[65:60] == my_id) && 
                    ((rin[66]) ? (rin[33:32] == wait_wr_id[1:0]) : (rin[33:32] == wait_rd_id[1:0]));
 
-    wire bus_stall = (rin[68] && !my_resp) || (av_read) ? (next_rd_id == wait_rd_id) : (next_wr_id == wait_wr_id);
+    wire bus_stall = (rin[68] && !my_resp) || ((av_read) ? (next_rd_id == wait_rd_id) : (next_wr_id == wait_wr_id));
     assign av_waitrequest = bus_stall;
 
     wire req_valid;

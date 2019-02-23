@@ -24,7 +24,7 @@ module tawas_fetch
     input [31:0] thread_mask,
     input [31:0] rcn_stall,
     input rcn_load_en,
-    
+
     input [7:0] au_flags,
     input [23:0] pc_rtn,
 
@@ -36,7 +36,7 @@ module tawas_fetch
     output ls_dir_store,
     output [2:0] ls_dir_reg,
     output [31:0] ls_dir_addr,
-    
+
     output au_op_en,
     output [14:0] au_op,
 
@@ -76,10 +76,10 @@ module tawas_fetch
 
     wire thread_retire_en;
     wire [4:0] thread_retire;
-    
+
     wire thread_abort_en;
     wire [4:0] thread_abort;
-    
+
     integer x2;
 
     always @ *
@@ -90,7 +90,7 @@ module tawas_fetch
         thread_done_mask = 32'd0;
 
         thread_ready = (~thread_busy) & thread_mask & (~rcn_stall);
-        
+
         for (x2 = 0; x2 < 32; x2 = x2 + 1)
             if (!s1_en && thread_ready[x2])
             begin
@@ -99,10 +99,10 @@ module tawas_fetch
                 s1_en = 1'b1;
             end
 
-        if (thread_retire_en) 
+        if (thread_retire_en)
             thread_done_mask = (32'd1 << thread_retire);
-            
-        if (thread_abort_en) 
+
+        if (thread_abort_en)
             thread_done_mask = (32'd1 << thread_abort);
     end
 
@@ -131,15 +131,15 @@ module tawas_fetch
     wire s6_halt;
     reg s5_en;
     reg [4:0] s5_sel;
-    
+
     reg s6_en;
     reg [4:0] s6_sel;
 
     reg [4:0] s7_sel;
-    
+
     assign ics = s2_en;
     assign iaddr = s2_pc[23:0];
-    
+
     reg [31:0] instr;
 
     always @ (posedge clk)
@@ -147,7 +147,7 @@ module tawas_fetch
         s2_pc <= pc[s1_sel];
         s3_pc <= s2_pc;
         s4_pc <= s3_pc;
-        
+
         s2_sel <= s1_sel;
         s3_sel <= s2_sel;
         s4_sel <= s3_sel;
@@ -193,7 +193,7 @@ module tawas_fetch
     wire op_low_au = !instr[30] || (instr[31:28] == 4'b1100);
 
     wire op_serial = !instr[31];
-    
+
     wire op_br_vld = (instr[31:29] == 3'b110);
 
     wire op_is_br = op_br_vld && !op_br[12];
@@ -234,21 +234,21 @@ module tawas_fetch
                             (op_is_br) ? {1'b0, op_br_iaddr} :
                             (op_is_br_cond && op_br_cond_true) ? {1'b0, op_br_cond_iaddr}
                                                                : pc_next;
-    
+
     //
     // Load thread register context
     //
-    
+
     assign thread_load_en = s3_en && !thread_abort_en;
     assign thread_load = s3_sel;
-    
+
     assign thread_decode = s4_sel;
     assign thread_store = s7_sel;
 
     //
     // Retire/abort/halt thread
     //
-    
+
     assign thread_abort_en = rcn_load_en;
     assign thread_abort = s3_sel;
 
@@ -256,33 +256,33 @@ module tawas_fetch
 
     assign thread_retire_en = s6_en;
     assign thread_retire = s6_sel;
-                                                 
+
     //
     // Imm/Dir data loads
     //
-    
+
     assign rf_imm_en = s4_en && (op_is_imm || op_is_call);
     assign rf_imm_reg = (op_is_imm) ? op_imm_reg : 3'd7;
     assign rf_imm = (op_is_imm) ? op_imm : {8'd0, s4_pc + 24'b1};
-    
+
     assign ls_dir_en = s4_en && (op_is_dir_ld || op_is_dir_st);
     assign ls_dir_store = op_is_dir_st;
     assign ls_dir_reg = op_dir_reg;
     assign ls_dir_addr = op_daddr;
-    
+
     //
     // LS/AU Ops
     //
-    
+
     wire do_low = (op_serial) ? !s4_pc[24] : op_low_vld;
     wire do_high = (op_serial) ? s4_pc[24] : op_high_vld;
-    
+
     assign au_op_en = s4_en && ((do_high && op_high_au) || (do_low && op_low_au));
     assign au_op = (do_high && op_high_au) ? op_high : op_low;
 
-    assign ls_op_en = s4_en && 
+    assign ls_op_en = s4_en &&
                     ((do_high && !op_high_au) || (do_low && !op_low_au) || op_is_call);
-    assign ls_op = (op_is_call) ? 15'h77F7 : 
+    assign ls_op = (op_is_call) ? 15'h77F7 :
                    (do_high && !op_high_au) ? op_high : op_low;
-       
+
 endmodule

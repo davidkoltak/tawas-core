@@ -72,7 +72,7 @@ module tawas
         .thread_mask(thread_mask),
         .rcn_stall(rcn_stall),
         .rcn_load_en(rcn_load_en),
-        
+
         .au_flags(au_flags),
         .pc_rtn(pc_rtn),
 
@@ -121,7 +121,7 @@ module tawas
     wire [4:0] rcn_load_thread;
     wire [2:0] rcn_load_reg;
     wire [31:0] rcn_load_data;
-    
+
     tawas_regfile tawas_regfile
     (
         .clk(clk),
@@ -156,7 +156,7 @@ module tawas
         .wb_store_en(wb_store_en),
         .wb_store_reg(wb_store_reg),
         .wb_store_data(wb_store_data),
-        
+
         .rcn_load_en(rcn_load_en),
         .rcn_load_thread(rcn_load_thread),
         .rcn_load_reg(rcn_load_reg),

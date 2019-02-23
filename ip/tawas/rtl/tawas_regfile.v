@@ -12,16 +12,16 @@ module tawas_regfile
 
     input thread_load_en,
     input [4:0] thread_load,
-    
-    output [31:0] reg0,
-    output [31:0] reg1,
-    output [31:0] reg2,
-    output [31:0] reg3,
-    output [31:0] reg4,
-    output [31:0] reg5,
-    output [31:0] reg6,
-    output [31:0] reg7,
-    output [7:0] au_flags,
+
+    output reg [31:0] reg0,
+    output reg [31:0] reg1,
+    output reg [31:0] reg2,
+    output reg [31:0] reg3,
+    output reg [31:0] reg4,
+    output reg [31:0] reg5,
+    output reg [31:0] reg6,
+    output reg [31:0] reg7,
+    output reg [7:0] au_flags,
 
     input [4:0] wb_thread,
 
@@ -39,185 +39,215 @@ module tawas_regfile
     input wb_store_en,
     input [2:0] wb_store_reg,
     input [31:0] wb_store_data,
-    
+
     input rcn_load_en,
     input [4:0] rcn_load_thread,
     input [2:0] rcn_load_reg,
     input [31:0] rcn_load_data
 );
 
-    reg [263:0] regfile[31:0];
-    
+    reg [31:0] regfile_0[31:0];
+    reg [31:0] regfile_1[31:0];
+    reg [31:0] regfile_2[31:0];
+    reg [31:0] regfile_3[31:0];
+    reg [31:0] regfile_4[31:0];
+    reg [31:0] regfile_5[31:0];
+    reg [31:0] regfile_6[31:0];
+    reg [31:0] regfile_7[31:0];
+    reg [7:0] regfile_au[31:0];
+
     //
     // Load register data
     //
 
-    reg [263:0] regdata;
-    
-    assign reg0 = regdata[31:0];
-    assign reg1 = regdata[63:32];
-    assign reg2 = regdata[95:64];
-    assign reg3 = regdata[127:96];
-    assign reg4 = regdata[159:128];
-    assign reg5 = regdata[191:160];
-    assign reg6 = regdata[223:192];
-    assign reg7 = regdata[255:224];
-    assign au_flags = regdata[263:256];
-    
     always @ (posedge clk)
-        if (thread_load_en) regdata <= regfile[thread_load];
+        if (thread_load_en)
+        begin
+            reg0 <= regfile_0[thread_load];
+            reg1 <= regfile_1[thread_load];
+            reg2 <= regfile_2[thread_load];
+            reg3 <= regfile_3[thread_load];
+            reg4 <= regfile_4[thread_load];
+            reg5 <= regfile_5[thread_load];
+            reg6 <= regfile_6[thread_load];
+            reg7 <= regfile_7[thread_load];
+            au_flags <= regfile_au[thread_load];
+        end
 
     //
-    // Create au/flags/ptr/store writeback data/mask vectors
+    // Store register data
     //
-    
-    reg [263:0] wdata_au;
-    reg [263:0] wmask_au;
-    reg [263:0] wdata_flags;
-    reg [263:0] wmask_flags;
-    reg [263:0] wdata_ptr;
-    reg [263:0] wmask_ptr;
-    reg [263:0] wdata_store;
-    reg [263:0] wmask_store;
-    
-    always @ *
-        if (wb_au_en)
-        begin
-            wdata_au = ({8'd0, {7{32'd0}}, wb_au_data[31:0]} << (32 * wb_au_reg));
-            wmask_au = ({8'd0, {7{32'd0}}, 32'hFFFFFFFF} << (32 * wb_au_reg));
-        end
+
+    reg regfile_0_we;
+    reg [4:0] regfile_0_sel;
+    reg [31:0] regfile_0_data;
+
+    always @ (posedge clk)
+        if (wb_au_en && (wb_au_reg == 3'd0))
+            {regfile_0_we, regfile_0_sel, regfile_0_data} <= {1'b1, wb_thread, wb_au_data};
+        else if (wb_ptr_en && (wb_ptr_reg == 3'd0))
+            {regfile_0_we, regfile_0_sel, regfile_0_data} <= {1'b1, wb_thread, wb_ptr_data};
+        else if (wb_store_en && (wb_store_reg == 3'd0))
+            {regfile_0_we, regfile_0_sel, regfile_0_data} <= {1'b1, wb_thread, wb_store_data};
+        else if (rcn_load_en && (rcn_load_reg == 3'd0))
+            {regfile_0_we, regfile_0_sel, regfile_0_data} <= {1'b1, rcn_load_thread, rcn_load_data};
         else
-        begin
-            wdata_au = {8'd0, {8{32'd0}}};
-            wmask_au = {8'd0, {8{32'd0}}};
-        end
+            regfile_0_we <= 1'b0;
 
-    always @ *
+    always @ (posedge clk)
+        if (regfile_0_we)
+            regfile_0[regfile_0_sel] <= regfile_0_data;
+
+
+    reg regfile_1_we;
+    reg [4:0] regfile_1_sel;
+    reg [31:0] regfile_1_data;
+
+    always @ (posedge clk)
+        if (wb_au_en && (wb_au_reg == 3'd1))
+            {regfile_1_we, regfile_1_sel, regfile_1_data} <= {1'b1, wb_thread, wb_au_data};
+        else if (wb_ptr_en && (wb_ptr_reg == 3'd1))
+            {regfile_1_we, regfile_1_sel, regfile_1_data} <= {1'b1, wb_thread, wb_ptr_data};
+        else if (wb_store_en && (wb_store_reg == 3'd1))
+            {regfile_1_we, regfile_1_sel, regfile_1_data} <= {1'b1, wb_thread, wb_store_data};
+        else if (rcn_load_en && (rcn_load_reg == 3'd1))
+            {regfile_1_we, regfile_1_sel, regfile_1_data} <= {1'b1, rcn_load_thread, rcn_load_data};
+        else
+            regfile_1_we <= 1'b0;
+
+    always @ (posedge clk)
+        if (regfile_1_we)
+            regfile_1[regfile_1_sel] <= regfile_1_data;
+
+
+    reg regfile_2_we;
+    reg [4:0] regfile_2_sel;
+    reg [31:0] regfile_2_data;
+
+    always @ (posedge clk)
+        if (wb_au_en && (wb_au_reg == 3'd2))
+            {regfile_2_we, regfile_2_sel, regfile_2_data} <= {1'b1, wb_thread, wb_au_data};
+        else if (wb_ptr_en && (wb_ptr_reg == 3'd2))
+            {regfile_2_we, regfile_2_sel, regfile_2_data} <= {1'b1, wb_thread, wb_ptr_data};
+        else if (wb_store_en && (wb_store_reg == 3'd2))
+            {regfile_2_we, regfile_2_sel, regfile_2_data} <= {1'b1, wb_thread, wb_store_data};
+        else if (rcn_load_en && (rcn_load_reg == 3'd2))
+            {regfile_2_we, regfile_2_sel, regfile_2_data} <= {1'b1, rcn_load_thread, rcn_load_data};
+        else
+            regfile_2_we <= 1'b0;
+
+    always @ (posedge clk)
+        if (regfile_2_we)
+            regfile_2[regfile_2_sel] <= regfile_2_data;
+
+
+    reg regfile_3_we;
+    reg [4:0] regfile_3_sel;
+    reg [31:0] regfile_3_data;
+
+    always @ (posedge clk)
+        if (wb_au_en && (wb_au_reg == 3'd3))
+            {regfile_3_we, regfile_3_sel, regfile_3_data} <= {1'b1, wb_thread, wb_au_data};
+        else if (wb_ptr_en && (wb_ptr_reg == 3'd3))
+            {regfile_3_we, regfile_3_sel, regfile_3_data} <= {1'b1, wb_thread, wb_ptr_data};
+        else if (wb_store_en && (wb_store_reg == 3'd3))
+            {regfile_3_we, regfile_3_sel, regfile_3_data} <= {1'b1, wb_thread, wb_store_data};
+        else if (rcn_load_en && (rcn_load_reg == 3'd3))
+            {regfile_3_we, regfile_3_sel, regfile_3_data} <= {1'b1, rcn_load_thread, rcn_load_data};
+        else
+            regfile_3_we <= 1'b0;
+
+    always @ (posedge clk)
+        if (regfile_3_we)
+            regfile_3[regfile_3_sel] <= regfile_3_data;
+
+
+    reg regfile_4_we;
+    reg [4:0] regfile_4_sel;
+    reg [31:0] regfile_4_data;
+
+    always @ (posedge clk)
+        if (wb_au_en && (wb_au_reg == 3'd4))
+            {regfile_4_we, regfile_4_sel, regfile_4_data} <= {1'b1, wb_thread, wb_au_data};
+        else if (wb_ptr_en && (wb_ptr_reg == 3'd4))
+            {regfile_4_we, regfile_4_sel, regfile_4_data} <= {1'b1, wb_thread, wb_ptr_data};
+        else if (wb_store_en && (wb_store_reg == 3'd4))
+            {regfile_4_we, regfile_4_sel, regfile_4_data} <= {1'b1, wb_thread, wb_store_data};
+        else if (rcn_load_en && (rcn_load_reg == 3'd4))
+            {regfile_4_we, regfile_4_sel, regfile_4_data} <= {1'b1, rcn_load_thread, rcn_load_data};
+        else
+            regfile_4_we <= 1'b0;
+
+    always @ (posedge clk)
+        if (regfile_4_we)
+            regfile_4[regfile_4_sel] <= regfile_4_data;
+
+
+    reg regfile_5_we;
+    reg [4:0] regfile_5_sel;
+    reg [31:0] regfile_5_data;
+
+    always @ (posedge clk)
+        if (wb_au_en && (wb_au_reg == 3'd5))
+            {regfile_5_we, regfile_5_sel, regfile_5_data} <= {1'b1, wb_thread, wb_au_data};
+        else if (wb_ptr_en && (wb_ptr_reg == 3'd5))
+            {regfile_5_we, regfile_5_sel, regfile_5_data} <= {1'b1, wb_thread, wb_ptr_data};
+        else if (wb_store_en && (wb_store_reg == 3'd5))
+            {regfile_5_we, regfile_5_sel, regfile_5_data} <= {1'b1, wb_thread, wb_store_data};
+        else if (rcn_load_en && (rcn_load_reg == 3'd5))
+            {regfile_5_we, regfile_5_sel, regfile_5_data} <= {1'b1, rcn_load_thread, rcn_load_data};
+        else
+            regfile_5_we <= 1'b0;
+
+    always @ (posedge clk)
+        if (regfile_5_we)
+            regfile_5[regfile_5_sel] <= regfile_5_data;
+
+
+    reg regfile_6_we;
+    reg [4:0] regfile_6_sel;
+    reg [31:0] regfile_6_data;
+
+    always @ (posedge clk)
+        if (wb_au_en && (wb_au_reg == 3'd6))
+            {regfile_6_we, regfile_6_sel, regfile_6_data} <= {1'b1, wb_thread, wb_au_data};
+        else if (wb_ptr_en && (wb_ptr_reg == 3'd6))
+            {regfile_6_we, regfile_6_sel, regfile_6_data} <= {1'b1, wb_thread, wb_ptr_data};
+        else if (wb_store_en && (wb_store_reg == 3'd6))
+            {regfile_6_we, regfile_6_sel, regfile_6_data} <= {1'b1, wb_thread, wb_store_data};
+        else if (rcn_load_en && (rcn_load_reg == 3'd6))
+            {regfile_6_we, regfile_6_sel, regfile_6_data} <= {1'b1, rcn_load_thread, rcn_load_data};
+        else
+            regfile_6_we <= 1'b0;
+
+    always @ (posedge clk)
+        if (regfile_6_we)
+            regfile_6[regfile_6_sel] <= regfile_6_data;
+
+
+    reg regfile_7_we;
+    reg [4:0] regfile_7_sel;
+    reg [31:0] regfile_7_data;
+
+    always @ (posedge clk)
+        if (wb_au_en && (wb_au_reg == 3'd7))
+            {regfile_7_we, regfile_7_sel, regfile_7_data} <= {1'b1, wb_thread, wb_au_data};
+        else if (wb_ptr_en && (wb_ptr_reg == 3'd7))
+            {regfile_7_we, regfile_7_sel, regfile_7_data} <= {1'b1, wb_thread, wb_ptr_data};
+        else if (wb_store_en && (wb_store_reg == 3'd7))
+            {regfile_7_we, regfile_7_sel, regfile_7_data} <= {1'b1, wb_thread, wb_store_data};
+        else if (rcn_load_en && (rcn_load_reg == 3'd7))
+            {regfile_7_we, regfile_7_sel, regfile_7_data} <= {1'b1, rcn_load_thread, rcn_load_data};
+        else
+            regfile_7_we <= 1'b0;
+
+    always @ (posedge clk)
+        if (regfile_7_we)
+            regfile_7[regfile_7_sel] <= regfile_7_data;
+
+
+    always @ (posedge clk)
         if (wb_au_flags_en)
-        begin
-            wdata_flags = {wb_au_flags, {8{32'd0}}};
-            wmask_flags = {8'hFF, {8{32'd0}}};
-        end
-        else
-        begin
-            wdata_flags = {8'd0, {8{32'd0}}};
-            wmask_flags = {8'd0, {8{32'd0}}};
-        end
-        
-    always @ *
-        if (wb_ptr_en)
-        begin
-            wdata_ptr = ({8'd0, {7{32'd0}}, wb_ptr_data[31:0]} << (32 * wb_ptr_reg));
-            wmask_ptr = ({8'd0, {7{32'd0}}, 32'hFFFFFFFF} << (32 * wb_ptr_reg));
-        end
-        else
-        begin
-            wdata_ptr = {8'd0, {8{32'd0}}};
-            wmask_ptr = {8'd0, {8{32'd0}}};
-        end
-
-    always @ *
-        if (wb_store_en)
-        begin
-            wdata_store = ({8'd0, {7{32'd0}}, wb_store_data[31:0]} << (32 * wb_store_reg));
-            wmask_store = ({8'd0, {7{32'd0}}, 32'hFFFFFFFF} << (32 * wb_store_reg));
-        end
-        else
-        begin
-            wdata_store = {8'd0, {8{32'd0}}};
-            wmask_store = {8'd0, {8{32'd0}}};
-        end
-
-    //
-    // Delay RCN load until writeback window
-    //
-    
-    reg rcn_load_en_d1;
-    reg rcn_load_en_d2;
-    reg rcn_load_en_d3;
-    reg rcn_load_en_d4;
-    reg [4:0] rcn_load_thread_d1;
-    reg [4:0] rcn_load_thread_d2;
-    reg [4:0] rcn_load_thread_d3;
-    reg [4:0] rcn_load_thread_d4;
-    reg [2:0] rcn_load_reg_d1;
-    reg [2:0] rcn_load_reg_d2;
-    reg [2:0] rcn_load_reg_d3;
-    reg [2:0] rcn_load_reg_d4;
-    reg [31:0] rcn_load_data_d1;
-    reg [31:0] rcn_load_data_d2;
-    reg [31:0] rcn_load_data_d3;
-    reg [31:0] rcn_load_data_d4;
-    reg [263:0] wdata_rcn;
-    reg [263:0] wmask_rcn;
-    
-    always @ (posedge clk or posedge rst)
-        if (rst)
-        begin
-            rcn_load_en_d1 <= 1'b0;
-            rcn_load_en_d2 <= 1'b0;
-            rcn_load_en_d3 <= 1'b0;
-            rcn_load_en_d4 <= 1'b0;
-        end
-        else
-        begin
-            rcn_load_en_d1 <= rcn_load_en;
-            rcn_load_en_d2 <= rcn_load_en_d1;
-            rcn_load_en_d3 <= rcn_load_en_d2;
-            rcn_load_en_d4 <= rcn_load_en_d3;
-        end
-    
-    always @ (posedge clk)
-        begin
-            rcn_load_thread_d1 <= rcn_load_thread;
-            rcn_load_thread_d2 <= rcn_load_thread_d1;
-            rcn_load_thread_d3 <= rcn_load_thread_d2;
-            rcn_load_thread_d4 <= rcn_load_thread_d3;
-            rcn_load_reg_d1 <= rcn_load_reg;
-            rcn_load_reg_d2 <= rcn_load_reg_d1;
-            rcn_load_reg_d3 <= rcn_load_reg_d2;
-            rcn_load_reg_d4 <= rcn_load_reg_d3;
-            rcn_load_data_d1 <= rcn_load_data;
-            rcn_load_data_d2 <= rcn_load_data_d1;
-            rcn_load_data_d3 <= rcn_load_data_d2;
-            rcn_load_data_d4 <= rcn_load_data_d3;
-        end
-
-    always @ *
-        if (rcn_load_en_d4)
-        begin
-            wdata_rcn = ({8'd0, {7{32'd0}}, rcn_load_data_d4[31:0]} << (32 * rcn_load_reg_d4));
-            wmask_rcn = ({8'd0, {7{32'd0}}, 32'hFFFFFFFF} << (32 * rcn_load_reg_d4));
-        end
-        else
-        begin
-            wdata_rcn = {8'd0, {8{32'd0}}};
-            wmask_rcn = {8'd0, {8{32'd0}}};
-        end
-
-    //
-    // Combine all writes
-    //
-    
-    reg wen;
-    wire wb_en_any = (wb_au_en || wb_au_flags_en || wb_ptr_en || wb_store_en || rcn_load_en_d4);
-    reg [4:0] waddr;
-    reg [263:0] wdata;
-    reg [263:0] wmask;
-    
-    always @ (posedge clk or posedge rst)
-        if (rst) wen <= 1'b0;
-        else wen <= wb_en_any;
-
-    always @ (posedge clk)
-        if (wb_en_any)
-        begin
-            waddr <= (rcn_load_en_d4) ? rcn_load_thread_d4 : wb_thread;
-            wdata <= wdata_au | wdata_flags | wdata_ptr | wdata_store | wdata_rcn;
-            wmask <= wmask_au | wmask_flags | wmask_ptr | wmask_store | wmask_rcn;
-        end
-
-    always @ (posedge clk)
-        if (wen) regfile[waddr] <= (regfile[waddr] & ~wmask) | wdata;
+            regfile_au[wb_thread] <= wb_au_flags;
 
 endmodule

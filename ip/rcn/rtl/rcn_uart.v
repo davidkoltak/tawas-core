@@ -86,7 +86,7 @@ module rcn_uart
         .clk_in(clk),
         .clk_out(clk_50),
 
-        .din(wdata[7:0]),
+        .din(wdata[15:8]),
         .push(cs && wr && mask[1]),
         .full(tx_full),
 

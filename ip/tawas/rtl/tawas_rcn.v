@@ -4,7 +4,7 @@
 //
 // Tawas RCN bus interface:
 //
-// Perform load/store operations over RCN. 
+// Perform load/store operations over RCN.
 // Stall issueing thread while transaction is pending.
 // Stall all threads if bus backpressure fills issue buffer.
 //
@@ -42,7 +42,7 @@ module tawas_rcn
     wire [3:0] rsp_mask;
     wire [31:0] rsp_data;
     wire master_full;
-    
+
     always @ (posedge clk)
         seq <= thread_decode;
 
@@ -84,7 +84,7 @@ module tawas_rcn
     reg [4:0] rsp_seq_d1;
     reg [4:0] rsp_seq_d2;
     reg [4:0] rsp_seq_d3;
-    
+
     always @ (posedge clk)
     begin
         rdone_d1 <= rdone;
@@ -97,7 +97,7 @@ module tawas_rcn
         rsp_seq_d2 <= rsp_seq_d1;
         rsp_seq_d3 <= rsp_seq_d2;
     end
-    
+
     reg [31:0] pending_stall;
     wire [31:0] set_pending_stall = (rcn_cs) ? (32'd1 << seq) : 32'd0;
     wire [31:0] clr_pending_stall = (rdone_d3 || wdone_d3) ? (32'd1 << rsp_seq_d3) : 32'd0;
@@ -138,5 +138,5 @@ module tawas_rcn
         rcn_load_reg = wbreg[rsp_seq];
         rcn_load_data = rsp_data_adj;
     end
-    
+
 endmodule

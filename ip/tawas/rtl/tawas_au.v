@@ -11,7 +11,7 @@ module tawas_au
 (
     input clk,
     input rst,
-    
+
     input [31:0] reg0,
     input [31:0] reg1,
     input [31:0] reg2,
@@ -23,14 +23,14 @@ module tawas_au
     input [4:0] thread_decode,
 
     output [31:0] thread_mask,
-    
+
     input rf_imm_en,
     input [2:0] rf_imm_reg,
     input [31:0] rf_imm,
 
     input au_op_en,
     input [14:0] au_op,
-    
+
     output wb_au_en,
     output [2:0] wb_au_reg,
     output [31:0] wb_au_data,
@@ -39,14 +39,14 @@ module tawas_au
     output [7:0] wb_au_flags
 );
     parameter RTL_VERSION = 32'hFFFFFFFF;
-    
+
     //
     // AU input registers
     //
-    
+
     reg [32:0] reg_a;
     reg [32:0] reg_b;
-    
+
     always @ (posedge clk)
         if (rf_imm_en)
         begin
@@ -65,7 +65,7 @@ module tawas_au
             3'd6: reg_a <= {1'b0, reg6};
             default: reg_a <= {1'b0, reg7};
             endcase
-            
+
             case (au_op[5:3])
             3'd0: reg_b <= {1'b0, reg0};
             3'd1: reg_b <= {1'b0, reg1};
@@ -77,16 +77,16 @@ module tawas_au
             default: reg_b <= {1'b0, reg7};
             endcase
         end
-    
+
     //
     // Pipeline commands
     //
-    
+
     reg rf_imm_en_d1;
     reg [2:0] rf_imm_reg_d1;
     reg [14:0] au_op_d1;
     reg [4:0] csr_thread_id;
-    
+
     always @ (posedge clk)
     begin
         rf_imm_en_d1 <= rf_imm_en;
@@ -94,34 +94,34 @@ module tawas_au
         au_op_d1 <= au_op;
         csr_thread_id <= thread_decode;
     end
-    
+
     //
     // Shifters
     //
-    
+
     wire [4:0] sh_bits = (au_op_d1[11]) ? au_op_d1[7:3] : reg_b[4:0];
-    
+
     wire [31:0] sh_lsl = (reg_a[31:0] << sh_bits);
     wire [31:0] sh_lsr = (reg_a[31:0] >> sh_bits);
     wire [31:0] sh_asr = (reg_a[31:0] >>> sh_bits);
-    
+
     //
     // Perform operation (step 1)
     //
-    
+
     reg [2:0] wbreg_d2;
     reg [32:0] au_result_d2;
 
     reg [31:0] csr_thread_mask;
     reg [31:0] csr_ticks;
     reg [31:0] csr_scratch;
-    
+
     assign thread_mask = csr_thread_mask;
 
     always @ (posedge clk or posedge rst)
         if (rst) csr_ticks <= 32'd0;
         else csr_ticks <= csr_ticks + 32'd1;
-        
+
     always @ (posedge clk or posedge rst)
         if (rst)
         begin
@@ -212,14 +212,14 @@ module tawas_au
             wbreg_d2 <= au_op_d1[2:0];
             au_result_d2 <= {{23{au_op_d1[12]}}, au_op_d1[12:3]};
         end
-    
+
     //
     // Perform operation (step 2) - nothing to do
     //
-    
+
     reg [32:0] au_result_d3;
     reg [2:0] wbreg_d3;
-    
+
     always @ (posedge clk)
     begin
         wbreg_d3 <= wbreg_d2;
@@ -229,15 +229,15 @@ module tawas_au
     //
     // Store Result
     //
-    
+
     reg wb_en_d1;
     reg wb_en_d2;
     reg wb_en_d3;
-    
-    wire no_store_op = (au_op[14:8] == 7'b0100111) || 
+
+    wire no_store_op = (au_op[14:8] == 7'b0100111) ||
                        (au_op[14:12] == 3'b011) ||
                        (au_op_d1[14:8] == 7'b0101000);
-    
+
     always @ (posedge clk or posedge rst)
         if (rst)
         begin
@@ -251,7 +251,7 @@ module tawas_au
             wb_en_d2 <= wb_en_d1;
             wb_en_d3 <= wb_en_d2;
         end
-    
+
     assign wb_au_en = wb_en_d3;
     assign wb_au_reg = wbreg_d3;
     assign wb_au_data = au_result_d3[31:0];
@@ -259,12 +259,12 @@ module tawas_au
     //
     // Store flags
     //
-    
+
     wire au_flag_zero = (au_result_d3 == 33'd0);
     wire au_flag_neg = au_result_d3[31];
     wire au_flag_ovfl = au_result_d3[32];
-    
+
     assign wb_au_flags_en = wb_en_d3;
     assign wb_au_flags = {5'd0, au_flag_ovfl, au_flag_neg, au_flag_zero};
-    
+
 endmodule

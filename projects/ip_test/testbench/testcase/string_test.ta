@@ -9,6 +9,9 @@ _t0_reset:
 .data stack_0_top w 0xAAAAAAAA
     ldi sp stack_0_top
 
+    ldi r0 0xf
+    wrcsr r0 thread_mask
+    
 .string test_0_str "Testing thread 0 with a string"
 .alloc test_0_buf b 50
 
