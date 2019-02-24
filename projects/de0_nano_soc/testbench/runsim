@@ -145,6 +145,10 @@ if (!(-e $script_dir."testcase/$testname"))
 
 system("rm '$script_dir"."testcase/irom.hex' 2> /dev/null");
 system("rm '$script_dir"."testcase/dram.hex' 2> /dev/null");
+system("rm '$script_dir"."testcase/dram.hex.0' 2> /dev/null");
+system("rm '$script_dir"."testcase/dram.hex.1' 2> /dev/null");
+system("rm '$script_dir"."testcase/dram.hex.2' 2> /dev/null");
+system("rm '$script_dir"."testcase/dram.hex.3' 2> /dev/null");
 
 $cmd = "cd '$script_dir"."testcase/' && make clean all -f ".$testname;
 print "RUNNING: $cmd\n";
@@ -156,7 +160,22 @@ print "RUNNING: $cmd\n";
 if (system($cmd))
 { die "ERROR: Command failed\n"; }
 
-$cmd = "cp '$script_dir"."testcase/dram.hex' ./";
+$cmd = "cp '$script_dir"."testcase/dram.hex.0' ./";
+print "RUNNING: $cmd\n";
+if (system($cmd))
+{ die "ERROR: Command failed\n"; }
+
+$cmd = "cp '$script_dir"."testcase/dram.hex.1' ./";
+print "RUNNING: $cmd\n";
+if (system($cmd))
+{ die "ERROR: Command failed\n"; }
+
+$cmd = "cp '$script_dir"."testcase/dram.hex.2' ./";
+print "RUNNING: $cmd\n";
+if (system($cmd))
+{ die "ERROR: Command failed\n"; }
+
+$cmd = "cp '$script_dir"."testcase/dram.hex.3' ./";
 print "RUNNING: $cmd\n";
 if (system($cmd))
 { die "ERROR: Command failed\n"; }
