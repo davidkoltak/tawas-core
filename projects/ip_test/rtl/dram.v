@@ -18,26 +18,18 @@ module dram
 );
     parameter DRAM_DATA_FILE = "dram.hex";
 
-    reg [31:0] data_array_32[(1024 * 16)-1:0];
     reg [7:0] data_array_w0[(1024 * 16)-1:0];
     reg [7:0] data_array_w1[(1024 * 16)-1:0];
     reg [7:0] data_array_w2[(1024 * 16)-1:0];
     reg [7:0] data_array_w3[(1024 * 16)-1:0];
     reg [31:0] data_out;
 
-    integer x;
-
     initial
     begin
-        $readmemh(DRAM_DATA_FILE, data_array_32);
-
-        for (x = 0; x < (1024 * 16); x = x + 1)
-        begin
-            data_array_w0[x] = data_array_32[x][7:0];
-            data_array_w1[x] = data_array_32[x][15:8];
-            data_array_w2[x] = data_array_32[x][23:16];
-            data_array_w3[x] = data_array_32[x][31:24];
-        end
+        $readmemh({DRAM_DATA_FILE, ".0"}, data_array_w0);
+        $readmemh({DRAM_DATA_FILE, ".1"}, data_array_w1);
+        $readmemh({DRAM_DATA_FILE, ".2"}, data_array_w2);
+        $readmemh({DRAM_DATA_FILE, ".3"}, data_array_w3);
     end
 
     always @ (posedge clk)

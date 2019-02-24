@@ -380,14 +380,26 @@ fout.close()
 
 try:
     fout = open(dram_out, "w")
+    fout_0 = open(dram_out + ".0", "w")
+    fout_1 = open(dram_out + ".1", "w")
+    fout_2 = open(dram_out + ".2", "w")
+    fout_3 = open(dram_out + ".3", "w")
 except IOError:
         print("ERROR: Unable to create file '%s'" % (dram_out))
         exit(-1)
 
 for d in data:
     fout.write("%08X\n" % (d))
+    fout_0.write("%02X\n" % ((d >> 0) & 0xFF))
+    fout_1.write("%02X\n" % ((d >> 8) & 0xFF))
+    fout_2.write("%02X\n" % ((d >> 16) & 0xFF))
+    fout_3.write("%02X\n" % ((d >> 24) & 0xFF))
 
 fout.close()
+fout_0.close()
+fout_1.close()
+fout_2.close()
+fout_3.close()
 
 #
 # Verbose output

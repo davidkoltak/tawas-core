@@ -3,7 +3,7 @@ TOOLS_PATH = ../../../../ip/tawas/tools/
 
 SIM_DEFS = -DMAX_CLOCKS=4000 -DSIM
 
-SRC = basic_test.ta lib/test.ta lib/string.ta
+SRC = basic_test.ta halt_4to31.ta lib/test.ta lib/string.ta
 INC = -Iinclude/
 
 all: irom.hex dram.hex
