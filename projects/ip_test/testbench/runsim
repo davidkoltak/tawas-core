@@ -168,14 +168,17 @@ if (system($cmd))
 $cmd = "cp '$script_dir"."testcase/dram.hex.1' ./";
 print "RUNNING: $cmd\n";
 if (system($cmd))
+{ die "ERROR: Command failed\n"; }
 
 $cmd = "cp '$script_dir"."testcase/dram.hex.2' ./";
 print "RUNNING: $cmd\n";
 if (system($cmd))
+{ die "ERROR: Command failed\n"; }
 
 $cmd = "cp '$script_dir"."testcase/dram.hex.3' ./";
 print "RUNNING: $cmd\n";
 if (system($cmd))
+{ die "ERROR: Command failed\n"; }
 
 open(_MKFILE_, "<$script_dir"."testcase/".$testname) ||
   die "ERROR: Unable to open '$script_dir"."testcase/".$testname."'\n";
